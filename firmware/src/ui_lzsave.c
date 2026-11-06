@@ -64,6 +64,20 @@ static void graph_lz_tools(void)
     static const char *const ON[6] = {"STEPS + AUTO", "ENGINE DEFAULT", "", "ALL ROWS", "EVERYTHING", "HEAVY SONG"};
     uint32_t c;
     char b[12];
+#if FELUCCA_NO_SEQUENCER
+    static const uint8_t LIVE_TOOL[] = {1u, 4u, 5u};
+    for (uint32_t row = 0; row < sizeof LIVE_TOOL / sizeof LIVE_TOOL[0]; row++) {
+        c = LIVE_TOOL[row];
+        int32_t y = 4 + (int32_t)row * 43;
+        int sel = ui.act == c + 1u;
+        uint16_t bg = sel ? T_TINT : T_RAISE;
+        cv_rect(4, y, 232, 39, bg);
+        GFX_HOOK_ALIGN(0, y, 0, y + 39, AL_V, "tools row text centred up/down");
+        cv_text_on(12, y + CAP_IN(M, 39), &AF_M, WHAT[c], sel ? T_TEXT : T_MID, bg);
+        GFX_HOOK_ALIGN(0, y, 0, y + 39, AL_V, "tools row text centred up/down");
+        cv_text_r(230, y + CAP_IN(X, 39), &AF_X, c == 5u ? "CPU LOAD" : ON[c], sel ? T_MID : T_DIM, bg);
+    }
+#else
     for (c = 0; c < 6u; c++) {
         int32_t y = 1 + (int32_t)c * 23;
         int sel = ui.act == c + 1u;
@@ -78,6 +92,7 @@ static void graph_lz_tools(void)
         GFX_HOOK_ALIGN(0, y, 0, y + 21, AL_V, "tools row text centred up/down");
         cv_text_r(230, y + CAP_IN(X, 21), &AF_X, c == 2u ? b : ON[c], sel ? T_MID : T_DIM, bg);
     }
+#endif
 }
 /* PROJECT: the sections, the arrangement's chips, the song's strip (ar: ARRANGE, its rows picked) */
 static void graph_proj(int ar)

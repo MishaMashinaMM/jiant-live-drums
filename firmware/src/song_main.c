@@ -115,6 +115,11 @@ static uint32_t section_bars(uint32_t s)
 /* Main loop only: PLAY a song. 0 = armed, 1 = no rows, 2 = busy, 3 + s = section s not saved */
 static uint32_t chain_prepare(void)
 {
+#if FELUCCA_NO_SEQUENCER
+    /* The editor may still write/query historical song rows. No caller is
+     * allowed to arm the removed sequencer's transport, including SysEx. */
+    return 2;
+#else
     uint32_t i;
     if (transport_busy())
         return 2;
@@ -135,6 +140,7 @@ static uint32_t chain_prepare(void)
     chain.armed = 1;
     transport_req = 1;
     return 0;
+#endif
 }
 
 /* section s as the music now, the song's rows kept (a section is a project: its own rows are not the song's) */

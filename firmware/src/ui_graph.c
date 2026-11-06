@@ -1897,6 +1897,7 @@ static void draw_graph(void)
         cv_oy = 0;
         graph_live();                             /* (0.8.5: HOME's lens, ECO / BEING; JIANT 0.5: the system's
                                                       * beings, was the scope) */
+#if !FELUCCA_SEQ_PROBE && !FELUCCA_NO_SEQUENCER
     } else if (seq_roll_view(pg)) {                  /* (0.9.17) every SEQ page: the roll (a kit: the grid), its marks */
         cv_oy = 0;
         if (drum_track(t))
@@ -1904,6 +1905,7 @@ static void draw_graph(void)
         else
             graph_roll(t, c);
         seq_overlay(t, pg);
+#endif
     } else if (lz_on() && lz_fam() == LZ_SAVE) {     /* (0.8.5) SAVE's lens */
         cv_oy = 0;
         graph_save_lz(pg);
@@ -1933,6 +1935,7 @@ static void draw_graph(void)
             } else
                 graph_dximg(t);
             break;
+#if !FELUCCA_SEQ_PROBE && !FELUCCA_NO_SEQUENCER
         case GR_ROLL:
         case GR_CHANCE:
         case GR_SHAPE:                               /* (0.6.85) STRETCH: the whole sequence, as the roll shows it */
@@ -1946,6 +1949,7 @@ static void draw_graph(void)
             cv_oy = 0;
             graph_pats();
             break;
+#endif
         case GR_FMOP:                                /* (0.6.10) FM6's operators: (0.9.6) the colony (ui_engvis.c), the operator */
         case GR_FMOP2:                               /* picked lit */
             if (fop_ok()) vx_fm6_page(t, fop_op % 6u, pg->graph == GR_FMOP2);

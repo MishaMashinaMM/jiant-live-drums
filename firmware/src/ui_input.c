@@ -412,6 +412,20 @@ static void ui_leds(void)
     }
     for (c = 0; c < FM1_NCOL; c++)
         fm1_led[c] = nl[c];
+#if FELUCCA_NO_SEQUENCER
+    /* The removed transport buttons should not appear available in any LED mode. */
+    {
+        static const uint8_t OFF_BTN[] = {B_SEQ, B_REC, B_PLAY};
+        for (k = 0; k < sizeof OFF_BTN / sizeof OFF_BTN[0]; k++) {
+            uint32_t pos = panel.btn[OFF_BTN[k]];
+            led_clear(fm1_led, pos);
+            led_clear(fm1_led_dim, pos);
+            led_clear(fm1_led_mid, pos);
+            led_clear(fm1_led_hi, pos);
+            led_clear(fm1_led_breath, pos);
+        }
+    }
+#endif
 }
 
 /* ---------------------------------------------------------- input --- */
@@ -1217,8 +1231,15 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (pg->graph == GR_TOOLS) {                          /* (0.6.25) TOOLS: a list, any knob (and PRESETS) moves the
                                                          * pick down / up; OCT+ does it (its dialog first) */
+#if FELUCCA_NO_SEQUENCER
+        /* Keep the original action IDs: only INIT SOUND, NEW PROJECT and CPU TEST are exposed. */
+        int32_t pos = ui.act == 2u ? 1 : ui.act == 5u ? 2 : ui.act == 6u ? 3 : 0;
+        pos = clamp(pos + (steps > 0 ? 1 : -1), 0, 3);
+        ui.act = (uint8_t)(pos == 1 ? 2 : pos == 2 ? 5 : pos == 3 ? 6 : 0);
+#else
         ui.act = steps < 0 && ui.act <= 1u ? 0u : (uint8_t)clamp((int32_t)ui.act + (steps > 0 ? 1 : -1), 1, 6);   /* (left
                                                          * past the first: none picked) */
+#endif
         return;
     }
     if (pg->graph == GR_SLOTS && save_on() && save_level() == SV_PROJ) {   /* (0.8.5) SAVE > PROJECT's SECTIONS: KNOB 1
@@ -2104,6 +2125,16 @@ static void ui_input_frame(void)
         usb_serial_apply();                             /* (MENU > USB SERIAL: when the menu has closed) */
     if (scr_input(pressed, notes))                      /* MENU > SCREEN OFF: dark, or the wake gesture: swallowed */
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
+#if FELUCCA_NO_SEQUENCER
+    /* Stage 18B: transport, recording and sequencer keys have no actions.
+     * Ignore held-state as well as press edges so no SEQ/REC layer or combo opens. */
+    {
+        uint32_t disabled = (1u << panel.btn[B_SEQ]) | (1u << panel.btn[B_REC]) |
+                            (1u << panel.btn[B_PLAY]);
+        pressed &= ~disabled;
+        fm1_in.buttons &= ~disabled;
+    }
+#endif
     home = btn_hold(&ui.home_t0, B_HOME, now, 1);
     rec = btn_hold(&ui.rec_t0, B_REC, now, 0);          /* (a tap; held, the REC layer: ui_layer.c) */
     seq = btn_hold(&ui.seq_t0, B_SEQ, now, !ui.menu && !dlg_on());

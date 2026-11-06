@@ -550,6 +550,14 @@ static uint32_t layer_btn(void);
  * LANES 2 a DRUM track's (its lane levels); SOUND / SOUND 2 a DRUM track's (DRUM-X: ui_dx.c) */
 static int page_visible(uint32_t i)
 {
+#if FELUCCA_SEQ_PROBE || FELUCCA_NO_SEQUENCER
+    if (PAGES[i].fam == FAM_SEQ)
+        return 0;   /* Stage 18A: hide sequencer-only pages in the measurement build */
+#endif
+#if FELUCCA_NO_SEQUENCER
+    if (PAGES[i].fam == FAM_SAVE && PAGES[i].graph == GR_SONG)
+        return 0;   /* ARRANGE depends on song transport; preserve stored data, hide its editor. */
+#endif
     if (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ)
         return 0;                                       /* (0.6.24) the song in one place: SAVE > ARRANGE (SEQ > SONG
                                                          * was the same page twice; kept in the table: its index) */
@@ -1806,6 +1814,9 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
     if (cur_page()->graph == GR_EVENTS) return ev_act_name();
     if (cur_page()->graph == GR_LYRIC) return "TYPE";
     if (cur_page()->graph == GR_TOOLS) {
+#if FELUCCA_NO_SEQUENCER
+        if (c == 5u) return "RUN";
+#endif
         static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};
         return actions[c < 5u ? c : 4u];
     }

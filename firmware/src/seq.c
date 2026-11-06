@@ -2299,6 +2299,12 @@ static void events_block(uint32_t n)
     mo_block(n);                                    /* (0.6.72) MIDI OUT: its setting, the clock */
     if (cin_left && !clock_mode)
         cin_block(n);
+#if FELUCCA_SEQ_PROBE || FELUCCA_NO_SEQUENCER
+    /* Stage 18A: transport stays stopped. This is a size probe, not a live-ready firmware. */
+    transport_req = 0;
+    song.playing = 0;
+    song.rec = 0;
+#else
     if (transport_req == 1u) {
         if (clock_mode)
             midi_clock_transport(0xFAu, fm1_ms);
@@ -2319,6 +2325,7 @@ static void events_block(uint32_t n)
         }
         transport_req = 0;
     }
+#endif
     midi_route_update();                         /* receive setup only; no flash or UI work */
     pr = panic_req;
     panic_req = 0;
@@ -2399,19 +2406,35 @@ static void events_block(uint32_t n)
     }
     if (clock_mode) {
         seq_n = 0;
+#if FELUCCA_NO_SEQUENCER
+        if (midi_clock.live_running) {
+#else
         if (song.playing) {
+#endif
             uint32_t last = midi_clock.have_pulse ? midi_clock.last_ms : midi_clock.start_ms;
             if (fm1_ms - last > 500u) {
+#if FELUCCA_NO_SEQUENCER
+                uint32_t j;
+                midi_clock.live_running = 0;
+                for (j = 0; j < NPART; j++)
+                    if (trk[j].arp_note)
+                        arp_off(&trk[j]);
+#else
                 seq_stop();                         /* cable loss must not leave a running held note */
+#endif
                 midi_clock.tempo_valid = 0;
             } else
                 seq_n = midi_clock_advance(fm1_ms);
         }
     }
+#if !FELUCCA_SEQ_PROBE && !FELUCCA_NO_SEQUENCER
     chain_tick(seq_n);
+#endif
     live_q(seq_n);                                  /* (0.9.11) LIVE: what goes in now (seq_live.c; idle: a test) */
+#if !FELUCCA_SEQ_PROBE && !FELUCCA_NO_SEQUENCER
     for (i = 0; i < NTRK; i++)
         seq_tick(&trk[i], seq_n);
+#endif
     for (i = 0; i < NPART; i++)                       /* (0.8.5) the kit's octaves held: their ratchets */
         if (dxo_n[i])
             dxo_tick(&trk[i], clock_mode ? seq_n : n);
@@ -2420,7 +2443,11 @@ static void events_block(uint32_t n)
     if (song.playing)
         click_tick(seq_n);
     for (i = 0; i < NPART; i++)
+#if FELUCCA_NO_SEQUENCER
+        arp_step(&trk[i], clock_mode ? seq_n : n, clock_mode ? seq_n : n);
+#else
         arp_step(&trk[i], clock_mode ? seq_n : n, clock_mode && song.playing ? seq_n : n);
+#endif
     beat_pos += clock_mode ? seq_n : n;               /* the beat the ARP LED flashes on (ui_leds) */
     if (beat_pos >= beat_samples()) {
         beat_pos -= beat_samples();

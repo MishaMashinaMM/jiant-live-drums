@@ -31,6 +31,15 @@
 #ifndef FELUCCA_DUAL_CORE
 #define FELUCCA_DUAL_CORE 1      /* (JIANT 0.6.71) the second core renders some synth tracks (hal/fm1_multicore.h) */
 #endif
+#ifndef FELUCCA_SEQ_PROBE
+#define FELUCCA_SEQ_PROBE 0     /* Stage 18A size-only probe; never flash this experimental build */
+#endif
+#ifndef FELUCCA_NO_SEQUENCER
+#define FELUCCA_NO_SEQUENCER 0  /* Stage 18B experimental live-only build; not yet hardware-safe */
+#endif
+#if FELUCCA_NO_SEQUENCER && FELUCCA_SEQ_PROBE
+#error "Select either FELUCCA_NO_SEQUENCER or FELUCCA_SEQ_PROBE, not both"
+#endif
 #ifndef FELUCCA_HOTRAM
 #define FELUCCA_HOTRAM 1         /* (JIANT 0.6.78, experimental) core 0's hottest audio code in RAM (core.h) */
 #endif

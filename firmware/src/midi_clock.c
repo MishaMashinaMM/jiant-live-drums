@@ -6,10 +6,37 @@ static struct {
     uint32_t pos, rendered, last_ms, start_ms, rem, interval_ms;
     uint32_t pulse_samples, interp_q8, tempo_ms;
     uint8_t mode, have_pulse, tempo_valid, tempo_n;
+#if FELUCCA_NO_SEQUENCER
+    uint8_t live_running;    /* External clock for the arpeggiator, independent of song transport. */
+#endif
 } midi_clock;
 
 static __attribute__((noinline)) void midi_clock_transport(uint32_t status, uint32_t ms)
 {
+#if FELUCCA_NO_SEQUENCER
+    if (status == 0xFAu || status == 0xFBu) {
+        if (status == 0xFAu) {
+            midi_clock.pos = midi_clock.rendered = midi_clock.rem = 0;
+            beat_pos = beat_n = bar_n = 0;  /* align the live ARP's beat indication to MIDI START */
+        } else
+            midi_clock.pos = midi_clock.rendered;
+        midi_clock.have_pulse = midi_clock.tempo_valid = 0;
+        midi_clock.interval_ms = 0;
+        midi_clock.start_ms = ms;
+        midi_clock.live_running = 1;
+    } else if (status == 0xFCu) {
+        uint32_t i;
+        midi_clock.live_running = 0;
+        for (i = 0; i < NPART; i++)
+            if (trk[i].arp_note)
+                arp_off(&trk[i]);
+    }
+#elif FELUCCA_SEQ_PROBE
+    /* Size-only experiment: incoming MIDI transport must not restart song playback.
+     * Keep clock-pulse handling separate for the next live-clock design pass. */
+    (void)status;
+    (void)ms;
+#else
     if (status == 0xFAu) {                         /* Start: step zero */
         midi_clock.pos = midi_clock.rendered = midi_clock.rem = 0;
         midi_clock.have_pulse = midi_clock.tempo_valid = 0;
@@ -28,6 +55,7 @@ static __attribute__((noinline)) void midi_clock_transport(uint32_t status, uint
     } else if (status == 0xFCu) {
         seq_stop();
     }
+#endif
 }
 
 static __attribute__((noinline)) void midi_clock_pulse(uint32_t ms)
@@ -61,7 +89,11 @@ static __attribute__((noinline)) void midi_clock_pulse(uint32_t ms)
             song.g[G_BPM] = (int16_t)clamp((int32_t)((15000u + dt / 2u) / dt), 40, 240);
         }
     }
+#if FELUCCA_NO_SEQUENCER
+    if (midi_clock.live_running) {
+#else
     if (song.playing) {
+#endif
         if (midi_clock.have_pulse) {
             uint32_t interval = ms - midi_clock.last_ms;
             if (interval >= 8u && interval <= 80u)

@@ -55,13 +55,21 @@ typedef struct {
 static const layer_t LAYERS[LAYER_N] = {
     {0, 0, 0, "", {{0, 0}, {0, 0}, {0, 0}}},
     {B_FX, LK_HOLD, FAM_HOME, "[FX] HOLD", {{KC_KEYS, "EFFECTS"}, {KC_K14, "MACROS"}, {0, 0}}},   /* (LET GO: the header's HOLD) */
+#if FELUCCA_NO_SEQUENCER
+    {B_GLO, LK_SET, FAM_HOME, "[GLO] SET", {{KC_GLO, "DONE"}, {0, 0}, {0, 0}}},
+#else
     {B_GLO, LK_SET, FAM_HOME, "[GLO] SET", {{KC_PLAY, "RESTART"}, {KC_GLO, "DONE"}, {0, 0}}},
+#endif
     {B_SCL, LK_SET, FAM_SCL, "[SCL] SET", {{KC_KEYS, "ROOT"}, {KC_SCL, "DONE"}, {0, 0}}},
     {B_EDIT, LK_SET, FAM_EDIT, "[EDIT] SET", {{KC_KEYS, "INIT / RECALL"}, {KC_EDIT, "DONE"}, {0, 0}}},
     {B_SEQ, LK_SET, FAM_SEQ, "[SEQ] TOOLS", {{KC_REC, "CLEAR ALL"}, {KC_SEQ, "DONE"}, {0, 0}}},   /* (0.6.14: REC, all six
                                                                      * tracks cleared, shown: it was nowhere) */
     {B_REC, LK_SET, FAM_HOME, "[REC] SET", {{KC_KEYS, "RECORDING"}, {KC_REC, "DONE"}, {0, 0}}},
+#if FELUCCA_NO_SEQUENCER
+    {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SECTIONS", {{KC_KEYS, "RECALL"}, {KC_OCTUP, "STORE"}, {KC_OCTDN, "RECALL"}}},
+#else
     {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SONG", {{KC_KEYS, "PLAY"}, {KC_OCTUP, "STORE"}, {KC_OCTDN, "RECALL"}}},
+#endif
     {B_LFO, LK_SET, FAM_HOME, "[LFO] MACRO", {{KC_K14, "M1-M4"}, {KC_SELECT, "DICE"}, {KC_KEYS, "DICE / CLEAR"}}},   /* JIANT (mod.c macro_v; SELECT, F3: macro_dice, G3 clears) */
 };
 /* SCL's knobs: the key and the sequence offset (cur_page() while the layer edits or draws them: page_over) */
@@ -182,8 +190,10 @@ static void layer_arm(uint32_t pressed, uint32_t now)
  * opened, or a combo: KNOB 1..4 quiet for a while (#39: the knob still turning is not the page's) */
 static void layer_let_go(uint32_t quiet)
 {
+#if !FELUCCA_NO_SEQUENCER
     if (ui.ly == LAYER_SAVE && lys.nqc >= 2u)           /* SAVE: two or more sections tapped: a quick chain */
         quick_chain(lys.qc, lys.nqc);
+#endif
     if (ui.ly == LAYER_SAVE && lys.song && lys.song - 1u != song_cur)   /* SAVE: KNOB 1 picked another song */
         (void)song_select(lys.song - 1u);
     lys.nqc = 0;
@@ -430,7 +440,23 @@ static void rec_key(uint32_t p)
 #define TL_MREV 12u                                     /* (0.9.3) SEQ's D5: REVERT, the track back to MUTATE's anchor */
 static void song_key(uint32_t p)
 {
+#if !FELUCCA_NO_SEQUENCER
     uint32_t k;
+#endif
+#if FELUCCA_NO_SEQUENCER
+    /* SAVE still recalls/stores live sound sections. Song mode, song record,
+     * chaining and the hidden ARRANGE page are unavailable. */
+    if (p < SK_STORE)
+        (void)section_jump(p);
+    else if (p < SK_STORE + 4u)
+        section_store(p - SK_STORE);
+    else if (p == SK_NAME) {
+        if (!ui.home && (cur_page()->graph == GR_USER || cur_page()->graph == GR_SLOTS))
+            name_rename();
+        else
+            ui_message("NAME: ON USER OR PROJECT");
+    }
+#else
     if (p < SK_STORE) {
         if (lys.nqc < sizeof lys.qc)
             lys.qc[lys.nqc++] = (uint8_t)p;
@@ -465,6 +491,7 @@ static void song_key(uint32_t p)
             page_entered();
         }
     }
+#endif
 }
 
 /* a key pressed in layer l (k: 0 = F3 .. 26 = G5) */
@@ -995,8 +1022,13 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
         if (blk)
             return LS_OFF;
         if (p < SK_STORE) {
+#if FELUCCA_NO_SEQUENCER
+            str_cpy(nm, "RECALL A", 12);
+            nm[7] = (char)('A' + p);
+#else
             str_cpy(nm, "PLAY A", 12);
             nm[5] = (char)('A' + p);
+#endif
             return !project_used(p) ? LS_DIM : live.req == (int8_t)p ? LS_WAIT : live.cur == (int8_t)p ? LS_SEL : LS_OFF;
         }
         if (p < SK_STORE + 4u) {
@@ -1004,8 +1036,12 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             nm[6] = (char)('A' + p - SK_STORE);
             return (live.dirty >> (p - SK_STORE)) & 1u ? LS_WAIT : LS_OFF;
         }
+#if FELUCCA_NO_SEQUENCER
+        str_cpy(nm, p == SK_NAME ? "NAME" : "", 12);
+#else
         str_cpy(nm, p == SK_MODE ? (live.mode ? "SONG" : "LOOP") : p == SK_REC ? "SONG REC" : p == SK_PAGE ? "ARRANGE" :
                     p == SK_NAME ? "NAME" : "", 12);
+#endif
         if (p == SK_NAME)
             return !ui.home && (cur_page()->graph == GR_USER || cur_page()->graph == GR_SLOTS) ? LS_OFF : LS_DIM;
         return p == SK_MODE && live.mode ? LS_SEL : p == SK_REC ? (live.srec == 2u ? LS_HELD : live.srec ? LS_WAIT : LS_OFF) : LS_OFF;
@@ -1089,13 +1125,23 @@ static void layer_cards(uint32_t l)
     } else if (l == LAYER_SAVE) {                       /* the section, LOOP / SONG, SONG REC, the song row */
         uint32_t n = lys.song ? lys.song - 1u : song_cur;
         fmt_int(val, (int32_t)n + 1);
+#if FELUCCA_NO_SEQUENCER
+        draw_column(0, "BANK", val, n != song_cur ? "NEXT" : "", VAL(0u), (int32_t)(n * 1000u / (NSONG - 1u)),
+                    ICON_X_SONG);
+#else
         draw_column(0, "SONG", val, n != song_cur ? "NEXT" : "", VAL(0u), (int32_t)(n * 1000u / (NSONG - 1u)),
                     ICON_X_SONG);
+#endif
         val[0] = live.cur >= 0 ? (char)('A' + live.cur) : '-'; val[1] = 0;
         draw_column(1, "SECT", val, "", live.cur >= 0 ? VAL(1u) : T_DIM, -1, ICON_X_PATTERN);
+#if FELUCCA_NO_SEQUENCER
+        draw_column(2, "STORE", "A-D", "", VAL(2u), -1, ICON_X_PATTERN);
+        draw_column(3, "RECALL", "A-D", "", VAL(3u), -1, ICON_X_PATTERN);
+#else
         draw_column(2, "PLAY", live.mode ? "SONG" : "LOOP", "", VAL(2u), -1, ICON_LOOP);
         draw_column(3, "REC", live.srec == 2u ? "ON" : live.srec ? "ARM" : "OFF", "", live.srec ? VAL(3u) : T_DIM, -1,
                     ICON_X_REC);
+#endif
     } else if (l == LAYER_MACRO) {                      /* M1..M4, 0..100 % */
         static const char *const M[4] = {"M1", "M2", "M3", "M4"};
         for (c = 0; c < 4u; c++) {
@@ -1236,9 +1282,17 @@ static void layer_state(uint32_t l)
         lst_chip("COUNT-IN", COUNTIN_N[rp_get(RP_COUNTIN) % 3u], rp_get(RP_COUNTIN) != 0u);
     } else if (l == LAYER_SAVE) {
         fmt_int(v, (int32_t)song_cur + 1);
+#if FELUCCA_NO_SEQUENCER
+        lst_chip("BANK", v, 1);
+#else
         lst_chip("SONG", v, 1);
+#endif
         v[0] = live.cur >= 0 ? (char)('A' + live.cur) : '-'; v[1] = 0;
         lst_chip("SECTION", v, live.cur >= 0);
+#if FELUCCA_NO_SEQUENCER
+        lst_chip("STORE", "A-D", 1);
+        lst_chip("RECALL", "A-D", 1);
+#else
         str_cpy(b, "CHAIN ", sizeof b);
         for (k = 0; k < lys.nqc && k < 8u; k++) { char c[2] = {(char)('A' + lys.qc[k]), 0}; str_cpy(b + str_len(b), c, sizeof b - str_len(b)); }
         lst_chip(lys.nqc >= 2u ? b : "CHAIN -", 0, lys.nqc >= 2u);
@@ -1250,6 +1304,7 @@ static void layer_state(uint32_t l)
             fmt_int(v, chain.remaining);
             lst_chip("BARS LEFT", v, 1);
         }
+#endif
     } else {                                            /* the four knobs' values; the track's sound; DRUM's sounds */
         for (k = 0; k < 4u; k++)
             if (ly_card[k].l[0])
