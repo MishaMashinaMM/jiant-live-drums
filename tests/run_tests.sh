@@ -241,6 +241,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "Shared MIDI receive channels and ownership" "$OUT/midi_rx_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drums_clock_test" tests/drums_clock_test.c -lm
     run "DRUMS live-only: external MIDI transport, arpeggiator clock and timeout" "$OUT/drums_clock_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumlab_test" tests/drumlab_test.c -lm
+    run "DRUMLAB: experimental fixed-point kick/snare synthesis" "$OUT/drumlab_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/midi_rx_ui_test" tests/midi_rx_ui_test.c -lm
     run "MIDI RX menu and project independence" "$OUT/midi_rx_ui_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/live_display_test" tests/live_display_test.c -lm
