@@ -4,14 +4,15 @@
  * The caller supplies sine_i(phase), producing signed Q15, just as DRUM-X does.
  */
 
-enum { DLAB_KICK, DLAB_SNARE };
+enum { DLAB_KICK, DLAB_SNARE, DLAB_HEAVY_SNARE };
 typedef struct {
     uint8_t kind, pitch, sweep, body, snap, noise, tone, drive;
+    uint8_t wire, weight, metal; /* Heavy snare: wire length, sub-body and inharmonic ring. */
 } dlab_patch_t;
 typedef struct {
-    uint32_t phase, phase2, seed, base_inc;
-    int32_t body_env, snap_env, sweep_env; /* Q24, initially 1.0 */
-    int32_t noise_lp;                      /* Q15 one-pole state */
+    uint32_t phase, phase2, phase3, seed, base_inc;
+    int32_t body_env, snap_env, sweep_env, wire_env; /* Q24, initially 1.0 */
+    int32_t noise_lp, wire_lp;                   /* Q15 one-pole states */
     uint8_t active;
 } dlab_voice_t;
 
@@ -40,7 +41,7 @@ static void dlab_trigger(dlab_voice_t *v, const dlab_patch_t *p, uint32_t seed)
     memset(v, 0, sizeof *v);
     v->seed = seed ? seed : 0x6D2B79F5u;
     v->base_inc = pitch_inc(note * 16u);
-    v->body_env = v->snap_env = v->sweep_env = 1 << 24;
+    v->body_env = v->snap_env = v->sweep_env = v->wire_env = 1 << 24;
     v->active = 1;
 }
 
@@ -112,4 +113,75 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
     v->sweep_env = p1;
     if (b1 < 100 && n1 < 100)
         v->active = 0;
+}
+
+/* Stage 19B: three-layer snare model. The drum membrane, attack crack, and
+ * wire rattle have INDEPENDENT envelopes. Optional inharmonic modes add metal
+ * ringing. Q15 signal paths, no floats, allocation or tables at render time.
+ * Deliberately separate from the original DRUM-X and Stage 19A voices. */
+static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
+                                 int32_t *out, uint32_t n)
+{
+    uint32_t i, ph = v->phase, ph2 = v->phase2, ph3 = v->phase3, rng = v->seed;
+    uint32_t body_us = 70000u + (uint32_t)p->body * p->body * 900000u / 16129u;
+    uint32_t wire_us = 35000u + (uint32_t)p->wire * p->wire * 1200000u / 16129u;
+    uint32_t snap_us = 900u + (uint32_t)p->snap * 130u;
+    uint32_t sweep_us = 1200u + (uint32_t)p->sweep * 220u;
+    int32_t be = v->body_env, we = v->wire_env, se = v->snap_env, pe = v->sweep_env;
+    int32_t be_end, we_end, se_end, pe_end, db, dw, ds, dp;
+    int32_t lp = v->noise_lp, wire_lp = v->wire_lp;
+    int32_t wire_k = 1800 + (int32_t)p->tone * 170;
+    uint32_t base = v->base_inc;
+    if (!v->active) {
+        for (i = 0; i < n; i++) out[i] = 0;
+        return;
+    }
+    be_end = (int32_t)(((int64_t)be * dlab_decay(n, body_us)) >> 16);
+    we_end = (int32_t)(((int64_t)we * dlab_decay(n, wire_us)) >> 16);
+    se_end = (int32_t)(((int64_t)se * dlab_decay(n, snap_us)) >> 16);
+    pe_end = (int32_t)(((int64_t)pe * dlab_decay(n, sweep_us)) >> 16);
+    db = (be_end - be) / (int32_t)n;
+    dw = (we_end - we) / (int32_t)n;
+    ds = (se_end - se) / (int32_t)n;
+    dp = (pe_end - pe) / (int32_t)n;
+    for (i = 0; i < n; i++, be += db, we += dw, se += ds, pe += dp) {
+        uint32_t inc = base + (uint32_t)(((uint64_t)base * p->sweep * (uint32_t)(pe >> 12)) >> 19);
+        int32_t white = (int32_t)(dlab_rand(&rng) >> 16) - 32768;
+        int32_t membrane = sine_i(ph);
+        int32_t second = sine_i(ph2);
+        int32_t ring = sine_i(ph3);
+        int32_t crack, wires, shell, raw, y;
+        /* Fast high-pass transient plus lower, gently damped wire rattle. */
+        lp += (int32_t)(((int64_t)(white - lp) * 3100) >> 15);
+        wire_lp += (int32_t)(((int64_t)(white - wire_lp) * wire_k) >> 15);
+        crack = white - lp;
+        wires = (white + wire_lp) / 2;
+        shell = (membrane * (180 + p->weight) + second * 85) / 392;
+        shell += (ring * p->metal) / 340;
+        raw = (int32_t)(((int64_t)shell * be * (100 + p->weight)) >> 31);
+        raw += (int32_t)(((int64_t)wires * we * p->noise) >> 31);
+        raw += (int32_t)(((int64_t)crack * se * (90 + p->snap)) >> 32);
+        /* Strong soft saturation: sustained shell remains substantial while
+         * the attack is compressed rather than cut off at a hard threshold. */
+        y = (int32_t)(((int64_t)raw * (170 + p->drive * 5u)) >> 8);
+        if (y > 14000) y = 14000 + (y - 14000) / 5;
+        if (y < -14000) y = -14000 + (y + 14000) / 5;
+        if (y > 31000) y = 31000 + (y - 31000) / 32;
+        if (y < -31000) y = -31000 + (y + 31000) / 32;
+        out[i] = y > 32767 ? 32767 : y < -32768 ? -32768 : y;
+        ph += inc;
+        ph2 += (uint32_t)(((uint64_t)inc * 6021u) >> 12);
+        ph3 += (uint32_t)(((uint64_t)inc * (7300u + p->metal * 27u)) >> 12);
+    }
+    v->phase = ph;
+    v->phase2 = ph2;
+    v->phase3 = ph3;
+    v->seed = rng;
+    v->noise_lp = lp;
+    v->wire_lp = wire_lp;
+    v->body_env = be_end;
+    v->wire_env = we_end;
+    v->snap_env = se_end;
+    v->sweep_env = pe_end;
+    if (be_end < 100 && we_end < 100 && se_end < 100) v->active = 0;
 }
