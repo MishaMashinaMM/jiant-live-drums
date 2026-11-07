@@ -37,6 +37,17 @@ static uint32_t dlab_decay(uint32_t nsamples, uint32_t tau_us)
     return x >= 65536u ? 0u : (uint32_t)(((uint64_t)65536u * 65536u) / (65536u + x));
 }
 
+/* Long snare envelopes need a 64-bit denominator. The legacy approximation
+ * above multiplied 44100 * tau_us as 32-bit, wrapping for tau > ~97 ms.
+ * Keep legacy rendering untouched; Stage 21B's opt-in harder-snare mode uses
+ * this corrected decay so its shell/wire tails stay smooth and continuous. */
+static uint32_t dlab_decay_long(uint32_t nsamples, uint32_t tau_us)
+{
+    uint64_t x = ((uint64_t)nsamples * 1000000u * 65536u) /
+                 ((uint64_t)44100u * tau_us);
+    return x >= 65536u ? 0u : (uint32_t)(((uint64_t)65536u * 65536u) / (65536u + x));
+}
+
 static void dlab_trigger(dlab_voice_t *v, const dlab_patch_t *p, uint32_t seed)
 {
     uint32_t note = 24u + (uint32_t)p->pitch * 60u / 127u;
@@ -168,10 +179,10 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
         for (i = 0; i < n; i++) out[i] = 0;
         return;
     }
-    be_end = (int32_t)(((int64_t)be * dlab_decay(n, body_us)) >> 16);
-    we_end = (int32_t)(((int64_t)we * dlab_decay(n, wire_us)) >> 16);
-    se_end = (int32_t)(((int64_t)se * dlab_decay(n, snap_us)) >> 16);
-    pe_end = (int32_t)(((int64_t)pe * dlab_decay(n, sweep_us)) >> 16);
+    be_end = (int32_t)(((int64_t)be * (edge ? dlab_decay_long(n, body_us) : dlab_decay(n, body_us))) >> 16);
+    we_end = (int32_t)(((int64_t)we * (edge ? dlab_decay_long(n, wire_us) : dlab_decay(n, wire_us))) >> 16);
+    se_end = (int32_t)(((int64_t)se * (edge ? dlab_decay_long(n, snap_us) : dlab_decay(n, snap_us))) >> 16);
+    pe_end = (int32_t)(((int64_t)pe * (edge ? dlab_decay_long(n, sweep_us) : dlab_decay(n, sweep_us))) >> 16);
     db = (be_end - be) / (int32_t)n;
     dw = (we_end - we) / (int32_t)n;
     ds = (se_end - se) / (int32_t)n;
