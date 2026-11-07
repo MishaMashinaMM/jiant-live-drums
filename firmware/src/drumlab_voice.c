@@ -52,7 +52,7 @@ static void dlab_trigger(dlab_voice_t *v, const dlab_patch_t *p, uint32_t seed)
  * decaying filtered noise. Both modes have a drive knee, not hard clipping. */
 static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint32_t n)
 {
-    uint32_t i, kb, kn, kp, ph = v->phase, ph2 = v->phase2, rng = v->seed;
+    uint32_t i, kb, kn, kp, ph = v->phase, ph2 = v->phase2, ph3 = v->phase3, rng = v->seed;
     int32_t ba = v->body_env, na = v->snap_env, pe = v->sweep_env, lp = v->noise_lp;
     int32_t b1, n1, p1, db, dn, inc, inc1, di;
     uint32_t body_us = 14000u + (uint32_t)p->body * p->body * 850000u / 16129u;
@@ -66,6 +66,11 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
      * WEIGHT sets its gain. 0..63 stays bit-for-bit like Stage 20B. */
     uint32_t punch_mix = p->kind == DLAB_KICK && p->metal > 63u ?
                          ((uint32_t)p->metal - 63u) * (64u + p->weight) : 0u;
+    /* The last part of the range adds a pronounced, industrial edge: a third
+     * harmonic and a short filtered-noise strike. Lower settings are identical
+     * to the previous Stage 21A audition. */
+    uint32_t edge_mix = p->kind == DLAB_KICK && p->metal > 111u ?
+                        (uint32_t)p->metal - 111u : 0u;
     if (punch_mix) body_us += ((uint32_t)p->metal - 63u) * 6000u;
     if (!v->active) {
         for (i = 0; i < n; i++) out[i] = 0;
@@ -101,6 +106,11 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
                 x += (int32_t)(((int64_t)sine_i(ph2) * ba * punch_mix) >> 38);
                 ph2 += (uint32_t)inc * 2u;
             }
+            if (edge_mix) {
+                x += (int32_t)(((int64_t)sine_i(ph3) * ba * edge_mix) >> 29);
+                x += (int32_t)(((int64_t)noise * na * edge_mix) >> 30);
+                ph3 += (uint32_t)inc * 3u;
+            }
         } else {
             x = (int32_t)(((int64_t)a * ba * tone_mix) >> 31);
             x += (int32_t)(((int64_t)noise * na * noise_mix) >> 31);
@@ -119,6 +129,7 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
     }
     v->phase = ph;
     v->phase2 = ph2;
+    v->phase3 = ph3;
     v->seed = rng;
     v->noise_lp = lp;
     v->body_env = b1;
