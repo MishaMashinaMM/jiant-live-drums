@@ -37,14 +37,14 @@ static uint32_t dlab_decay(uint32_t nsamples, uint32_t tau_us)
     return x >= 65536u ? 0u : (uint32_t)(((uint64_t)65536u * 65536u) / (65536u + x));
 }
 
-/* Long snare envelopes need a 64-bit denominator. The legacy approximation
- * above multiplied 44100 * tau_us as 32-bit, wrapping for tau > ~97 ms.
- * Keep legacy rendering untouched; Stage 21B's opt-in harder-snare mode uses
- * this corrected decay so its shell/wire tails stay smooth and continuous. */
+/* The legacy denominator above wraps in 32 bits for tau > ~97 ms. Stage
+ * 21B uses the algebraically equivalent x = nsamples * (1e6 * 65536 / 44100)
+ * / tau_us, with the constant rounded to 1486077. The 32-sample audio blocks
+ * fit in uint32_t; no unsupported 64-bit divide is pulled into the firmware.
+ * Preserve the legacy rendering for previously approved patches. */
 static uint32_t dlab_decay_long(uint32_t nsamples, uint32_t tau_us)
 {
-    uint64_t x = ((uint64_t)nsamples * 1000000u * 65536u) /
-                 ((uint64_t)44100u * tau_us);
+    uint32_t x = (nsamples * 1486077u) / tau_us;
     return x >= 65536u ? 0u : (uint32_t)(((uint64_t)65536u * 65536u) / (65536u + x));
 }
 
