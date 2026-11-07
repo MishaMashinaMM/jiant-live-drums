@@ -60,6 +60,11 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
     uint32_t sweep_us = 1800u + (uint32_t)p->sweep * 150u;
     int32_t noise_mix = p->noise, tone_mix = 127 - noise_mix;
     int32_t lp_k = 1024 + (int32_t)p->tone * 220;
+    /* Stage 21A: the existing METAL knob opens a sub-octave kick layer from
+     * 64 upward; <=63 is exactly the Stage 20B kick. WEIGHT sets its amount.
+     * This stays optional, so existing kits and saved patches are unchanged. */
+    uint32_t sub_mix = p->kind == DLAB_KICK && p->metal > 63u ?
+                       ((uint32_t)p->metal - 63u) * (32u + p->weight) : 0u;
     if (!v->active) {
         for (i = 0; i < n; i++) out[i] = 0;
         return;
@@ -90,6 +95,10 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
         if (p->kind == DLAB_KICK) {
             x = (int32_t)(((int64_t)a * ba) >> 24);
             x += (int32_t)(((int64_t)noise * na * (12 + noise_mix)) >> 32);
+            if (sub_mix) {
+                x += (int32_t)(((int64_t)sine_i(ph2) * ba * sub_mix) >> 39);
+                ph2 += (uint32_t)inc >> 1;
+            }
         } else {
             x = (int32_t)(((int64_t)a * ba * tone_mix) >> 31);
             x += (int32_t)(((int64_t)noise * na * noise_mix) >> 31);
