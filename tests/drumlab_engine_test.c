@@ -44,6 +44,20 @@ int main(void)
     host_preset(t, ENGI_DRUMLAB, 0);
     t->p[P_ATK] = 0;
     t->p[P_SUS] = 127;
+    {
+        dlab_patch_t before = *drumlab_patch_of(t, 38);
+        dlab_patch_t other = *drumlab_patch_of(t, 36);
+        bad += check_lab("12 separate pitch-class patches", &drumlab_kit[0][0] != &drumlab_kit[0][2]);
+        bad += check_lab("individual snare field changes without kick changes",
+                         drumlab_patch_set(t, 2, 2, 127u) &&
+                         drumlab_patch_of(t, 38)->body == 127 &&
+                         !memcmp(&other, drumlab_patch_of(t, 36), sizeof other));
+        *drumlab_patch_of(t, 38) = before;
+        bad += check_lab("invalid patch edits rejected",
+                         !drumlab_patch_set(t, 12, 0, 10) &&
+                         !drumlab_patch_set(t, 2, 10, 10) &&
+                         !drumlab_patch_set(t, 2, 1, 128));
+    }
     trk_note_on(t, 36, 110);
     bad += check_lab("MIDI 36: kick sounds through track renderer", render_energy(t, 50) > 100000u);
     trk_note_on(t, 38, 110);
