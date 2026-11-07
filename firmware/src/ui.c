@@ -575,8 +575,9 @@ static int page_visible(uint32_t i)
         return trk_engp(TSEL) == &ENG_FORMANT;
     if (PAGES[i].graph == GR_PATS || PAGES[i].graph == GR_CHANCE)   /* (0.6.37) PHRASES, a step's CHANCE: out of the */
         return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
-    if (PAGES[i].graph == GR_DXSND)  /* SOUND 1..4: DRUM-X or DRUM-LAB (independent kits) */
-        return trk_eng(TSEL) == ENGI_DRUM || trk_eng(TSEL) == ENGI_DRUMLAB;
+    if (PAGES[i].graph == GR_DXSND)  /* X-MOD belongs only to DRUM-X; LAB has four SOUND pages */
+        return trk_eng(TSEL) == ENGI_DRUM ||
+               (trk_eng(TSEL) == ENGI_DRUMLAB && PAGES[i].title[0] != 'X');
     if (PAGES[i].graph == GR_DXIMG) /* DRUM-X-specific KIT 3 / IMAGE */
         return trk_eng(TSEL) == ENGI_DRUM;
     if (PAGES[i].scope == SC_TRACK && ((PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7) ||

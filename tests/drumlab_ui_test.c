@@ -10,6 +10,13 @@ int main(void)
     ui_power_on();
     set_engine_of(TSEL, ENGI_DRUMLAB);
     TSEL->engine = TSEL->eng_req;
+    {
+        uint32_t xmod = NPAGES;
+        for (uint32_t p = 0; p < NPAGES; p++)
+            if (str_eq(PAGES[p].title, "X-MOD") && PAGES[p].fam == FAM_EDIT) { xmod = p; break; }
+        bad += check("Stage 23A: DRUM-LAB hides DRUM-X's duplicate X-MOD page",
+                     xmod < NPAGES && !page_visible(xmod));
+    }
     go_title("SOUND"); frame();
     dx_ui_lane = 2u;
     lab_ui_seen = last_note;

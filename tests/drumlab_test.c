@@ -61,6 +61,21 @@ int main(int argc, char **argv)
         dlab_run(&b, &LAB_PRESETS[2], y, 32);
         bad += check("identical preset and seed reproduce samples exactly", !memcmp(x, y, sizeof x));
     }
+    {   /* Stage 23A: the old 32-bit square*span wrapped multiple times. */
+        uint32_t last_k = 0, last_s = 0, last_w = 0, last_decay = 0;
+        int monotonic = 1;
+        for (uint32_t value = 0; value <= 127u; value++) {
+            uint32_t kick = 14000u + DLAB_CURVE_US(value, 850000u);
+            uint32_t shell = 70000u + DLAB_CURVE_US(value, 900000u);
+            uint32_t wires = 35000u + DLAB_CURVE_US(value, 1200000u);
+            uint32_t decay = dlab_decay_long(32u, shell);
+            if (value) monotonic &= kick > last_k && shell > last_s && wires > last_w && decay >= last_decay;
+            last_k = kick; last_s = shell; last_w = wires; last_decay = decay;
+        }
+        bad += check("Stage 23A: BODY and WIRES durations/decays rise monotonically 0..127", monotonic);
+        bad += check("Stage 23A: full-scale BODY and WIRES retain their intended durations",
+                     last_k == 864000u && last_s == 970000u && last_w == 1235000u);
+    }
     if (wav) fclose(wav);
     printf("DRUMLAB DSP TESTS %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return !!bad;

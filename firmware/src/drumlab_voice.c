@@ -48,6 +48,14 @@ static uint32_t dlab_decay_long(uint32_t nsamples, uint32_t tau_us)
     return x >= 65536u ? 0u : (uint32_t)(((uint64_t)65536u * 65536u) / (65536u + x));
 }
 
+/* Stage 23A: x*x*span wrapped uint32_t before the /16129, making BODY and
+ * WIRES cycle through shorter decays as their displayed values increased.
+ * Divide the fixed span first: q*sq + (r*sq)/16129 is EXACTLY the same
+ * integer result as (sq*span)/16129, without a 64-bit divide or overflow. */
+#define DLAB_CURVE_US(v, span) \
+    (((uint32_t)(v) * (v)) * ((span) / 16129u) + \
+     (((uint32_t)(v) * (v)) * ((span) % 16129u)) / 16129u)
+
 static void dlab_trigger(dlab_voice_t *v, const dlab_patch_t *p, uint32_t seed)
 {
     uint32_t note = 24u + (uint32_t)p->pitch * 60u / 127u;
@@ -66,7 +74,7 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
     uint32_t i, kb, kn, kp, ph = v->phase, ph2 = v->phase2, ph3 = v->phase3, rng = v->seed;
     int32_t ba = v->body_env, na = v->snap_env, pe = v->sweep_env, lp = v->noise_lp;
     int32_t b1, n1, p1, db, dn, inc, inc1, di;
-    uint32_t body_us = 14000u + (uint32_t)p->body * p->body * 850000u / 16129u;
+    uint32_t body_us = 14000u + DLAB_CURVE_US(p->body, 850000u);
     uint32_t snap_us = 1500u + (uint32_t)p->snap * p->snap * 240000u / 16129u;
     uint32_t sweep_us = 1800u + (uint32_t)p->sweep * 150u;
     int32_t noise_mix = p->noise, tone_mix = 127 - noise_mix;
@@ -87,7 +95,7 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
         for (i = 0; i < n; i++) out[i] = 0;
         return;
     }
-    kb = dlab_decay(n, body_us);
+    kb = dlab_decay_long(n, body_us);
     kn = dlab_decay(n, snap_us);
     kp = dlab_decay(n, sweep_us);
     b1 = (int32_t)(((int64_t)ba * kb) >> 16);
@@ -158,8 +166,8 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
                                  int32_t *out, uint32_t n)
 {
     uint32_t i, ph = v->phase, ph2 = v->phase2, ph3 = v->phase3, rng = v->seed;
-    uint32_t body_us = 70000u + (uint32_t)p->body * p->body * 900000u / 16129u;
-    uint32_t wire_us = 35000u + (uint32_t)p->wire * p->wire * 1200000u / 16129u;
+    uint32_t body_us = 70000u + DLAB_CURVE_US(p->body, 900000u);
+    uint32_t wire_us = 35000u + DLAB_CURVE_US(p->wire, 1200000u);
     uint32_t snap_us = 900u + (uint32_t)p->snap * 130u;
     uint32_t sweep_us = 1200u + (uint32_t)p->sweep * 220u;
     /* Stage 21B: TONE above 116 adds an optional harder shell/crack voice.
@@ -182,8 +190,8 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
         for (i = 0; i < n; i++) out[i] = 0;
         return;
     }
-    be_end = (int32_t)(((int64_t)be * (edge ? dlab_decay_long(n, body_us) : dlab_decay(n, body_us))) >> 16);
-    we_end = (int32_t)(((int64_t)we * (edge ? dlab_decay_long(n, wire_us) : dlab_decay(n, wire_us))) >> 16);
+    be_end = (int32_t)(((int64_t)be * dlab_decay_long(n, body_us)) >> 16);
+    we_end = (int32_t)(((int64_t)we * dlab_decay_long(n, wire_us)) >> 16);
     se_end = (int32_t)(((int64_t)se * (edge ? dlab_decay_long(n, snap_us) : dlab_decay(n, snap_us))) >> 16);
     pe_end = (int32_t)(((int64_t)pe * (edge ? dlab_decay_long(n, sweep_us) : dlab_decay(n, sweep_us))) >> 16);
     db = (be_end - be) / (int32_t)n;
