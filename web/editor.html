@@ -1948,6 +1948,7 @@ function makeMockDevice(opt = {}) {
       name: "-", titles: ["-", "-"], edit: Array.from({ length: 8 }, () => D("-", F.INT, 0, 127, 0)), presets: [],
     };
     GP[20].names = ENG.map((e) => e.name);             /* historical ids stay fixed, as ENGINES[] / N_ENGNAME */
+    GP[20].max = ENG.length - 1;                       /* Stage 20B: ENG enum also includes DRUM-LAB at ID 15. */
   }
   const FM6_E = ENG.findIndex((e) => e.name === "FM6"), FM6_OWN = FM6.FACTORY_PK.length, DRUM_E = ENG.findIndex((e) => e.name === "DRUM");
   /* factory PATTERNS[] (engines.c; the device loads them from SEQ > PATTERNS, presets only suggest one): absolute
