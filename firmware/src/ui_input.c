@@ -2140,8 +2140,7 @@ static void ui_input_frame(void)
         fm1_in.buttons &= ~disabled;
     }
     if (ui.drum_map_open) {
-        /* Keep the assigned track and pad separate from EDIT's sound pages.
-         * K2/K3 are reserved for pan/pitch in the following DSP increment. */
+        /* Keep the assigned track and pad separate from EDIT's sound pages. */
         if ((s = panel_enc(EN_ALGO)) != 0)
             track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
         if ((s = panel_enc(EN_SELECT)) != 0) {
@@ -2173,8 +2172,18 @@ static void ui_input_frame(void)
                 ui.force = 1u;
             }
         }
+        if ((s = panel_enc(EN_K2)) != 0) {
+            uint32_t ti = song.sel;
+            if (trk[ti].eng_req == ENGI_DRUM || trk[ti].eng_req == ENGI_DRUMLAB) {
+                int32_t p = drum_pad_pan[ti][ui.drum_map_pad];
+                fm1_irq_off();
+                drum_pad_pan[ti][ui.drum_map_pad] = (int8_t)clamp(p + (s > 0 ? 1 : -1), -64, 64);
+                fm1_irq_on();
+                ui.force = 1u;
+            }
+        }
         panel_enc(EN_PRESET);
-        panel_enc(EN_K2); panel_enc(EN_K3); panel_enc(EN_K4);
+        panel_enc(EN_K3); panel_enc(EN_K4);
         return;
     }
 #endif

@@ -946,6 +946,14 @@ int main(void)
             ok = proj_pack(&saved, &lab) && proj_import(&restored, &saved, sizeof saved) &&
                  !restored.lab_note_on[0];
             bad += check("Stage 22A: a project without a MIDI map keeps legacy routing", ok);
+            lab.pad_pan[0][0] = -64;
+            lab.pad_pan[0][2] = 31;
+            lab.sum = proj_sum(&lab);
+            ok = proj_pack(&saved, &lab) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.pad_pan[0][0] == -64 && restored.pad_pan[0][2] == 31 &&
+                 restored.pad_pan[0][1] == 0;
+            bad += check("Stage 22B: DRUM-LAB individual pans survive project save/import", ok);
+            lab.pad_pan[0][0] = lab.pad_pan[0][2] = 0;
         }
         {   /* Stage 22: DRUM-X uses the same custom-note capability independently. */
             static project_t dx, restored;
@@ -967,6 +975,13 @@ int main(void)
             ok = proj_pack(&saved, &dx) && proj_import(&restored, &saved, sizeof saved) &&
                  !restored.dx_note_on[0];
             bad += check("Stage 22: an older DRUM-X project retains its GM mapping", ok);
+            dx.pad_pan[0][1] = 64;
+            dx.pad_pan[0][11] = -12;
+            dx.sum = proj_sum(&dx);
+            ok = proj_pack(&saved, &dx) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.pad_pan[0][1] == 64 && restored.pad_pan[0][11] == -12 &&
+                 restored.pad_pan[0][0] == 0;
+            bad += check("Stage 22B: DRUM-X individual pans survive project save/import", ok);
         }
         {   /* Stage 9B2: the extra drums are independent across a project save/load, including their LEVEL values. */
             static project_t b2, restored;

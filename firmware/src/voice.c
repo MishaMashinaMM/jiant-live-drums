@@ -182,7 +182,7 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
                 y = y + (((x - y) * w) >> 12);          /* out */
             out[i] = y;
         }
-        if ((dx_xon & 1u) && ENGINES[t->engine] == &ENG_DRUM)
+        if ((dx_xon & 1u) && (ENGINES[t->engine] == &ENG_DRUM || ENGINES[t->engine] == &ENG_DRUMLAB))
             tf_sides(ti, &c, k, ft, was, on, n > CTL ? CTL : n);
         tf_on[ti] = (uint8_t)on;
     }
@@ -1047,7 +1047,7 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         t->mo_cur = (uint16_t)(c + clamp(g - c, -(3 << 8), 3 << 8));
     }
     dx_xon = 0;                                         /* (0.6.48) a DRUM part's IMAGE and SENDs (eng_drum.c) */
-    if (e == &ENG_DRUM)
+    if (e == &ENG_DRUM || e == &ENG_DRUMLAB)
         drum_side_begin(t, n);
     if (e->block)                                       /* the engine's per-part work (WHEEL: bars, rotor) */
         e->block(t);

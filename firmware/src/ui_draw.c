@@ -2224,14 +2224,22 @@ static void draw_drum_midi_map(void)
         cv_text(6, y + CAP_IN(S, 20), &AF_S, b, col);
         fmt_int(b, (int32_t)note);
         cv_text(68, y + CAP_IN(S, 20), &AF_S, b, col);
-        cv_text(116, y + CAP_IN(S, 20), &AF_S, "--", T_DIM);
+        {
+            int32_t pan = drum_pad_pan[ti][lane];
+            if (pan == 0) str_cpy(b, "C", sizeof b);
+            else {
+                b[0] = pan < 0 ? 'L' : 'R';
+                fmt_int(b + 1, pan < 0 ? -pan : pan);
+            }
+            cv_text(116, y + CAP_IN(S, 20), &AF_S, b, col);
+        }
         cv_text(174, y + CAP_IN(S, 20), &AF_S, "--", T_DIM);
     }
     cv_blit(0, 40);
 
     cv_begin(240, 42, T_BG);
     cv_text(6, CAP_IN(S, 14), &AF_S, "ALGO TRACK  SELECT PAD", T_DIM);
-    cv_text(6, 20 + CAP_IN(S, 14), &AF_S, "K1 NOTE   OCT-/+ PAGE", T_TEXT);
+    cv_text(6, 20 + CAP_IN(S, 14), &AF_S, "K1 NOTE K2 PAN OCT PAGE", T_TEXT);
     cv_blit(0, 198);
     ui.force = 0;
 }

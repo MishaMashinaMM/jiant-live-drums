@@ -1989,7 +1989,7 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             return;
         }
         int32_t lq0 = lq, gl0 = gl, gr0 = gr;           /* (0.7.5: uin_mix, the same ramps) */
-        if (dx_xon && ENGINES[t->engine] == &ENG_DRUM)  /* (0.6.48) IMAGE, SENDs: from the same ramps as below */
+        if (dx_xon && (ENGINES[t->engine] == &ENG_DRUM || ENGINES[t->engine] == &ENG_DRUMLAB))
         {
             int32_t *const sx[3] = {sc, sd, sr};
             drum_mix(ol, or_, n, lq, dl, gl, dgl, gr, dgr, pm0, pm1, sx);

@@ -163,6 +163,9 @@ static const uint8_t DRUM_LANE_NOTE[NLANE] = {36, 38, 39, 42, 46, 45, 37, 56};
 static const uint8_t DRUM_NOTE12[DV_NLANE12] = {36, 38, 39, 42, 46, 45, 37, 56, 41, 40, 43, 44};
 static uint8_t drum_midi_note[NPART][DV_NLANE12];
 static uint8_t drum_midi_custom[NPART];
+/* Stage 22B: fixed signed pan for each pad, independent on every track.
+ * Added to DRUM-X IMAGE; DRUM-LAB uses it directly. Zero keeps old sound. */
+static int8_t drum_pad_pan[NPART][DV_NLANE12];
 
 static int drum_note_set(track_t *t, uint32_t lane, uint32_t note)
 {
@@ -441,32 +444,36 @@ static int32_t dx_img_k(const track_t *t)
 /* a DRUM part's render starts (voice.c track_render): the pans of the block, the buffers that will be fed cleared */
 static __attribute__((noinline)) void drum_side_begin(const track_t *t, uint32_t n)
 {
-    int32_t img = clamp(t->p[P_DXIMG], 0, 127), k = img ? dx_img_k(t) : 0;
+    uint32_t ti = (uint32_t)(t - trk) % NTRK;
+    uint32_t lab = t->eng_req == ENGI_DRUMLAB;
+    int32_t img = lab ? 0 : clamp(t->p[P_DXIMG], 0, 127), k = img ? dx_img_k(t) : 0;
     uint32_t l, i, on = 0;
     dx_core_t *dc = &DXC;                                /* (0.7.9: this core's, read once) */
-    int8_t *pc = dx_pcur[(uint32_t)(t - trk) % NTRK];
-    int8_t *pc12 = dx_pcur12[(uint32_t)(t - trk) % NTRK];
+    int8_t *pc = dx_pcur[ti];
+    int8_t *pc12 = dx_pcur12[ti];
     for (l = 0; l < DV_NLANE; l++) {
-        int32_t p = img ? dx_img_pan(l, img) * k >> 8 : 0, p0 = pc[l];
+        int32_t p = (img ? dx_img_pan(l, img) * k >> 8 : 0) + drum_pad_pan[ti][l], p0 = pc[l];
+        p = clamp(p, -64, 64);
         p = p0 + clamp(p - p0, -DX_PSLEW, DX_PSLEW);
         pc[l] = (int8_t)p;
         dc->lpan0[l] = (int8_t)p0;
         dc->lpan[l] = (int8_t)p;
         if (p || p0)
             on |= 1u;
-        if (DXS_BUS(dx_snd[l]) && DXS_AMT(dx_snd[l]))
+        if (!lab && DXS_BUS(dx_snd[l]) && DXS_AMT(dx_snd[l]))
             on |= 1u << DXS_BUS(dx_snd[l]);
     }
     for (l = 0; l < 4u; l++) {
         uint32_t ll = DV_NLANE + l;
-        int32_t p = img ? dx_img_pan(ll, img) * k >> 8 : 0, p0 = pc12[l];
+        int32_t p = (img ? dx_img_pan(ll, img) * k >> 8 : 0) + drum_pad_pan[ti][ll], p0 = pc12[l];
+        p = clamp(p, -64, 64);
         p = p0 + clamp(p - p0, -DX_PSLEW, DX_PSLEW);
         pc12[l] = (int8_t)p;
         dc->lpan0[ll] = (int8_t)p0;
         dc->lpan[ll] = (int8_t)p;
         if (p || p0)
             on |= 1u;
-        if (DXS_BUS(dx_snd12[l]) && DXS_AMT(dx_snd12[l]))
+        if (!lab && DXS_BUS(dx_snd12[l]) && DXS_AMT(dx_snd12[l]))
             on |= 1u << DXS_BUS(dx_snd12[l]);
     }
     dc->xon = (uint8_t)on;

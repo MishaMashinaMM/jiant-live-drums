@@ -39,6 +39,10 @@ int main(void)
             snare += t->v[i].s[0] == DV_SNARE;
         }
     bad += test("DRUM-X MIDI 6 triggers both kick and snare", kick == 1 && snare == 1);
+    drum_pad_pan[0][0] = -64;
+    for (i = 0; i < 70u; i++) drum_side_begin(t, CTL);
+    bad += test("DRUM-X per-pad fixed pan works with IMAGE at zero",
+                dx_lpan[0] == -64 && (dx_xon & 1u));
 
     host_tracks_init();
     host_preset(t, ENGI_DRUMLAB, 0);
@@ -54,6 +58,10 @@ int main(void)
             snare += t->v[i].note == 38;
         }
     bad += test("DRUM-LAB MIDI 6 triggers two independent pads", kick == 1 && snare == 1);
+    drum_pad_pan[0][0] = 64;
+    for (i = 0; i < 70u; i++) drum_side_begin(t, CTL);
+    bad += test("DRUM-LAB per-pad fixed pan has its own stereo side",
+                dx_lpan[0] == 64 && (dx_xon & 1u) && !(dx_xon & 0xEu));
     printf("DRUM MIDI MAP TESTS %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return bad != 0;
 }

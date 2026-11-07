@@ -144,8 +144,19 @@ static void drumlab_render(track_t *t, voice_t *v, int32_t *out,
         dlab_run_heavy_snare(state, patch, hit, n);
     else
         dlab_run(state, patch, hit, n);
-    for (i = 0; i < n; i++)
-        out[i] += voice_amp(hit[i], m, i);
+    {
+        uint32_t lane = drumlab_lane(v->note);
+        int32_t p0 = dx_lpan0[lane], dp = (int32_t)dx_lpan[lane] - p0;
+        int32_t pq = p0 * 256, step = n ? dp * 256 / (int32_t)n : 0;
+        for (i = 0; i < n; i++, pq += step) {
+            int32_t x = voice_amp(hit[i], m, i), pan = pq >> 8;
+            out[i] += x;
+            if (dx_xon & 1u) {
+                if (pan > 0) dx_sl[i] += (x >> 6) * pan;
+                else if (pan < 0) dx_sr[i] += (x >> 6) * -pan;
+            }
+        }
+    }
 }
 
 static const preset_t DRUMLAB_PRESETS[] = {
