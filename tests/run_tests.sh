@@ -148,7 +148,18 @@ OUT=build/host
 mkdir -p "$OUT"
 CC="${CC:-cc} -O1 -Wall -Wno-unused-function"
 fail=0
-run() { echo "== $1"; shift; "$@" || fail=1; }
+run() {
+    label=$1
+    echo "== $label"
+    shift
+    if "$@"; then
+        :
+    else
+        rc=$?
+        echo "HOST TEST STEP FAILED ($rc): $label"
+        fail=1
+    fi
+}
 
 $CC -o "$OUT/storage_test" tests/storage_test.c
 run "flash storage (A/B, torn writes)" "$OUT/storage_test"
