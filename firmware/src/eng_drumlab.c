@@ -14,6 +14,23 @@ static dlab_voice_t drumlab_state[NPART][NVOICE];
 static dlab_patch_t drumlab_kit[NPART][DLAB_LANES];
 static uint8_t drumlab_kit_ready[NPART];
 static uint16_t drumlab_kit_dirty[NPART]; /* sparse project encoding: 12 bits per track */
+/* Stage 22A: MIDI input-to-pad assignment. Until a map is enabled, retain
+ * Stage 21B's octave-wrapped note behavior for old projects. */
+static uint8_t drumlab_midi_note[NPART][DLAB_LANES];
+static uint8_t drumlab_midi_custom[NPART];
+
+static int drumlab_note_set(track_t *t, uint32_t lane, uint32_t note)
+{
+    uint32_t ti = (uint32_t)(t - trk), i;
+    if (ti >= NPART || lane >= DLAB_LANES || note > 127u) return 0;
+    if (!drumlab_midi_custom[ti]) {
+        for (i = 0; i < DLAB_LANES; i++)
+            drumlab_midi_note[ti][i] = (uint8_t)(36u + i);
+        drumlab_midi_custom[ti] = 1u;
+    }
+    drumlab_midi_note[ti][lane] = (uint8_t)note;
+    return 1;
+}
 
 static uint32_t drumlab_lane(uint32_t note)
 {

@@ -63,6 +63,25 @@ int main(void)
     trk_note_on(t, 38, 110);
     bad += check_lab("MIDI 38: heavy snare sounds through track renderer", render_energy(t, 50) > 100000u);
     bad += check_lab("two independent one-shot voices", t->v[0].active && t->v[1].active);
+    {
+        uint32_t before, i, kick = 0, snare = 0;
+        bad += check_lab("MIDI note assignments accept 0..127, reject invalid input",
+                         drumlab_note_set(t, 0, 6) && drumlab_note_set(t, 2, 6) &&
+                         drumlab_note_set(t, 11, 127) && !drumlab_note_set(t, 12, 6) &&
+                         !drumlab_note_set(t, 0, 128));
+        before = vage;
+        trk_note_on(t, 38, 110);
+        bad += check_lab("old snare note no longer triggers after reassignment", vage == before);
+        trk_note_on(t, 6, 110);
+        for (i = 0; i < NVOICE; i++) {
+            if (t->v[i].active && t->v[i].age > before) {
+                kick += t->v[i].note == 36u;
+                snare += t->v[i].note == 38u;
+            }
+        }
+        bad += check_lab("one MIDI note fans out to kick and snare", kick == 1 && snare == 1);
+        bad += check_lab("both mapped pads produce audible output", render_energy(t, 30) > 100000u);
+    }
     printf("DRUMLAB ENGINE TESTS %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return !!bad;
 }

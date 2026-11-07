@@ -676,7 +676,7 @@ static volatile uint8_t asleep_hit;                     /* (0.6.28) a note went 
                                                          * their sounds and steps kept (fx.c mix_part) */                                /* (0.6.15) bit k: track k muted by GLO's solo / the FX layer's
                                                          * black key (perform.c): no new notes, as MUTE (a MIDI mute: a
                                                          * silenced track's voices end, it costs nothing) */
-static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
+static void trk_note_on_raw(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t any = 0, i, mode = trk_vmode(t);
     if ((uint32_t)(t - trk) >= trk_live && !t->p[P_MUTE]) {
@@ -731,7 +731,22 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
     }
 }
 
-static void trk_note_off(track_t *t, uint32_t note)
+static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
+{
+    uint32_t ti = (uint32_t)(t - trk), lane;
+    if (t->eng_req == ENGI_DRUMLAB && ti < NPART && drumlab_midi_custom[ti]) {
+        /* Every matching lane is a separate hit, including duplicate MIDI
+         * assignments on the same track. Voice stealing remains centralized
+         * in voice_alloc: the global NVOICE budget is unchanged. */
+        for (lane = 0; lane < DLAB_LANES; lane++)
+            if (drumlab_midi_note[ti][lane] == note)
+                trk_note_on_raw(t, 36u + lane, vel);
+        return;
+    }
+    trk_note_on_raw(t, note, vel);
+}
+
+static void trk_note_off_raw(track_t *t, uint32_t note)
 {
     uint32_t i, k = 0, mode = trk_vmode(t);
     for (i = 0; i < t->xp_n; i++)                       /* not sounding yet (engine switch): forget it */
@@ -762,6 +777,18 @@ static void trk_note_off(track_t *t, uint32_t note)
             t->v[i].gate = 0;
             t->v[i].stage = 3;
         }
+}
+
+static void trk_note_off(track_t *t, uint32_t note)
+{
+    uint32_t ti = (uint32_t)(t - trk), lane;
+    if (t->eng_req == ENGI_DRUMLAB && ti < NPART && drumlab_midi_custom[ti]) {
+        for (lane = 0; lane < DLAB_LANES; lane++)
+            if (drumlab_midi_note[ti][lane] == note)
+                trk_note_off_raw(t, 36u + lane);
+        return;
+    }
+    trk_note_off_raw(t, note);
 }
 
 static void trk_all_off(track_t *t)
