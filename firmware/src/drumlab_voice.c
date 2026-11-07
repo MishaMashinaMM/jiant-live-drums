@@ -205,6 +205,10 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
         if (y < -14000) y = -14000 + (y + 14000) / 5;
         if (y > 31000) y = 31000 + (y - 31000) / 32;
         if (y < -31000) y = -31000 + (y + 31000) / 32;
+        if (edge) {  /* extra soft knee for the new crack layer; legacy snares untouched */
+            if (y > 30000) y = 30000 + (y - 30000) / 4;
+            if (y < -30000) y = -30000 + (y + 30000) / 4;
+        }
         out[i] = y > 32767 ? 32767 : y < -32768 ? -32768 : y;
         ph += inc;
         ph2 += (uint32_t)(((uint64_t)inc * 6021u) >> 12);
