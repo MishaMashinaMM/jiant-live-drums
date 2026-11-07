@@ -60,11 +60,13 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
     uint32_t sweep_us = 1800u + (uint32_t)p->sweep * 150u;
     int32_t noise_mix = p->noise, tone_mix = 127 - noise_mix;
     int32_t lp_k = 1024 + (int32_t)p->tone * 220;
-    /* Stage 21A: the existing METAL knob opens a sub-octave kick layer from
-     * 64 upward; <=63 is exactly the Stage 20B kick. WEIGHT sets its amount.
-     * This stays optional, so existing kits and saved patches are unchanged. */
-    uint32_t sub_mix = p->kind == DLAB_KICK && p->metal > 63u ?
-                       ((uint32_t)p->metal - 63u) * (32u + p->weight) : 0u;
+    /* Stage 21A revision: the original kick's fundamental can be around 50 Hz;
+     * a sub-octave is then almost inaudible. METAL 64..127 instead adds a
+     * tuneful second harmonic (punch around 100 Hz), with a longer body tail.
+     * WEIGHT sets its gain. 0..63 stays bit-for-bit like Stage 20B. */
+    uint32_t punch_mix = p->kind == DLAB_KICK && p->metal > 63u ?
+                         ((uint32_t)p->metal - 63u) * (64u + p->weight) : 0u;
+    if (punch_mix) body_us += ((uint32_t)p->metal - 63u) * 6000u;
     if (!v->active) {
         for (i = 0; i < n; i++) out[i] = 0;
         return;
@@ -95,9 +97,9 @@ static void dlab_run(dlab_voice_t *v, const dlab_patch_t *p, int32_t *out, uint3
         if (p->kind == DLAB_KICK) {
             x = (int32_t)(((int64_t)a * ba) >> 24);
             x += (int32_t)(((int64_t)noise * na * (12 + noise_mix)) >> 32);
-            if (sub_mix) {
-                x += (int32_t)(((int64_t)sine_i(ph2) * ba * sub_mix) >> 39);
-                ph2 += (uint32_t)inc >> 1;
+            if (punch_mix) {
+                x += (int32_t)(((int64_t)sine_i(ph2) * ba * punch_mix) >> 38);
+                ph2 += (uint32_t)inc * 2u;
             }
         } else {
             x = (int32_t)(((int64_t)a * ba * tone_mix) >> 31);

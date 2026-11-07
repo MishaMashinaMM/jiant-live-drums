@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Stage 21A: optional low-octave kick body; three sounds for audition.
+ * Stage 21A: optional mid-bass kick punch and longer body; three sounds for audition.
  *   build/host/drumlab_stage21_test build/drumlab_stage21-kicks.wav
  */
 #define main hostsim_main
@@ -55,8 +55,8 @@ int main(int argc, char **argv)
             }
         }
         bad += check21(k == 0 ? "original kick audible, without clipping" :
-                       k == 1 ? "moderate sub kick audible, without clipping" :
-                                "heavy sub kick audible, without clipping",
+                       k == 1 ? "moderate punch kick audible, without clipping" :
+                                "heavy punch kick audible, without clipping",
                        energy > 100000u && peak > 100u && peak < 32767);
         if (wav) for (uint32_t i = 0; i < PAUSE; i++) wav_put(wav, 0, 0);
     }
