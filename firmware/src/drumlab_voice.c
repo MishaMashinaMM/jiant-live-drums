@@ -213,7 +213,17 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
         shell = (membrane * (180 + p->weight) + second * 85) / 392;
         shell += (ring * p->metal) / 340;
         raw = (int32_t)(((int64_t)shell * be * (100 + p->weight)) >> 31);
-        raw += (int32_t)(((int64_t)wires * we * p->noise) >> 31);
+        if (edge) {
+            /* Stage 21B's approved hard-shell/crack voices stay identical. */
+            raw += (int32_t)(((int64_t)wires * we * p->noise) >> 31);
+        } else {
+            /* Stage 23A2: restoring the full WIRES decay made ordinary snares
+             * hiss for almost as long as their membrane. Square the rattle's
+             * envelope (Q24) and halve its level. The attack crack below is
+             * unchanged, and WIRES still controls the rattle's duration. */
+            int32_t rattle = (we >> 12) * (we >> 12);
+            raw += (int32_t)(((int64_t)wires * rattle * p->noise) >> 32);
+        }
         raw += (int32_t)(((int64_t)crack * se * (90 + p->snap)) >> 32);
         if (edge) {
             /* Separate shell and attack characters: hard shell emphasizes

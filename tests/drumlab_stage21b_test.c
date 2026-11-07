@@ -27,7 +27,9 @@ int main(int argc, char **argv)
         dlab_patch_t p = original;
         dlab_voice_t v;
         uint64_t energy = 0;
-        uint32_t clipped = 0, audible_tail = 0;
+        uint32_t clipped = 0, audible_tail = 0, hf_count = 0;
+        uint64_t hf_tail = 0;
+        int32_t previous = 0;
         p.tone = tone[k];
         dlab_trigger(&v, &p, 0x13579BDFu);
         for (uint32_t i = 0; i < HIT; i += BLOCK) {
@@ -37,6 +39,12 @@ int main(int argc, char **argv)
                 int32_t a = samples[j] < 0 ? -samples[j] : samples[j];
                 energy += (uint32_t)a;
                 if (i + j >= 22050u && a > 30) audible_tail++;
+                if (k == 0u && i + j >= 13230u && i + j < 26460u) {
+                    int32_t delta = samples[j] - previous;
+                    hf_tail += (uint32_t)(delta < 0 ? -delta : delta);
+                    hf_count++;
+                }
+                previous = samples[j];
                 clipped += samples[j] == 32767 || samples[j] == -32768;
                 if (wav) {
                     /* Audition clips are finite. Fade the last 100 ms so the
@@ -55,6 +63,9 @@ int main(int argc, char **argv)
                    k == 1 ? "hard shell snare sustained and unclipped" :
                             "extreme crack snare sustained and unclipped",
                    energy > 100000u && audible_tail > 100u && !clipped);
+        if (k == 0u)
+            bad += chk("Stage 23A2: ordinary snare's long tail has no excessive hiss",
+                       hf_count > 10000u && hf_tail < (uint64_t)hf_count * 1500u);
         if (wav) for (uint32_t i = 0; i < PAUSE; i++) wav_put(wav, 0, 0);
     }
     if (wav) fclose(wav);
