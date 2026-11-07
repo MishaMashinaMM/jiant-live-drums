@@ -2192,6 +2192,51 @@ static void draw_mixer_table(void)
     }
 }
 
+#if FELUCCA_NO_SEQUENCER
+/* Live-only SEQ screen. Six pads are visible at once; the list belongs to
+ * the selected track, not to a shared kit or MIDI channel. */
+static void draw_drum_midi_map(void)
+{
+    const uint32_t ti = song.sel, first = ui.drum_map_pad < 6u ? 0u : 6u;
+    const track_t *t = &trk[ti];
+    uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB;
+    char b[24];
+    cv_begin(240, 40, T_BG);
+    cv_text(6, CAP_IN(M, 24), &AF_M, "DRUM MIDI MAP", T_TEXT);
+    b[0] = 'T'; b[1] = (char)('1' + ti); b[2] = ' '; b[3] = 0;
+    str_cpy(b + 3, drum ? "DRUM-X" : lab ? "DRUM-LAB" : "NO DRUM", sizeof b - 3u);
+    cv_text(6, 30 + CAP_IN(S, 10), &AF_S, b, T_ACCENT);
+    cv_blit(0, 0);
+
+    cv_begin(240, 158, T_BG);
+    cv_text(6, CAP_IN(S, 14), &AF_S, "PAD", T_DIM);
+    cv_text(68, CAP_IN(S, 14), &AF_S, "NOTE", T_DIM);
+    cv_text(116, CAP_IN(S, 14), &AF_S, "PAN", T_DIM);
+    cv_text(174, CAP_IN(S, 14), &AF_S, "PITCH", T_DIM);
+    if (drum || lab) for (uint32_t i = 0; i < 6u; i++) {
+        uint32_t lane = first + i;
+        int32_t y = 16 + (int32_t)i * 23;
+        uint16_t col = lane == ui.drum_map_pad ? T_ACCENT : T_TEXT;
+        uint32_t note = drum ? (drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane])
+                             : (drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane);
+        b[0] = (char)('0' + (lane + 1u) / 10u);
+        b[1] = (char)('0' + (lane + 1u) % 10u); b[2] = 0;
+        cv_text(6, y + CAP_IN(S, 20), &AF_S, b, col);
+        fmt_int(b, (int32_t)note);
+        cv_text(68, y + CAP_IN(S, 20), &AF_S, b, col);
+        cv_text(116, y + CAP_IN(S, 20), &AF_S, "--", T_DIM);
+        cv_text(174, y + CAP_IN(S, 20), &AF_S, "--", T_DIM);
+    }
+    cv_blit(0, 40);
+
+    cv_begin(240, 42, T_BG);
+    cv_text(6, CAP_IN(S, 14), &AF_S, "ALGO TRACK  SELECT PAD", T_DIM);
+    cv_text(6, 20 + CAP_IN(S, 14), &AF_S, "K1 NOTE   OCT-/+ PAGE", T_TEXT);
+    cv_blit(0, 198);
+    ui.force = 0;
+}
+#endif
+
 static void ui_draw_body(uint32_t counting)
 {
     if (ui.hint_pg && ui.hint_pg != (ui.home ? 255u : ui.page + 1u)) {   /* (0.9.0) a layer's hint: its own page's only */
@@ -2204,6 +2249,12 @@ static void ui_draw_body(uint32_t counting)
         draw_head();
         return;
     }
+#if FELUCCA_NO_SEQUENCER
+    if (ui.drum_map_open) {
+        draw_drum_midi_map();
+        return;
+    }
+#endif
     if (ui.menu) {
         draw_menu();
         ui.force = 0;

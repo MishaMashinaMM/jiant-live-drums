@@ -2127,13 +2127,55 @@ static void ui_input_frame(void)
     if (scr_input(pressed, notes))                      /* MENU > SCREEN OFF: dark, or the wake gesture: swallowed */
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
 #if FELUCCA_NO_SEQUENCER
-    /* Stage 18B: transport, recording and sequencer keys have no actions.
-     * Ignore held-state as well as press edges so no SEQ/REC layer or combo opens. */
+    /* Stage 22B: the freed SEQ button opens the live drum MIDI map. The
+     * transport remains disabled, with no sequencer layers or combinations. */
     {
         uint32_t disabled = (1u << panel.btn[B_SEQ]) | (1u << panel.btn[B_REC]) |
                             (1u << panel.btn[B_PLAY]);
+        if ((pressed & (1u << panel.btn[B_SEQ])) && !ui.menu && !dlg_on() && !name_on()) {
+            ui.drum_map_open ^= 1u;
+            ui.force = 1u;
+        }
         pressed &= ~disabled;
         fm1_in.buttons &= ~disabled;
+    }
+    if (ui.drum_map_open) {
+        /* Keep the assigned track and pad separate from EDIT's sound pages.
+         * K2/K3 are reserved for pan/pitch in the following DSP increment. */
+        if ((s = panel_enc(EN_ALGO)) != 0)
+            track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
+        if ((s = panel_enc(EN_SELECT)) != 0) {
+            ui.drum_map_pad = (uint8_t)clamp((int32_t)ui.drum_map_pad + (s > 0 ? 1 : -1), 0, 11);
+            ui.force = 1u;
+        }
+        if (pressed & (1u << panel.btn[B_OCTDN])) {
+            ui.drum_map_pad = (uint8_t)(ui.drum_map_pad % 6u);
+            ui.force = 1u;
+        }
+        if (pressed & (1u << panel.btn[B_OCTUP])) {
+            ui.drum_map_pad = (uint8_t)(6u + ui.drum_map_pad % 6u);
+            ui.force = 1u;
+        }
+        if ((s = panel_enc(EN_K1)) != 0) {
+            uint32_t ti = song.sel, lane = ui.drum_map_pad;
+            track_t *t = &trk[ti];
+            int32_t old = -1;
+            if (t->eng_req == ENGI_DRUM)
+                old = drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane];
+            else if (t->eng_req == ENGI_DRUMLAB)
+                old = drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36 + (int32_t)lane;
+            if (old >= 0) {
+                uint32_t note = (uint32_t)clamp(old + (s > 0 ? 1 : -1), 0, 127);
+                fm1_irq_off();
+                if (t->eng_req == ENGI_DRUM) drum_note_set(t, lane, note);
+                else drumlab_note_set(t, lane, note);
+                fm1_irq_on();
+                ui.force = 1u;
+            }
+        }
+        panel_enc(EN_PRESET);
+        panel_enc(EN_K2); panel_enc(EN_K3); panel_enc(EN_K4);
+        return;
     }
 #endif
     home = btn_hold(&ui.home_t0, B_HOME, now, 1);
