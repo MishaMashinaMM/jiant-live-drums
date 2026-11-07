@@ -13,6 +13,7 @@ static dlab_voice_t drumlab_state[NPART][NVOICE];
 #define DLAB_LANES 12u
 static dlab_patch_t drumlab_kit[NPART][DLAB_LANES];
 static uint8_t drumlab_kit_ready[NPART];
+static uint16_t drumlab_kit_dirty[NPART]; /* sparse project encoding: 12 bits per track */
 
 static uint32_t drumlab_lane(uint32_t note)
 {
@@ -87,6 +88,7 @@ static int drumlab_patch_set(track_t *t, uint32_t lane, uint32_t field, uint32_t
     if (!p) return 0;
     parameters = &p->pitch; /* pitch..metal are ten adjacent 7-bit controls */
     parameters[field] = (uint8_t)value;
+    drumlab_kit_dirty[t - trk] |= (uint16_t)(1u << lane);
     return 1;
 }
 

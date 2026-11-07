@@ -1218,7 +1218,8 @@ static void draw_columns(void)
         return;
     }
     if (cur_page()->graph == GR_DXSND) {               /* EDIT > SOUND (ui_dx.c) */
-        dx_cards(cur_page());
+        if (trk_eng(TSEL) == ENGI_DRUMLAB) lab_cards(cur_page());
+        else dx_cards(cur_page());
         return;
     }
     if (DX_KIT3(cur_page())) {                         /* (0.6.54) EDIT > KIT 3 */

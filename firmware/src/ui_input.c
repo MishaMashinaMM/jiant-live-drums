@@ -1129,7 +1129,8 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     if (pg->graph == GR_DXSND) {                          /* EDIT > SOUND: the DRUM-X kit (ui_dx.c) */
-        dx_knob(pg, slot, steps);
+        if (trk_eng(TSEL) == ENGI_DRUMLAB) lab_knob(pg, slot, steps);
+        else dx_knob(pg, slot, steps);
         return;
     }
     if (pg->graph == GR_FOCUS) {                          /* (0.8.5) EDIT > FOCUS */
@@ -2698,3 +2699,4 @@ timeout:
 }
 
 #include "ui_dx.c"                                  /* EDIT > SOUND / SOUND 2: the DRUM-X kit */
+#include "ui_lab.c"                                 /* DRUM-LAB: independent electronic drum patches */

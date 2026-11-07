@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Stage 20B: physical SOUND page knob editing is specific to DRUM-LAB. */
+#define UI_TEST_NO_MAIN 1
+#include "ui_test.c"
+
+int main(void)
+{
+    int bad = 0;
+    uint8_t other, before;
+    ui_power_on();
+    set_engine_of(TSEL, ENGI_DRUMLAB);
+    TSEL->engine = TSEL->eng_req;
+    go_title("SOUND"); frame();
+    dx_ui_lane = 2u;
+    lab_ui_seen = last_note;
+    before = drumlab_patch_of(TSEL, 38)->pitch;
+    other = drumlab_patch_of(TSEL, 36)->pitch;
+    turn(EN_K2, 1); frame();
+    bad += check("DRUM-LAB SOUND knob 2 edits only selected snare PITCH",
+                 drumlab_patch_of(TSEL, 38)->pitch > before && drumlab_patch_of(TSEL, 36)->pitch == other);
+    bad += check("DRUM-LAB SOUND page edit marks only that pad dirty",
+                 drumlab_kit_dirty[0] == (1u << 2));
+    go_title("SOUND 2"); frame();
+    before = drumlab_patch_of(TSEL, 38)->snap;
+    turn(EN_K2, 1); frame();
+    bad += check("SOUND 2 edits the selected pad's SNAP", drumlab_patch_of(TSEL, 38)->snap > before);
+    go_title("SOUND 3"); frame();
+    before = drumlab_patch_of(TSEL, 38)->drive;
+    turn(EN_K2, -1); frame();
+    bad += check("SOUND 3 edits the selected pad's DRIVE", drumlab_patch_of(TSEL, 38)->drive < before);
+    go_title("SOUND 4"); frame();
+    before = drumlab_patch_of(TSEL, 38)->metal;
+    turn(EN_K2, 1); frame();
+    bad += check("SOUND 4 edits the selected pad's METAL", drumlab_patch_of(TSEL, 38)->metal > before);
+    apply_preset(1);
+    bad += check("loading another DRUM-LAB kit resets its per-pad edits",
+                 !drumlab_kit_dirty[0] && !drumlab_kit_ready[0]);
+    printf("DRUMLAB UI TESTS %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
+    return !!bad;
+}

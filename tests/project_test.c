@@ -912,6 +912,24 @@ int main(void)
         ok &= MOTION_TRK(&g.motion.event[0]) == 5u && MOTION_STEP(&g.motion.event[0]) == 9u && MOTION_VAL(&g.motion.event[0]) == 33 &&
               MOTION_TRK(&g.motion.event[1]) == 4u && MOTION_VAL(&g.motion.event[1]) == -20;
         bad += check("FUNC: six tracks round trip (steps, ratchet, chance, patches, T5 / T6 motion, name, globals)", ok);
+        {   /* Stage 20B: a sparse, optional DRUM-LAB patch bank round-trips without touching DRUM-X. */
+            static project_t lab, restored;
+            static project_store_t saved;
+            lab = f;
+            lab.t[0].engine = ENGI_DRUMLAB;
+            lab.lab_mask[0] = (1u << 0) | (1u << 2);
+            for (uint32_t fld = 0; fld < 10u; fld++) {
+                lab.lab_patch[0][0][fld] = (uint8_t)(fld + 10u);
+                lab.lab_patch[0][2][fld] = (uint8_t)(fld + 70u);
+            }
+            lab.sum = proj_sum(&lab);
+            ok = proj_pack(&saved, &lab) && proj_import(&restored, &saved, sizeof saved);
+            ok &= restored.t[0].engine == ENGI_DRUMLAB && restored.lab_mask[0] == lab.lab_mask[0] &&
+                  !memcmp(restored.lab_patch[0][0], lab.lab_patch[0][0], 10u) &&
+                  !memcmp(restored.lab_patch[0][2], lab.lab_patch[0][2], 10u) &&
+                  !memcmp(restored.dx, lab.dx, sizeof lab.dx);
+            bad += check("Stage 20B: two independent DRUM-LAB pads survive sparse project save/import", ok);
+        }
         {   /* Stage 9B2: the extra drums are independent across a project save/load, including their LEVEL values. */
             static project_t b2, restored;
             static project_store_t saved;
