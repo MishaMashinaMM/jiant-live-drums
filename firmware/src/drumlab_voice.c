@@ -167,8 +167,11 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
      * so their original audio remains bit-for-bit unchanged. */
     uint32_t edge = p->tone > 116u ? (uint32_t)p->tone - 116u : 0u;
     if (edge) {
-        body_us += edge * 24000u;
-        wire_us += edge * 12000u;
+        /* Shorter hard-shell hit at the start of the range; the last values
+         * develop a visibly longer metallic body and wire tail. Do not let
+         * the legacy BODY/WIRE settings turn these into multi-second tones. */
+        body_us = 130000u + edge * 14000u;
+        wire_us = 95000u + edge * 20000u;
     }
     int32_t be = v->body_env, we = v->wire_env, se = v->snap_env, pe = v->sweep_env;
     int32_t be_end, we_end, se_end, pe_end, db, dw, ds, dp;
@@ -205,9 +208,12 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
         raw += (int32_t)(((int64_t)wires * we * p->noise) >> 31);
         raw += (int32_t)(((int64_t)crack * se * (90 + p->snap)) >> 32);
         if (edge) {
-            /* A pitched, inharmonic body plus a separate short crack. */
-            raw += (int32_t)(((int64_t)second * be * edge) >> 30);
-            raw += (int32_t)(((int64_t)crack * se * edge) >> 30);
+            /* Separate shell and attack characters: hard shell emphasizes
+             * the pitched membrane, while the final settings bring in a
+             * substantially stronger short crack and metallic ring. */
+            raw += (int32_t)(((int64_t)second * be * (14u - edge)) >> 31);
+            raw += (int32_t)(((int64_t)ring * be * edge) >> 31);
+            raw += (int32_t)(((int64_t)crack * se * edge * edge) >> 33);
         }
         /* Strong soft saturation: sustained shell remains substantial while
          * the attack is compressed rather than cut off at a hard threshold. */

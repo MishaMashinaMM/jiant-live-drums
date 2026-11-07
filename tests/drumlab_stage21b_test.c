@@ -38,7 +38,15 @@ int main(int argc, char **argv)
                 energy += (uint32_t)a;
                 if (i + j >= 22050u && a > 30) audible_tail++;
                 clipped += samples[j] == 32767 || samples[j] == -32768;
-                if (wav) wav_put(wav, samples[j], samples[j]);
+                if (wav) {
+                    /* Audition clips are finite. Fade the last 100 ms so the
+                     * remaining natural tail cannot jump straight to zero
+                     * at the following silence (an audible edit click). */
+                    uint32_t left = HIT - (i + j);
+                    int32_t rendered = samples[j];
+                    if (left < 4410u) rendered = (int32_t)(((int64_t)rendered * left) / 4410u);
+                    wav_put(wav, rendered, rendered);
+                }
             }
         }
         printf("drumlab 21B: tone %u: energy %llu, tail %u samples, clipped %u samples\n",
