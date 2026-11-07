@@ -131,6 +131,8 @@ typedef struct {
     dx_lane_t dx12[4];                         /* 9B2: B2/S2/O2/T2 independent patches */
     uint16_t lab_mask[NPART];                   /* Stage 20B: DRUM-LAB's edited pads only */
     uint8_t lab_patch[NPART][12][10];           /* pitch..metal, kind derived from MIDI note */
+    uint8_t lab_note_on[NPART];                  /* Stage 22A: custom MIDI assignments enabled */
+    uint8_t lab_note[NPART][12];                /* independent note number for each pad */
     uint8_t dx_snd12[4], dx_lay12[4];          /* their independent sends, layers and feedback */
     uint16_t dx_mute;                          /* its mutes (eng_drum.c: the groups DXG_* in the first reserved byte, the
                                                 * sounds' DXM_LANE in the second) */
@@ -882,6 +884,12 @@ static uint32_t proj_packed_size(const project_t *q)
                 count += 2u + 10u * proj_bits(q->lab_mask[t] & 0x0FFFu);
         if (count) n += 3u + count;
     }
+    {   /* optional per-track DRUM-LAB MIDI map ('L' 'N') */
+        uint32_t count = 0;
+        for (t = 0; t < NPART; t++)
+            if (q->t[t].engine == ENGI_DRUMLAB && q->lab_note_on[t]) count++;
+        if (count) n += 3u + 12u * count;
+    }
     if (proj_fg_used(q))                                /* (0.6.52) FUGUE's */
         n += 2u + sizeof q->fugue;
     for (t = 0; t < NTRK; t++)                          /* (0.8.5) the lyrics' */
@@ -1007,6 +1015,19 @@ static int proj_pack(project_store_t *out, const project_t *q)
                         pos += 10u;
                     }
             }
+        }
+    }
+    {   /* Stage 22A: save customized per-pad MIDI assignments only. */
+        uint32_t mask = 0;
+        for (t = 0; t < NPART; t++)
+            if (q->t[t].engine == ENGI_DRUMLAB && q->lab_note_on[t]) mask |= 1u << t;
+        if (mask) {
+            b[pos++] = 'L'; b[pos++] = 'N'; b[pos++] = (uint8_t)mask;
+            for (t = 0; t < NPART; t++)
+                if (mask & (1u << t)) {
+                    memcpy(b + pos, q->lab_note[t], 12u);
+                    pos += 12u;
+                }
         }
     }
     if (proj_fg_used(q)) {                              /* (0.6.52) FUGUE's heads */
@@ -1296,6 +1317,21 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
                 memcpy(q->lab_patch[t][lane], b + pos, 10u);
                 pos += 10u;
             }
+        }
+    }
+    memset(q->lab_note_on, 0, sizeof q->lab_note_on);
+    if (pos + 3u <= room && b[pos] == 'L' && b[pos + 1u] == 'N') {
+        uint32_t mask = b[pos + 2u], lane;
+        if (!mask || (mask >> NPART)) return 0;
+        pos += 3u;
+        for (t = 0; t < NPART; t++) {
+            if (!(mask & (1u << t))) continue;
+            if (q->t[t].engine != ENGI_DRUMLAB || pos + 12u > room) return 0;
+            for (lane = 0; lane < 12u; lane++)
+                if (b[pos + lane] > 127u) return 0;
+            memcpy(q->lab_note[t], b + pos, 12u);
+            pos += 12u;
+            q->lab_note_on[t] = 1u;
         }
     }
     memset(q->fugue, 0, sizeof q->fugue);
@@ -1661,6 +1697,9 @@ static void project_capture(project_t *p)
     for (i = 0; i < NPART; i++) {
         uint32_t lane;
         p->lab_mask[i] = trk[i].eng_req == ENGI_DRUMLAB ? drumlab_kit_dirty[i] : 0u;
+        p->lab_note_on[i] = trk[i].eng_req == ENGI_DRUMLAB ? drumlab_midi_custom[i] : 0u;
+        if (p->lab_note_on[i])
+            memcpy(p->lab_note[i], drumlab_midi_note[i], 12u);
         if (!p->lab_mask[i]) continue;
         drumlab_kit_ensure(&trk[i]);
         for (lane = 0; lane < 12u; lane++)
@@ -1839,6 +1878,9 @@ static void sound_put(project_t *p, uint32_t k)
     }
     if (e == ENGI_DRUMLAB) {
         uint32_t lane, ti = k % NTRK;
+        drumlab_midi_custom[ti] = p->lab_note_on[ti];
+        if (drumlab_midi_custom[ti])
+            memcpy(drumlab_midi_note[ti], p->lab_note[ti], 12u);
         drumlab_kit_ready[ti] = 0;
         drumlab_kit_dirty[ti] = p->lab_mask[ti];
         drumlab_kit_ensure(t);
@@ -1943,6 +1985,9 @@ static int project_restore_runtime(const project_t *input)
     }
     for (k = 0; k < NTRK; k++) {                       /* Stage 20B: independent DRUM-LAB patches */
         uint32_t lane;
+        drumlab_midi_custom[k] = p->t[k].engine == ENGI_DRUMLAB ? p->lab_note_on[k] : 0u;
+        if (drumlab_midi_custom[k])
+            memcpy(drumlab_midi_note[k], p->lab_note[k], 12u);
         drumlab_kit_ready[k] = 0;
         drumlab_kit_dirty[k] = p->t[k].engine == ENGI_DRUMLAB ? p->lab_mask[k] : 0u;
         if (p->t[k].engine != ENGI_DRUMLAB) continue;

@@ -929,6 +929,23 @@ int main(void)
                   !memcmp(restored.lab_patch[0][2], lab.lab_patch[0][2], 10u) &&
                   !memcmp(restored.dx, lab.dx, sizeof lab.dx);
             bad += check("Stage 20B: two independent DRUM-LAB pads survive sparse project save/import", ok);
+            /* Stage 22A: two pads share note 6, a third accepts note 127.
+             * The map is independent of the edited patch bank. */
+            lab.lab_note_on[0] = 1u;
+            for (uint32_t lane = 0; lane < 12u; lane++)
+                lab.lab_note[0][lane] = (uint8_t)(36u + lane);
+            lab.lab_note[0][0] = lab.lab_note[0][2] = 6u;
+            lab.lab_note[0][11] = 127u;
+            lab.sum = proj_sum(&lab);
+            ok = proj_pack(&saved, &lab) && proj_import(&restored, &saved, sizeof saved);
+            ok &= restored.lab_note_on[0] && restored.lab_note[0][0] == 6u &&
+                  restored.lab_note[0][2] == 6u && restored.lab_note[0][11] == 127u;
+            bad += check("Stage 22A: per-pad MIDI map survives sparse project save/import", ok);
+            lab.lab_note_on[0] = 0u;
+            lab.sum = proj_sum(&lab);
+            ok = proj_pack(&saved, &lab) && proj_import(&restored, &saved, sizeof saved) &&
+                 !restored.lab_note_on[0];
+            bad += check("Stage 22A: a project without a MIDI map keeps legacy routing", ok);
         }
         {   /* Stage 9B2: the extra drums are independent across a project save/load, including their LEVEL values. */
             static project_t b2, restored;
