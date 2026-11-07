@@ -1042,7 +1042,11 @@ static void key_next(uint32_t k, track_t *t)
     uint32_t x = kb_snd[k][kb_on[k]], mc = trk_midi_ch(trk_index(t));
     if (!midi_local_held(t, x)) {
         in_norec = kb_sn[k] > 1u;                   /* (0.6.84: the chord's notes recorded at once, key_on) */
+#if FELUCCA_NO_SEQUENCER
+        input_on(t, x, 100);                        /* live-only: no DRUM-X octave modifiers */
+#else
         dxo_on(t, x, kb_oct[k], 100, DXO_KEY + k);  /* (0.8.5: a kit's octave; else input_on) */
+#endif
         in_norec = 0;
         mo_key(t, 0x09u | (0x90u | mc) << 8 | drum_oct_note(x, kb_oct[k]) << 16 | 100u << 24);
     }

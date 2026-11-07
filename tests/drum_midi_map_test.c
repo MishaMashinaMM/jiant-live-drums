@@ -17,6 +17,13 @@ int main(void)
     int bad = 0;
     host_tracks_init();
     host_preset(t, ENGI_DRUM, 0);
+#if FELUCCA_NO_SEQUENCER
+    before = vage;
+    trk_note_on(t, 24, 100);  /* formerly SHORT kick: not a sound slot */
+    bad += test("live-only default: no octave variation on MIDI 24", before == vage);
+    trk_note_on(t, 36, 100);
+    bad += test("live-only default: MIDI 36 still plays normal kick", vage > before);
+#endif
     bad += test("DRUM-X accepts MIDI 0..127, rejects invalid lane and note",
                 drum_note_set(t, 0, 6) && drum_note_set(t, 1, 6) &&
                 drum_note_set(t, 11, 127) && !drum_note_set(t, 12, 6) &&

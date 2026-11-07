@@ -106,12 +106,17 @@ static void midi_release_mask(uint32_t ch, uint32_t note, uint32_t mask)
         midi_owners[i]--;
         if (!--midi_ch[ch].owned[i])
             midi_ch[ch].targets &= (uint8_t)~(1u << i);
+#if FELUCCA_NO_SEQUENCER
+        if (!midi_local_held(t, note))
+            input_off(t, note);
+#else
         if (drum_track(t) && drum_oct_of(note)) {
             dxo_off(t, DXO_MIDI + (ch << 7) + note);
             if (!midi_local_held(t, drum_oct_base(note)))
                 input_off(t, drum_oct_base(note));
         } else if (!midi_local_held(t, note))
             input_off(t, note);              /* also checks other MIDI owners */
+#endif
     }
 }
 static void midi_release(uint32_t ch, uint32_t note)
@@ -122,11 +127,13 @@ static void midi_release(uint32_t ch, uint32_t note)
 /* a MIDI note-on (ch, note) of track t. A note another key or MIDI note holds already sounds: not started again */
 static void midi_play(track_t *t, uint32_t ch, uint32_t note, uint32_t vel)
 {
+#if !FELUCCA_NO_SEQUENCER
     if (drum_track(t) && drum_oct_of(note)) {          /* (0.8.5) the kit in another octave: its sound, ratcheted /
                                                          * damped (seq.c dxo_on) */
         dxo_on(t, drum_oct_base(note), drum_oct_of(note), vel, DXO_MIDI + (ch << 7) + note);
         return;
     }
+#endif
     if (!midi_note_held(t, note) && !midi_local_held(t, note))
         input_on(t, note, vel);
 }

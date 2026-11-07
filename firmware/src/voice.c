@@ -12,6 +12,9 @@
  * over one block (stage 4: the envelope goes to 0, the block's amplitude ramp
  * declicks it); one of the part's own is restarted in place, as before. Extra UNISON
  * voices only start when there is room. */
+#ifndef FELUCCA_NO_SEQUENCER
+#define FELUCCA_NO_SEQUENCER 0
+#endif
 static uint32_t vage;                                   /* voice ages: one clock for every part */
 static int32_t lfo_wave(track_t *t, uint32_t ph)
 {
@@ -734,9 +737,10 @@ static void trk_note_on_raw(track_t *t, uint32_t note, uint32_t vel)
 static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t ti = (uint32_t)(t - trk), lane;
-    if (t->eng_req == ENGI_DRUM && ti < NPART && drum_midi_custom[ti]) {
+    if (t->eng_req == ENGI_DRUM && ti < NPART &&
+        (drum_midi_custom[ti] || FELUCCA_NO_SEQUENCER)) {
         for (lane = 0; lane < DV_NLANE12; lane++)
-            if (drum_midi_note[ti][lane] == note)
+            if ((drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane]) == note)
                 trk_note_on_raw(t, DRUM_NOTE12[lane], vel);
         return;
     }
@@ -788,9 +792,10 @@ static void trk_note_off_raw(track_t *t, uint32_t note)
 static void trk_note_off(track_t *t, uint32_t note)
 {
     uint32_t ti = (uint32_t)(t - trk), lane;
-    if (t->eng_req == ENGI_DRUM && ti < NPART && drum_midi_custom[ti]) {
+    if (t->eng_req == ENGI_DRUM && ti < NPART &&
+        (drum_midi_custom[ti] || FELUCCA_NO_SEQUENCER)) {
         for (lane = 0; lane < DV_NLANE12; lane++)
-            if (drum_midi_note[ti][lane] == note)
+            if ((drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane]) == note)
                 trk_note_off_raw(t, DRUM_NOTE12[lane]);
         return;
     }
