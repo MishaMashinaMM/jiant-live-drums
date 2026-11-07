@@ -14,14 +14,14 @@ static int favorite_has(uint32_t engine, uint32_t preset)
     /* Slot 15 is system metadata in PER4/PER6, not a factory-favorites row.
      * DRUM-LAB (index 15) has no persisted favorites until a settings-format
      * migration gives it a dedicated row. Never read metadata as stars. */
-    if (engine == ENGI_DRUMLAB)
+    if (engine == 15u && NENGINES > 15u)
         return 0;
     return engine < NENGINES && engine < 16u && preset < 256u &&
         ((favorites.factory[engine][preset / 8u] >> (preset % 8u)) & 1u);
 }
 static int favorite_set(uint32_t engine, uint32_t preset, int on)
 {
-    if (engine == ENGI_DRUMLAB)
+    if (engine == 15u && NENGINES > 15u)
         return 0; /* protect PER6 slot 15 without changing its binary layout */
     if (engine > NENGINES || (engine == NENGINES ? preset >= UP_SLOTS : engine >= 16u || preset >= 256u))
         return 0;
