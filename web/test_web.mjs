@@ -179,7 +179,7 @@ async function editorMock() {
   inp.onmidimessage = (e) => link.receive(e.data);
   const rq = async (r, o) => link.request(r, o);
   const info = E.parse[E.CMD.INFO](await rq(E.req.info()));
-  ok(info.nengines === 15 && info.engines[1] === "-" && info.engines[12] === "FM6" && info.engines[13] === "-" && info.engines[14] === "ANIMAL"
+  ok(info.nengines === 16 && info.engines[1] === "-" && info.engines[12] === "FM6" && info.engines[13] === "-" && info.engines[14] === "ANIMAL" && info.engines[15] === "DRUM-LAB"
  && info.engines[5] === "VOICE" && info.engines[6] === "-" && info.engines[7] === "WHEEL" && info.engines[8] === "-" && info.engines[9] === "-" && info.engines[10] === "DRUM" && info.engines[11] === "NOISE" && info.pcount === 127 && info.pe0 === 115 && info.engines[4] === "-",
     "editor: INFO");
   let descs = 0;
@@ -286,16 +286,16 @@ async function editorMock() {
   ok(!prefs.favorites[info.nengines][31] && !E.devicePresetRows(info, names, prefs).some((r) => r.user), "editor: erased slot disappears and loses star");
   {   /* the lists in the device's order (engines.c ENGINE_ORDER, 0.9.9): DRUM VOICE ANIMAL first, "-" never; the numbers stay */
     const shown = E.engineOrder(info.engines).map((i) => info.engines[i]);
-    ok(shown.join() === "DRUM,VOICE,ANIMAL,LOFI,ANALOG,FM6,PHASE,WHEEL,NOISE" &&
-       E.engineOrder(info.engines).join() === "10,5,14,3,0,12,2,7,11",
-       "editor: engines listed DRUM VOICE ANIMAL LOFI ANALOG FM6 PHASE WHEEL NOISE (0.9.9; indices kept)");
+    ok(shown.join() === "DRUM,VOICE,ANIMAL,LOFI,ANALOG,FM6,PHASE,WHEEL,NOISE,DRUM-LAB" &&
+       E.engineOrder(info.engines).join() === "10,5,14,3,0,12,2,7,11,15",
+       "editor: engines listed in firmware order, DRUM-LAB appended (existing indices kept)");
     ok(E.engineOrder(["ANALOG", "X", "-", "DRUM", "FM6"]).join() === "3,0,4,1", "editor: an unknown engine follows the known ones");
     ok(E.engineOrder(["ANALOG", "DIGITAL", "FM6", "DRUM"]).join() === "3,0,2,1", "editor: DIGITAL (FELUCCA_FM4 builds) after the others");
     m.state.favorites[10][0] = m.state.favorites[12][0] = true;
     await rq(E.req.uiSet(3, 0));
     prefs = await E.readDevicePreferences(rq, info, names, prefs);
     const rows = E.devicePresetRows(info, names, prefs).filter((r) => !r.user), eng = [...new Set(rows.map((r) => r.engine))];
-    ok(eng.join() === "10,5,14,3,0,12,2,7,11", "editor: device presets in the device's engine order (DRUM first, NOISE last)");
+    ok(eng.join() === "10,5,14,3,0,12,2,7,11,15", "editor: device presets in the device's engine order (DRUM first, DRUM-LAB last)");
   }
   const none = await E.readDevicePreferences(() => { throw new Error("unexpected request"); }, { uiCaps: 0 }, []);
   ok(none === null, "editor: old firmware receives no unsupported preference requests");
@@ -761,7 +761,7 @@ async function editorLibrarian() {
   const pts = [cap, { ...bass, engineName: info.engines[bass.engine], tags: ["bass", "device"] }];
   const file = JSON.parse(JSON.stringify(E.libraryFile("library", pts, ctx)));
   ok(file.format === "felucca-library" && file.version === 1 && file.pCount === 127 && file.paramLabels.length === 127 && file.paramLabels[81] === "ROTATE" && file.paramLabels[82].startsWith("PITCH#") &&
-    file.paramLabels[83] === "KICK" && file.paramLabels[90] === "BELL" && file.engines.length === 15,
+    file.paramLabels[83] === "KICK" && file.paramLabels[90] === "BELL" && file.engines.length === 16,
     "library file: versioned, with P_COUNT, labels and engines");
   const back = E.readLibraryFile(file, ctx);
   ok(back.patches.length === 2 && !back.skipped && eq(back.patches[0].p, cap.p) && eq(back.patches[1].p, bass.p)
