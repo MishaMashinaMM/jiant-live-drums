@@ -2233,13 +2233,20 @@ static void draw_drum_midi_map(void)
             }
             cv_text(116, y + CAP_IN(S, 20), &AF_S, b, col);
         }
-        cv_text(174, y + CAP_IN(S, 20), &AF_S, "--", T_DIM);
+        {
+            int32_t pitch = drum_pad_pitch[ti][lane];
+            if (pitch > 0) {
+                b[0] = '+';
+                fmt_int(b + 1, pitch);
+            } else fmt_int(b, pitch);
+            cv_text(174, y + CAP_IN(S, 20), &AF_S, b, col);
+        }
     }
     cv_blit(0, 40);
 
     cv_begin(240, 42, T_BG);
     cv_text(6, CAP_IN(S, 14), &AF_S, "ALGO TRACK  SELECT PAD", T_DIM);
-    cv_text(6, 20 + CAP_IN(S, 14), &AF_S, "K1 NOTE K2 PAN OCT PAGE", T_TEXT);
+    cv_text(6, 20 + CAP_IN(S, 14), &AF_S, "K1 NOTE K2 PAN K3 PIT", T_TEXT);
     cv_blit(0, 198);
     ui.force = 0;
 }

@@ -2182,8 +2182,18 @@ static void ui_input_frame(void)
                 ui.force = 1u;
             }
         }
+        if ((s = panel_enc(EN_K3)) != 0) {
+            uint32_t ti = song.sel;
+            if (trk[ti].eng_req == ENGI_DRUM || trk[ti].eng_req == ENGI_DRUMLAB) {
+                int32_t pitch = drum_pad_pitch[ti][ui.drum_map_pad];
+                fm1_irq_off();
+                drum_pad_pitch[ti][ui.drum_map_pad] = (int8_t)clamp(pitch + (s > 0 ? 1 : -1), -24, 24);
+                fm1_irq_on();
+                ui.force = 1u;
+            }
+        }
         panel_enc(EN_PRESET);
-        panel_enc(EN_K3); panel_enc(EN_K4);
+        panel_enc(EN_K4);
         return;
     }
 #endif

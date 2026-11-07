@@ -112,10 +112,14 @@ static int drumlab_patch_set(track_t *t, uint32_t lane, uint32_t field, uint32_t
 static void drumlab_note_on(track_t *t, voice_t *v)
 {
     dlab_patch_t *patch = drumlab_patch_of(t, v->note);
-    uint32_t slot = drumlab_slot(t, v);
+    uint32_t slot = drumlab_slot(t, v), lane = drumlab_lane(v->note);
     if (slot >= NVOICE || !patch) return;
     dlab_trigger(&drumlab_state[t - trk][slot], patch,
                  0x13579BDFu ^ ((uint32_t)v->note << 16) ^ (uint32_t)v->age);
+    if (drum_pad_pitch[t - trk][lane]) {
+        int32_t note = 24 + (int32_t)patch->pitch * 60 / 127 + drum_pad_pitch[t - trk][lane];
+        drumlab_state[t - trk][slot].base_inc = pitch_inc((uint32_t)clamp(note, 0, 127) * 16u);
+    }
 }
 
 static int32_t drumlab_amp(track_t *t, voice_t *v, int32_t adsr)

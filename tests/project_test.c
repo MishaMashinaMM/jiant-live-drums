@@ -954,6 +954,13 @@ int main(void)
                  restored.pad_pan[0][1] == 0;
             bad += check("Stage 22B: DRUM-LAB individual pans survive project save/import", ok);
             lab.pad_pan[0][0] = lab.pad_pan[0][2] = 0;
+            lab.pad_pitch[0][0] = -24;
+            lab.pad_pitch[0][2] = 17;
+            lab.sum = proj_sum(&lab);
+            ok = proj_pack(&saved, &lab) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.pad_pitch[0][0] == -24 && restored.pad_pitch[0][2] == 17 &&
+                 restored.pad_pitch[0][1] == 0;
+            bad += check("Stage 22B: DRUM-LAB pitch offsets survive project save/import", ok);
         }
         {   /* Stage 22: DRUM-X uses the same custom-note capability independently. */
             static project_t dx, restored;
@@ -982,6 +989,13 @@ int main(void)
                  restored.pad_pan[0][1] == 64 && restored.pad_pan[0][11] == -12 &&
                  restored.pad_pan[0][0] == 0;
             bad += check("Stage 22B: DRUM-X individual pans survive project save/import", ok);
+            dx.pad_pitch[0][1] = 24;
+            dx.pad_pitch[0][11] = -12;
+            dx.sum = proj_sum(&dx);
+            ok = proj_pack(&saved, &dx) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.pad_pitch[0][1] == 24 && restored.pad_pitch[0][11] == -12 &&
+                 restored.pad_pitch[0][0] == 0;
+            bad += check("Stage 22B: DRUM-X pitch offsets survive project save/import", ok);
         }
         {   /* Stage 9B2: the extra drums are independent across a project save/load, including their LEVEL values. */
             static project_t b2, restored;

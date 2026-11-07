@@ -43,6 +43,9 @@ int main(void)
     for (i = 0; i < 70u; i++) drum_side_begin(t, CTL);
     bad += test("DRUM-X per-pad fixed pan works with IMAGE at zero",
                 dx_lpan[0] == -64 && (dx_xon & 1u));
+    drum_pad_pitch[0][0] = 24;
+    bad += test("DRUM-X per-pad pitch offset holds +24 semitones independently",
+                drum_pad_pitch[0][0] == 24 && drum_pad_pitch[0][1] == 0);
 
     host_tracks_init();
     host_preset(t, ENGI_DRUMLAB, 0);
@@ -62,6 +65,17 @@ int main(void)
     for (i = 0; i < 70u; i++) drum_side_begin(t, CTL);
     bad += test("DRUM-LAB per-pad fixed pan has its own stereo side",
                 dx_lpan[0] == 64 && (dx_xon & 1u) && !(dx_xon & 0xEu));
+    drum_pad_pitch[0][0] = -12;
+    trk_note_on(t, 6, 100);
+    {
+        uint32_t found = 0;
+        dlab_patch_t *patch = drumlab_patch_of(t, 36);
+        uint32_t want = pitch_inc((uint32_t)(24 + (uint32_t)patch->pitch * 60u / 127u - 12u) * 16u);
+        for (i = 0; i < NVOICE; i++)
+            if (t->v[i].active && t->v[i].note == 36 &&
+                drumlab_state[0][i].base_inc == want) found = 1u;
+        bad += test("DRUM-LAB applies signed pitch offset at note trigger", found);
+    }
     printf("DRUM MIDI MAP TESTS %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return bad != 0;
 }

@@ -166,6 +166,9 @@ static uint8_t drum_midi_custom[NPART];
 /* Stage 22B: fixed signed pan for each pad, independent on every track.
  * Added to DRUM-X IMAGE; DRUM-LAB uses it directly. Zero keeps old sound. */
 static int8_t drum_pad_pan[NPART][DV_NLANE12];
+/* Additional semitones relative to the sound's EDIT pitch, not a rewrite of
+ * its patch. 0 means the original engine renders exactly as before. */
+static int8_t drum_pad_pitch[NPART][DV_NLANE12];
 
 static int drum_note_set(track_t *t, uint32_t lane, uint32_t note)
 {
@@ -596,7 +599,8 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     }
     dx_run(lane < DV_NLANE ? &dx_kit[lane] : &dx_kit12[lane - DV_NLANE], lane, &L->x,
            p[P_E0] + dx_mot_v + L->rm + lfo_shp,
-           L->st * 16 + L->rt + L->bc + (p[P_E1] - 64) * 3 + t->pfx_pit + lfo_pit,
+           L->st * 16 + L->rt + L->bc + (p[P_E1] - 64) * 3 + t->pfx_pit + lfo_pit +
+           (int32_t)drum_pad_pitch[(uint32_t)(t - trk)][lane] * 16,
            p[P_E3] - 64 + DXO_DEC[L->dm & 3u], p[P_E2] - 64 + DXO_TON[L->dm & 3u], p[P_E4] - 64, p[P_E6], p[P_E5], y, n);
     {                                                    /* PUNCH: the boost before the knee (driven into it, as
                                                           * Drum Buss), the tail's cut on the amplitude ramp */
