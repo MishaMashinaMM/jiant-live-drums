@@ -30,10 +30,14 @@ int main(int argc, char **argv)
     web_boot();
     render(500);
     web_test_heavy();
+#if FELUCCA_NO_SEQUENCER
+    web_midi(0x90, 64, 100);  /* live-only: same input as emu_test.mjs */
+#else
     web_buttons(1u << B_PLAY);
     render(60);
     web_buttons(0);
     render(60);
+#endif
     rec = 1;
     render(2000);
     fclose(out);

@@ -22,6 +22,9 @@
 #include <stdint.h>
 
 #define FELUCCA_WEB 1
+#ifndef FELUCCA_NO_SEQUENCER
+#define FELUCCA_NO_SEQUENCER 0
+#endif
 #ifndef FELUCCA_CDC
 #define FELUCCA_CDC 1                    /* as src/felucca.c: MENU > USB SERIAL is there (nothing behind it) */
 #endif
@@ -501,6 +504,7 @@ EXPORT uint16_t *web_screen(void) { return web_fb; }
 EXPORT uint32_t web_screen_draws(void) { return web_draws; }
 EXPORT uint32_t web_now_ms(void) { return fm1_ms; }
 EXPORT uint32_t web_playing(void) { return song.playing; }
+EXPORT uint32_t web_live_only(void) { return FELUCCA_NO_SEQUENCER != 0; }
 EXPORT uint32_t web_sample_rate(void) { return FS; }
 
 /* (0.7.1) stems from the browser (web/emu/stems.js): a backup file's objects into this device, as the editor's RESTORE

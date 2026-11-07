@@ -62,6 +62,7 @@ const colours = (fb) => new Set(fb).size;
 
 // ---- boot, keys, screen, LEDs
 const a = await device(null);
+const liveOnly = a.ex.web_live_only?.() === 1;
 let startupSweepAt = a.ex.web_anim_levels() ? 0 : null;
 let startupMs = 0;
 const renderStartup = (ms) => {
@@ -106,7 +107,8 @@ a.turn(EN.K1, 3);
 check("KNOB 1 redraws the screen", a.ex.web_screen_draws() > draws);
 a.tap(B.PLAY);
 a.render(1000);
-check("PLAY: the sequencer runs, PLAY's green LED", a.ex.web_playing() === 1 && (a.ex.web_lit_buttons() >> 14 & 1) === 1);
+check(liveOnly ? "live-only: PLAY does not start a sequencer" : "PLAY: the sequencer runs, PLAY's green LED",
+      liveOnly ? a.ex.web_playing() === 0 : a.ex.web_playing() === 1 && (a.ex.web_lit_buttons() >> 14 & 1) === 1);
 a.tap(B.PLAY);
 a.render(300);
 check("PLAY again stops it", a.ex.web_playing() === 0);
@@ -163,13 +165,14 @@ async function song() {
   const d = await device(null);
   d.render(500);
   d.ex.web_test_heavy();
-  d.tap(B.PLAY);
+  if (liveOnly) d.ex.web_midi(0x90, 64, 100);   // live audio without sequencer transport
+  else d.tap(B.PLAY);
   d.rec = true;
   d.render(2000);
   return d;
 }
 const s1 = await song(), s2 = await song();
-check(`the heavy song plays (peak ${s1.peak.toFixed(3)}), twice the same samples`, s1.peak > 0.05 && s1.sig === s2.sig);
+check(`${liveOnly ? "live MIDI audio" : "the heavy song"} plays (peak ${s1.peak.toFixed(3)}), twice the same samples`, s1.peak > 0.05 && s1.sig === s2.sig);
 if (nativePath) {                                             // web/emu/native_check.c: the same song, built with cc
   const nat = new Float32Array(new Uint8Array(fs.readFileSync(nativePath)).buffer);
   const web = s1.samples;
