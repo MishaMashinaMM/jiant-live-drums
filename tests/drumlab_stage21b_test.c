@@ -41,6 +41,8 @@ int main(int argc, char **argv)
                 if (wav) wav_put(wav, samples[j], samples[j]);
             }
         }
+        printf("drumlab 21B: tone %u: energy %llu, tail %u samples, clipped %u samples\n",
+               (unsigned)p.tone, (unsigned long long)energy, audible_tail, clipped);
         bad += chk(k == 0 ? "original industrial snare sustained and unclipped" :
                    k == 1 ? "hard shell snare sustained and unclipped" :
                             "extreme crack snare sustained and unclipped",
