@@ -6095,13 +6095,14 @@ static int test_fm4_retired(void)
         turn(EN_K2, 1);
         seen |= 1u << TSEL->eng_req;
     }
-    bad += check("PRESETS KNOB 2: the engines in order (0.9.9: DRUM first, NOISE last, round), DIGITAL skipped, back to the first",
+    bad += check("PRESETS KNOB 2: DRUM first, DRUM-LAB last, DIGITAL skipped, wrap",
                  seen == all && TSEL->eng_req == 0u && eng_step(0, 1) == ENGI_FM6 && eng_step(ENGI_FM6, 1) == ENGI_PHASE &&
                  eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_LOFI && eng_step(ENGI_DRUM, 1) == ENGI_VOICE &&
-                 eng_step(ENGI_VOICE, 1) == ENGI_ANIMAL && eng_step(ENGI_DRUM, -1) == ENGI_NOISE && eng_step(ENGI_NOISE, 1) == ENGI_DRUM);
+                 eng_step(ENGI_VOICE, 1) == ENGI_ANIMAL && eng_step(ENGI_DRUM, -1) == ENGI_DRUMLAB &&
+                 eng_step(ENGI_NOISE, 1) == ENGI_DRUMLAB && eng_step(ENGI_DRUMLAB, 1) == ENGI_DRUM);
     {   /* the display order (engines.c ENGINE_ORDER, 0.9.9): every engine one can pick once; the PRESETS list follows it
          * (was ANALOG FM6 PHASE LOFI VOICE WHEEL NOISE DRUM ANIMAL: test_engine_order_099 has PROGRAM CHANGE's) */
-        static const char *const ORDER[] = {"DRUM", "VOICE", "ANIMAL", "LOFI", "ANALOG", "FM6", "PHASE", "WHEEL", "NOISE"};
+        static const char *const ORDER[] = {"DRUM", "VOICE", "ANIMAL", "LOFI", "ANALOG", "FM6", "PHASE", "WHEEL", "NOISE", "DRUM-LAB"};
         uint32_t last = 0xFFu, r = 0, n = 0;
         ok = NENG_SHOWN == NELEM(ORDER);
         for (i = 0; ok && i < NENG_SHOWN; i++)
@@ -6116,7 +6117,7 @@ static int test_fm4_retired(void)
             last = e;
             r++;
         }
-        bad += check("engines shown DRUM VOICE ANIMAL LOFI ANALOG FM6 PHASE WHEEL NOISE (ENGINE_ORDER); PRESETS lists them so",
+        bad += check("engines shown in legacy order followed by DRUM-LAB; PRESETS matches",
                      ok && r == NENG_SHOWN);
     }
     /* a user preset stored with engine 1: kept as it is, it loads as FM6 with the converted patch */
@@ -11312,8 +11313,8 @@ static int test_scope(void)
             nseen += case_ok;
             bad += case_ok ? 0 : 1;
         }
-    bad += check("SCOPE LARGE: 28 engine/skin pairs, both restored modes; title, edits, live signal and stable redraws",
-                 nseen == SKIN_N * 7u);
+    bad += check("SCOPE LARGE: eligible engine/skin pairs, both modes; title, edits, signal and stable redraws",
+                 nseen == SKIN_N * 8u);
     ui_power_on(); frame();
     return bad;
 }

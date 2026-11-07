@@ -3,6 +3,8 @@
  * No engine registration, persistent data or existing DRUM-X behavior changes.
  * The caller supplies sine_i(phase), producing signed Q15, just as DRUM-X does.
  */
+#ifndef FELUCCA_DRUMLAB_VOICE_C
+#define FELUCCA_DRUMLAB_VOICE_C
 
 enum { DLAB_KICK, DLAB_SNARE, DLAB_HEAVY_SNARE };
 typedef struct {
@@ -185,3 +187,4 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
     v->sweep_env = pe_end;
     if (be_end < 100 && we_end < 100 && se_end < 100) v->active = 0;
 }
+#endif /* FELUCCA_DRUMLAB_VOICE_C */
