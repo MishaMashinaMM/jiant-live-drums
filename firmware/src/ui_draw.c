@@ -2219,9 +2219,8 @@ static void draw_drum_midi_map(void)
         uint16_t col = lane == ui.drum_map_pad ? T_ACCENT : T_TEXT;
         uint32_t note = drum ? (drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane])
                              : (drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane);
-        b[0] = (char)('0' + (lane + 1u) / 10u);
-        b[1] = (char)('0' + (lane + 1u) % 10u); b[2] = 0;
-        cv_text(6, y + CAP_IN(S, 20), &AF_S, b, col);
+        cv_text(6, y + CAP_IN(S, 20), &AF_S,
+                drum ? drum_lane_abbr(t, lane) : LAB_NAMES[lane], col);
         fmt_int(b, (int32_t)note);
         cv_text(68, y + CAP_IN(S, 20), &AF_S, b, col);
         {

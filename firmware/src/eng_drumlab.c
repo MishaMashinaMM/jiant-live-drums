@@ -11,6 +11,10 @@ static dlab_voice_t drumlab_state[NPART][NVOICE];
  * chromatic note C2..B2, per track. RAM-only until project serialization and
  * the per-lane editor are added. Never share DRUM-X's kit storage. */
 #define DLAB_LANES 12u
+/* The exact SOUND labels shared by EDIT and the live MIDI Map. */
+static const char *const LAB_NAMES[DLAB_LANES] = {
+    "K1", "S1", "SN", "S2", "K2", "K3", "S3", "K4", "S4", "K5", "S5", "K6"
+};
 static dlab_patch_t drumlab_kit[NPART][DLAB_LANES];
 static uint8_t drumlab_kit_ready[NPART];
 static uint16_t drumlab_kit_dirty[NPART]; /* sparse project encoding: 12 bits per track */

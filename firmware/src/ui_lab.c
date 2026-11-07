@@ -3,9 +3,6 @@
  * untouched. On each page KNOB 1 selects one of the 12 independent pads,
  * KNOB 2..4 edit that pad's own synthesis controls.
  */
-static const char *const LAB_NAMES[12] = {
-    "K1", "S1", "SN", "S2", "K2", "K3", "S3", "K4", "S4", "K5", "S5", "K6"
-};
 static const char *const LAB_FIELDS[10] = {
     "PITCH", "SWEEP", "BODY", "SNAP", "NOISE", "TONE", "DRIVE", "WIRES", "WEIGHT", "METAL"
 };
