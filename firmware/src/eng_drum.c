@@ -158,6 +158,24 @@ static const char *drum_oct_name(int32_t o)              /* what OCT does on a D
  * engine: DRUM strikes its lanes, a synth plays the pitches. Each is the designed pitch of
  * its lane (st 0 in DRUM_GM) */
 static const uint8_t DRUM_LANE_NOTE[NLANE] = {36, 38, 39, 42, 46, 45, 37, 56};
+/* Stage 22: direct note assignments are independent of the legacy GM map.
+ * The four additional DRUM-X sounds are S2=40, B2=41, O2=43, T2=44. */
+static const uint8_t DRUM_NOTE12[DV_NLANE12] = {36, 38, 39, 42, 46, 45, 37, 56, 41, 40, 43, 44};
+static uint8_t drum_midi_note[NPART][DV_NLANE12];
+static uint8_t drum_midi_custom[NPART];
+
+static int drum_note_set(track_t *t, uint32_t lane, uint32_t note)
+{
+    uint32_t ti = (uint32_t)(t - trk), i;
+    if (ti >= NPART || lane >= DV_NLANE12 || note > 127u) return 0;
+    if (!drum_midi_custom[ti]) {
+        for (i = 0; i < DV_NLANE12; i++)
+            drum_midi_note[ti][i] = DRUM_NOTE12[i];
+        drum_midi_custom[ti] = 1u;
+    }
+    drum_midi_note[ti][lane] = (uint8_t)note;
+    return 1;
+}
 
 /* the lane a note strikes */
 static uint32_t drum_lane(uint32_t note) { return (uint32_t)DRUM_GM[drum_gm_ix(note)][0]; }

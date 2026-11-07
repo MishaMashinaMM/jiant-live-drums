@@ -947,6 +947,27 @@ int main(void)
                  !restored.lab_note_on[0];
             bad += check("Stage 22A: a project without a MIDI map keeps legacy routing", ok);
         }
+        {   /* Stage 22: DRUM-X uses the same custom-note capability independently. */
+            static project_t dx, restored;
+            static project_store_t saved;
+            dx = f;
+            dx.t[0].engine = ENGI_DRUM;
+            dx.dx_note_on[0] = 1u;
+            for (uint32_t lane = 0; lane < 12u; lane++)
+                dx.dx_note[0][lane] = (uint8_t)(36u + lane);
+            dx.dx_note[0][0] = dx.dx_note[0][1] = 6u;
+            dx.dx_note[0][11] = 127u;
+            dx.sum = proj_sum(&dx);
+            ok = proj_pack(&saved, &dx) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.dx_note_on[0] && restored.dx_note[0][0] == 6u &&
+                 restored.dx_note[0][1] == 6u && restored.dx_note[0][11] == 127u;
+            bad += check("Stage 22: DRUM-X 12-pad MIDI map survives project save/import", ok);
+            dx.dx_note_on[0] = 0u;
+            dx.sum = proj_sum(&dx);
+            ok = proj_pack(&saved, &dx) && proj_import(&restored, &saved, sizeof saved) &&
+                 !restored.dx_note_on[0];
+            bad += check("Stage 22: an older DRUM-X project retains its GM mapping", ok);
+        }
         {   /* Stage 9B2: the extra drums are independent across a project save/load, including their LEVEL values. */
             static project_t b2, restored;
             static project_store_t saved;

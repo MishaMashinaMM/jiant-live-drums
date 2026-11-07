@@ -734,6 +734,12 @@ static void trk_note_on_raw(track_t *t, uint32_t note, uint32_t vel)
 static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t ti = (uint32_t)(t - trk), lane;
+    if (t->eng_req == ENGI_DRUM && ti < NPART && drum_midi_custom[ti]) {
+        for (lane = 0; lane < DV_NLANE12; lane++)
+            if (drum_midi_note[ti][lane] == note)
+                trk_note_on_raw(t, DRUM_NOTE12[lane], vel);
+        return;
+    }
     if (t->eng_req == ENGI_DRUMLAB && ti < NPART && drumlab_midi_custom[ti]) {
         /* Every matching lane is a separate hit, including duplicate MIDI
          * assignments on the same track. Voice stealing remains centralized
@@ -782,6 +788,12 @@ static void trk_note_off_raw(track_t *t, uint32_t note)
 static void trk_note_off(track_t *t, uint32_t note)
 {
     uint32_t ti = (uint32_t)(t - trk), lane;
+    if (t->eng_req == ENGI_DRUM && ti < NPART && drum_midi_custom[ti]) {
+        for (lane = 0; lane < DV_NLANE12; lane++)
+            if (drum_midi_note[ti][lane] == note)
+                trk_note_off_raw(t, DRUM_NOTE12[lane]);
+        return;
+    }
     if (t->eng_req == ENGI_DRUMLAB && ti < NPART && drumlab_midi_custom[ti]) {
         for (lane = 0; lane < DLAB_LANES; lane++)
             if (drumlab_midi_note[ti][lane] == note)
