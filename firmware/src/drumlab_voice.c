@@ -15,6 +15,7 @@ typedef struct {
     uint32_t phase, phase2, phase3, seed, base_inc;
     int32_t body_env, snap_env, sweep_env, wire_env; /* Q24, initially 1.0 */
     int32_t noise_lp, wire_lp;                   /* Q15 one-pole states */
+    int32_t body_fast_lp, body_slow_lp;          /* Stage 23C snare low-mid band */
     uint8_t active;
 } dlab_voice_t;
 
@@ -166,24 +167,16 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
                                  int32_t *out, uint32_t n)
 {
     uint32_t i, ph = v->phase, ph2 = v->phase2, ph3 = v->phase3, rng = v->seed;
-    uint32_t body_us = 70000u + DLAB_CURVE_US(p->body, 900000u);
-    uint32_t wire_us = 35000u + DLAB_CURVE_US(p->wire, 1200000u);
-    uint32_t snap_us = 900u + (uint32_t)p->snap * 130u;
-    uint32_t sweep_us = 1200u + (uint32_t)p->sweep * 220u;
-    /* Stage 21B: TONE above 116 adds an optional harder shell/crack voice.
-     * The three approved Stage 19B snare patches all have TONE <= 113,
-     * so their original audio remains bit-for-bit unchanged. */
-    uint32_t edge = p->tone > 116u ? (uint32_t)p->tone - 116u : 0u;
-    if (edge) {
-        /* Shorter hard-shell hit at the start of the range; the last values
-         * develop a visibly longer metallic body and wire tail. Do not let
-         * the legacy BODY/WIRE settings turn these into multi-second tones. */
-        body_us = 130000u + edge * 14000u;
-        wire_us = 95000u + edge * 20000u;
-    }
+    /* Stage 23C: BODY shapes a compact non-tonal membrane, not a long sine.
+     * SNAP and WIRES retain independent, smoothly increasing durations. */
+    uint32_t body_us = 35000u + DLAB_CURVE_US(p->body, 185000u);
+    uint32_t wire_us = 16000u + DLAB_CURVE_US(p->wire, 310000u);
+    uint32_t snap_us = 9000u + DLAB_CURVE_US(p->snap, 65000u);
+    uint32_t sweep_us = 3000u + (uint32_t)p->sweep * 85u;
     int32_t be = v->body_env, we = v->wire_env, se = v->snap_env, pe = v->sweep_env;
     int32_t be_end, we_end, se_end, pe_end, db, dw, ds, dp;
     int32_t lp = v->noise_lp, wire_lp = v->wire_lp;
+    int32_t body_fast_lp = v->body_fast_lp, body_slow_lp = v->body_slow_lp;
     int32_t wire_k = 1800 + (int32_t)p->tone * 170;
     uint32_t base = v->base_inc;
     if (!v->active) {
@@ -192,8 +185,8 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
     }
     be_end = (int32_t)(((int64_t)be * dlab_decay_long(n, body_us)) >> 16);
     we_end = (int32_t)(((int64_t)we * dlab_decay_long(n, wire_us)) >> 16);
-    se_end = (int32_t)(((int64_t)se * (edge ? dlab_decay_long(n, snap_us) : dlab_decay(n, snap_us))) >> 16);
-    pe_end = (int32_t)(((int64_t)pe * (edge ? dlab_decay_long(n, sweep_us) : dlab_decay(n, sweep_us))) >> 16);
+    se_end = (int32_t)(((int64_t)se * dlab_decay_long(n, snap_us)) >> 16);
+    pe_end = (int32_t)(((int64_t)pe * dlab_decay_long(n, sweep_us)) >> 16);
     db = (be_end - be) / (int32_t)n;
     dw = (we_end - we) / (int32_t)n;
     ds = (se_end - se) / (int32_t)n;
@@ -204,35 +197,25 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
         int32_t membrane = sine_i(ph);
         int32_t second = sine_i(ph2);
         int32_t ring = sine_i(ph3);
-        int32_t crack, wires, shell, raw, y;
+        int32_t crack, wires, raw, y;
         /* Fast high-pass transient plus lower, gently damped wire rattle. */
         lp += (int32_t)(((int64_t)(white - lp) * 3100) >> 15);
         wire_lp += (int32_t)(((int64_t)(white - wire_lp) * wire_k) >> 15);
         crack = white - lp;
         wires = (white + wire_lp) / 2;
-        shell = (membrane * (180 + p->weight) + second * 85) / 392;
-        shell += (ring * p->metal) / 340;
-        raw = (int32_t)(((int64_t)shell * be * (100 + p->weight)) >> 31);
-        if (edge) {
-            /* Stage 21B's approved hard-shell/crack voices stay identical. */
-            raw += (int32_t)(((int64_t)wires * we * p->noise) >> 31);
-        } else {
-            /* Stage 23A2: restoring the full WIRES decay made ordinary snares
-             * hiss for almost as long as their membrane. Square the rattle's
-             * envelope (Q24) and halve its level. The attack crack below is
-             * unchanged, and WIRES still controls the rattle's duration. */
-            int32_t rattle = (we >> 12) * (we >> 12);
-            raw += (int32_t)(((int64_t)wires * rattle * p->noise) >> 32);
-        }
-        raw += (int32_t)(((int64_t)crack * se * (90 + p->snap)) >> 32);
-        if (edge) {
-            /* Separate shell and attack characters: hard shell emphasizes
-             * the pitched membrane, while the final settings bring in a
-             * substantially stronger short crack and metallic ring. */
-            raw += (int32_t)(((int64_t)second * be * (14u - edge)) >> 31);
-            raw += (int32_t)(((int64_t)ring * be * edge) >> 31);
-            raw += (int32_t)(((int64_t)crack * se * edge * edge) >> 33);
-        }
+        /* Stage 23C: the broad low-mid band IS the body. TONE moves the
+         * filters gradually, BODY controls weight and duration, while the
+         * audible oscillator impact dies away in a few milliseconds. */
+        body_fast_lp += (int32_t)(((int64_t)(white - body_fast_lp) * (3000 + p->tone * 28)) >> 15);
+        body_slow_lp += (int32_t)(((int64_t)(white - body_slow_lp) * (450 + p->tone * 3)) >> 15);
+        int32_t membrane_noise = body_fast_lp - body_slow_lp;
+        raw = (int32_t)(((int64_t)membrane_noise * be * (180 + p->weight)) >> 32);
+        raw += (int32_t)(((int64_t)(membrane + second / 3) * pe) >> 24);
+        raw += (int32_t)(((int64_t)ring * pe * p->metal) >> 34);
+        raw += (int32_t)(((int64_t)(crack + wire_lp) * se * (50 + p->snap)) >> 32);
+        /* WIRES is a controlled, independently decaying rattle, not the body. */
+        int32_t rattle = (we >> 12) * (we >> 12);
+        raw += (int32_t)(((int64_t)wires * rattle * p->noise) >> 32);
         /* Strong soft saturation: sustained shell remains substantial while
          * the attack is compressed rather than cut off at a hard threshold. */
         y = (int32_t)(((int64_t)raw * (170 + p->drive * 5u)) >> 8);
@@ -240,10 +223,6 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
         if (y < -14000) y = -14000 + (y + 14000) / 5;
         if (y > 31000) y = 31000 + (y - 31000) / 32;
         if (y < -31000) y = -31000 + (y + 31000) / 32;
-        if (edge) {  /* extra soft knee for the new crack layer; legacy snares untouched */
-            if (y > 30000) y = 30000 + (y - 30000) / 4;
-            if (y < -30000) y = -30000 + (y + 30000) / 4;
-        }
         out[i] = y > 32767 ? 32767 : y < -32768 ? -32768 : y;
         ph += inc;
         ph2 += (uint32_t)(((uint64_t)inc * 6021u) >> 12);
@@ -255,6 +234,8 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
     v->seed = rng;
     v->noise_lp = lp;
     v->wire_lp = wire_lp;
+    v->body_fast_lp = body_fast_lp;
+    v->body_slow_lp = body_slow_lp;
     v->body_env = be_end;
     v->wire_env = we_end;
     v->snap_env = se_end;
