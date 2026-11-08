@@ -83,6 +83,28 @@ int main(void)
     press(B_PLAY);
     bad += check("Stage 25B: PLAY switches back to performance controls",
                  ui.drum_perf_open && !ui.drum_map_open);
+    /* The middle canvas is capped at 150 rows: the uncovered part must
+     * still be black, never the previous screen's pixels. */
+    host_screen[190u * 240u + 237u] = swap16(0xFFFFu);
+    ui.force = 1u; ui_draw();
+    bad += check("Stage 25C: PLAY clears the entire screen",
+                 host_screen[190u * 240u + 237u] == swap16(T_BG));
+    press(B_ENV);
+    bad += check("Stage 25C: ENV tap leaves PLAY immediately",
+                 !ui.drum_perf_open && !ui.drum_map_open && !ui.home && cur_page()->fam == FAM_ENV);
+    press(B_SEQ);
+    bad += check("Stage 25C: SEQ opens from ENV", ui.drum_map_open);
+    host_screen[190u * 240u + 237u] = swap16(0xFFFFu);
+    ui.force = 1u; ui_draw();
+    bad += check("Stage 25C: SEQ clears the entire screen",
+                 host_screen[190u * 240u + 237u] == swap16(T_BG));
+    press(B_EDIT);
+    bad += check("Stage 25C: EDIT tap leaves SEQ immediately",
+                 !ui.drum_perf_open && !ui.drum_map_open && !ui.home && cur_page()->fam == FAM_EDIT);
+    press(B_PLAY);
+    press(B_HOME);
+    bad += check("Stage 25C: HOME tap leaves PLAY immediately",
+                 !ui.drum_perf_open && !ui.drum_map_open && ui.home);
     press(B_PLAY);
 #endif
     printf("DRUMLAB UI TESTS %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);

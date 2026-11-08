@@ -2212,6 +2212,7 @@ static void draw_drum_midi_map(void)
     uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB;
     char b[24];
     if (lab) drumlab_kit_ensure(&trk[ti]);
+    lcd_fill(0, 0, 240, 240, T_BG);
     cv_begin(240, 40, T_BG);
     cv_text(6, CAP_IN(M, 24), &AF_M, "DRUM MIDI MAP", T_TEXT);
     b[0] = 'T'; b[1] = (char)('1' + ti); b[2] = ' '; b[3] = 0;
@@ -2272,6 +2273,7 @@ static void draw_drum_perf(void)
     static const char *const curves[] = {"LIN", "SOFT", "HARD", "FIX"};
     char b[24];
     if (lab) drumlab_kit_ensure(&trk[ti]);
+    lcd_fill(0, 0, 240, 240, T_BG);
     cv_begin(240, 40, T_BG);
     cv_text(6, CAP_IN(M, 24), &AF_M, "DRUM PERFORMANCE", T_TEXT);
     b[0] = 'T'; b[1] = (char)('1' + ti); b[2] = ' '; b[3] = 0;

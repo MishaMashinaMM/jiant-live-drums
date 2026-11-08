@@ -2130,6 +2130,17 @@ static void ui_input_frame(void)
     /* Stage 22B: the freed SEQ button opens the live drum MIDI map. The
      * transport remains disabled, with no sequencer layers or combinations. */
     {
+        /* These are ordinary tap-opened pages. A different family button
+         * leaves them and continues through the usual navigation below. */
+        uint32_t navigation = 0u;
+        for (uint32_t f = 0; f < FAM_COUNT; f++)
+            if (FAM_BTN[f] != B_SEQ)
+                navigation |= 1u << panel.btn[FAM_BTN[f]];
+        if (pressed & navigation) {
+            ui.drum_map_open = 0u;
+            ui.drum_perf_open = 0u;
+            ui.force = 1u;
+        }
         uint32_t disabled = (1u << panel.btn[B_SEQ]) | (1u << panel.btn[B_REC]) |
                             (1u << panel.btn[B_PLAY]);
         if ((pressed & (1u << panel.btn[B_SEQ])) && !ui.menu && !dlg_on() && !name_on()) {
