@@ -39,6 +39,12 @@ int main(void)
     before = drumlab_patch_of(TSEL, 38)->metal;
     turn(EN_K2, 1); frame();
     bad += check("SOUND 4 edits the selected pad's METAL", drumlab_patch_of(TSEL, 38)->metal > before);
+    turn(EN_K3, -1); frame();
+    bad += check("Stage 24B fix: SOUND 4 TYPE can change SNARE to KICK",
+                 drumlab_patch_of(TSEL, 38)->kind == DLAB_KICK);
+    turn(EN_K3, 1); frame();
+    bad += check("Stage 24B fix: TYPE advances KICK to approved SNARE",
+                 drumlab_patch_of(TSEL, 38)->kind == DLAB_HEAVY_SNARE);
     turn(EN_K3, 1); frame();
     bad += check("Stage 24B: SOUND 4 knob 3 selects CLAP independently",
                  drumlab_patch_of(TSEL, 38)->kind == DLAB_CLAP &&
