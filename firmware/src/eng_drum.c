@@ -311,29 +311,6 @@ static drum_lane_t *drum_lane_of(track_t *t, const voice_t *v)
     return L->owner == i + 1u ? L : 0;
 }
 
-/* Different GM pitches on a lane still share its one sounding voice. */
-static voice_t *drum_reuse(track_t *t, uint32_t note)
-{
-    uint32_t lane = drum_lane(note);
-    uint32_t owner;
-    if (drum_overlaps(t, lane)) return 0;
-    if (lane < DV_NLANE) {
-        drum_lane_t *K = drum_kit_of(t);
-        if (!K)
-            return 0;
-        owner = K[lane].owner;
-    } else {
-        drum_lane_t *K = drum_kit12_of(t);
-        if (!K)
-            return 0;
-        owner = K[lane - DV_NLANE].owner;
-    }
-    if (!owner || owner > NVOICE)
-        return 0;
-    voice_t *v = &t->v[owner - 1u];
-    return v->active && (uint32_t)v->s[0] == lane ? v : 0;
-}
-
 /* CH always chokes every ringing OH, including overlapping tails. O2 is
  * independent, as required by the existing Stage 9B choke behavior. */
 static void drum_choke_open_hat(track_t *t)

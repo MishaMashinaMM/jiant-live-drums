@@ -42,17 +42,21 @@ int main(void)
         uint32_t voices = 0;
         trk_note_on(t, 36, 100);
         trk_note_on(t, 36, 100);
+        trk_note_on(t, 36, 100);
         for (i = 0; i < NVOICE; i++)
             voices += t->v[i].active && t->v[i].s[0] == DV_KICK;
-        bad += test("Stage 25B: DRUM-X default OVERLAP has two independent kick tails", voices == 2u);
-        for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
+        bad += test("Stage 25B: DRUM-X default OVERLAP has three independent kick tails", voices == 3u);
         drum_retrigger[0][DV_KICK] = 1u;
-        trk_note_on(t, 36, 100);
         trk_note_on(t, 36, 100);
         voices = 0;
         for (i = 0; i < NVOICE; i++)
             voices += t->v[i].active && t->v[i].s[0] == DV_KICK;
-        bad += test("Stage 25B: DRUM-X RESTART reuses one voice", voices == 1u);
+        bad += test("Stage 25B3: DRUM-X OVR to RST kills all earlier tails", voices == 1u);
+        trk_note_on(t, 36, 100);
+        voices = 0;
+        for (i = 0; i < NVOICE; i++)
+            voices += t->v[i].active && t->v[i].s[0] == DV_KICK;
+        bad += test("Stage 25B: DRUM-X RESTART keeps one voice", voices == 1u);
         for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
         drum_retrigger[0][DV_KICK] = 0u;
     }
@@ -132,15 +136,18 @@ int main(void)
         drumlab_midi_custom[0] = 0;
         trk_note_on(t, 36, 100);
         trk_note_on(t, 36, 100);
-        for (i = 0; i < NVOICE; i++) count += t->v[i].active && t->v[i].note == 36;
-        bad += test("Stage 25B: DRUM-LAB default OVERLAP keeps two hits", count == 2u);
-        for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
-        drum_retrigger[0][0] = 1u;
         trk_note_on(t, 36, 100);
+        for (i = 0; i < NVOICE; i++) count += t->v[i].active && t->v[i].note == 36;
+        bad += test("Stage 25B: DRUM-LAB default OVERLAP keeps three hits", count == 3u);
+        drum_retrigger[0][0] = 1u;
         trk_note_on(t, 36, 100);
         count = 0;
         for (i = 0; i < NVOICE; i++) count += t->v[i].active && t->v[i].note == 36;
-        bad += test("Stage 25B: DRUM-LAB RESTART reuses the same voice", count == 1u);
+        bad += test("Stage 25B3: DRUM-LAB OVR to RST kills all earlier tails", count == 1u);
+        trk_note_on(t, 36, 100);
+        count = 0;
+        for (i = 0; i < NVOICE; i++) count += t->v[i].active && t->v[i].note == 36;
+        bad += test("Stage 25B: DRUM-LAB RESTART keeps one voice", count == 1u);
         drum_retrigger[0][0] = 0u;
         for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
         drum_perf_choke[0][0] = drum_perf_choke[0][2] = 2u;

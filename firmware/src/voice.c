@@ -467,17 +467,26 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
 {
     uint32_t i, np = trk_nvoice(t), best = np, low = np, nfree = 0;
     int32_t bd = 0x7FFFFFFF;
-    if (t->engine == ENGI_DRUM) {
-        voice_t *v = drum_reuse(t, note);
-        if (v)
-            return voice_reuse(t, v);
-    }
-    if (t->engine == ENGI_DRUMLAB) {
-        uint32_t lane = drumlab_lane(note), ti = (uint32_t)(t - trk);
-        if (ti < NPART && drum_retrigger[ti][lane])
-            for (i = 0; i < np; i++)
-                if (t->v[i].active && drumlab_lane(t->v[i].note) == lane)
-                    return voice_reuse(t, &t->v[i]);
+    if (t->engine == ENGI_DRUM || t->engine == ENGI_DRUMLAB) {
+        uint32_t lane = t->engine == ENGI_DRUM ? drum_lane(note) : drumlab_lane(note);
+        uint32_t ti = (uint32_t)(t - trk);
+        if (ti < NPART && lane < DV_NLANE12 && drum_retrigger[ti][lane]) {
+            voice_t *reuse = 0;
+            /* A pad may have several tails from when it was in OVERLAP.
+             * RESTART must discard ALL of them, not merely retrigger one.
+             * End the discarded voices immediately: a six-ms voice_kill
+             * fade would itself be audible as a second, overlapping hit. */
+            for (i = 0; i < np; i++) {
+                voice_t *old = &t->v[i];
+                uint32_t old_lane = t->engine == ENGI_DRUM ?
+                    (uint32_t)old->s[0] : drumlab_lane(old->note);
+                if (!old->active || old_lane != lane) continue;
+                if (!reuse) { reuse = old; continue; }
+                old->active = old->gate = old->stage = 0;
+                old->env = old->env_out = 0;
+            }
+            if (reuse) return voice_reuse(t, reuse);
+        }
     }
     for (i = 0; i < np; i++) {
         if (t->v[i].active && t->v[i].note == note &&
