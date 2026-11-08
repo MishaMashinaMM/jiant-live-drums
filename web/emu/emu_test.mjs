@@ -20,11 +20,12 @@ const EN = { SELECT: 0, ALGO: 1, PRESETS: 2, K1: 3, K2: 4, K3: 5, K4: 6 };
 let fails = 0;
 const check = (what, ok) => { console.log(`emu: ${what.padEnd(76)} ${ok ? "ok" : "FAIL"}`); if (!ok) fails++; };
 const emulatorPage = fs.readFileSync("web/emu/index.html", "utf8");
-check("Stage 10A: browser has a channel, note, velocity and 12-note drum test input",
+check("Stage 24C: browser MIDI test follows all 12 selected-track drum assignments",
       ["midi-test-channel", "midi-test-note", "midi-test-velocity",
        "midi-test-on", "midi-test-off", "midi-test-pulse", "midi-test-panic",
        "midi-test-pads"].every((id) => emulatorPage.includes('id="' + id + '"')) &&
-      emulatorPage.includes("n < 48") && emulatorPage.includes("0x90 | ch") &&
+      emulatorPage.includes("lane < 12") && emulatorPage.includes("midiTestPadMap") &&
+      emulatorPage.includes("pad.dataset.note") && emulatorPage.includes("0x90 | ch") &&
       emulatorPage.includes("0x80 | ch") && emulatorPage.includes("0xB0 | ch"));
 
 
