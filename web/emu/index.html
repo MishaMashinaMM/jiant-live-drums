@@ -115,6 +115,11 @@ footer small { font-size: 11px; opacity: .8; }
     <button id="midi-test-pulse" type="button" disabled>Play 200 ms</button>
     <button id="midi-test-panic" type="button" disabled>All Notes Off</button>
   </div>
+  <div class="controls">
+    <label>CC number <input id="midi-test-cc" type="number" min="0" max="127" value="30"></label>
+    <label>CC value <input id="midi-test-cc-value" type="number" min="0" max="127" value="64"></label>
+    <button id="midi-test-send-cc" type="button" disabled>Send CC</button>
+  </div>
   <div class="pads" id="midi-test-pads" aria-label="Selected track drum MIDI assignments"></div>
   <p id="midi-test-pad-status">Select a DRUM-X or DRUM-LAB track to use its MIDI note assignments. Set Channel to that track's RX channel. All Notes Off sends CC123 on every channel.</p>
 </details>
@@ -469,6 +474,8 @@ const testValue = (id, lo, hi) => {
 const testChannel = () => testValue("midi-test-channel", 1, 16) - 1;
 const testNote = () => testValue("midi-test-note", 0, 127);
 const testVelocity = () => testValue("midi-test-velocity", 1, 127);
+const testCC = () => testValue("midi-test-cc", 0, 127);
+const testCCValue = () => testValue("midi-test-cc-value", 0, 127);
 const midiTestSend = (status, note, velocity) => send({ type: "midi", data: [status, note, velocity] });
 const testHeld = new Set(), testTimers = new Set();
 function testStart(ch, n, vel) {
@@ -489,6 +496,9 @@ function testPulse(ch, n, vel) {
 document.getElementById("midi-test-on").addEventListener("click", () => testStart(testChannel(), testNote(), testVelocity()));
 document.getElementById("midi-test-off").addEventListener("click", () => testStop(testChannel(), testNote()));
 document.getElementById("midi-test-pulse").addEventListener("click", () => testPulse(testChannel(), testNote(), testVelocity()));
+document.getElementById("midi-test-send-cc").addEventListener("click", () => {
+  if (node) midiTestSend(0xB0 | testChannel(), testCC(), testCCValue());
+});
 document.getElementById("midi-test-panic").addEventListener("click", () => {
   for (const timer of testTimers) clearTimeout(timer);
   testTimers.clear();

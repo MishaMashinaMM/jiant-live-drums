@@ -27,6 +27,10 @@ check("Stage 24C: browser MIDI test follows all 12 selected-track drum assignmen
       emulatorPage.includes("lane < 12") && emulatorPage.includes("midiTestPadMap") &&
       emulatorPage.includes("pad.dataset.note") && emulatorPage.includes("0x90 | ch") &&
       emulatorPage.includes("0x80 | ch") && emulatorPage.includes("0xB0 | ch"));
+check("Stage 26: browser can send controller number and value on selected MIDI channel",
+      ["midi-test-cc", "midi-test-cc-value", "midi-test-send-cc"].every((id) =>
+        emulatorPage.includes('id="' + id + '"')) &&
+      emulatorPage.includes('midiTestSend(0xB0 | testChannel(), testCC(), testCCValue())'));
 
 
 async function device(saved) {
