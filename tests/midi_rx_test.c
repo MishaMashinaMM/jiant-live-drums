@@ -125,9 +125,16 @@ int main(void)
     send_rx(0x90, 36, 100, 1); send_rx(0xB0, 64, 127, 1); send_rx(0x80, 36, 0, 1);
     assert(mn_get(0, 36) == (1u | MIDI_PEDAL_NOTE) && !midi_owners[1]);
     send_rx(0xB0, 64, 0, 1); assert(!mn_get(0, 36));
+#if FELUCCA_NO_SEQUENCER
+    /* Live kits have one assignable note per pad, not an octave effect band. */
+    send_rx(0x90, 36, 100, 1); assert(midi_owners[1]);
+    send_rx(0x80, 36, 0, 1); assert(!midi_owners[1]);
+    puts("RX: shared drum/synth pedal and live drum note ownership passed");
+#else
     send_rx(0x90, 84, 100, 1); assert(dxo_n[1] && midi_owners[1]);
     send_rx(0x80, 84, 0, 1); assert(!dxo_n[1] && !midi_owners[1]);
     puts("RX: shared drum/synth pedal and drum octave release passed");
+#endif
 
     reset_rx(); midi_rx[1] = 1;
     send_rx(0x90, 60, 100, 1);

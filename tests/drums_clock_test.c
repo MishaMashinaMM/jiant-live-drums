@@ -106,8 +106,9 @@ static int live_only_ui_test(void)
     hold(B_REC);
     press(B_PLAY);
     events_block(CTL);
-    bad += check("DRUMS: SEQ/REC/PLAY keys cannot open sequencer UI or transport",
-                 ui.home && ui.layer == LAYER_NONE && !song.playing && !song.rec && !transport_req);
+    bad += check("DRUMS: SEQ/PLAY open drum pages without starting transport",
+                 ui.drum_perf_open && !ui.drum_map_open && ui.layer == LAYER_NONE &&
+                 !song.playing && !song.rec && !transport_req);
     ui_leds();
     int led_ok = 1;
     static const uint8_t OFF_BTN[] = {B_SEQ, B_REC, B_PLAY};
@@ -125,6 +126,9 @@ static int live_only_ui_test(void)
                 arrange_visible = 1;
         bad += check("DRUMS: SAVE ARRANGE is hidden without deleting project data", !arrange_visible);
     }
+    press(B_SAVE); /* ordinary page navigation closes the live PLAY screen */
+    bad += check("DRUMS: SAVE navigation closes the live PLAY screen",
+                 !ui.drum_map_open && !ui.drum_perf_open);
     go_title("TOOLS");
     ui.act = 0;
     turn(EN_K1, 1);
