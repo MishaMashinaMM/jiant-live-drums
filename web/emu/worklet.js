@@ -37,6 +37,7 @@ if (typeof registerProcessor === "function") {
       this.sentDraws = -1;
       this.sentWrites = -1;
       this.sentLeds = "";
+      this.sentDrumPads = "";
       this.lastFrame = 0;
       this.period = 1 / 30;
       this.busy = 0;
@@ -108,6 +109,15 @@ if (typeof registerProcessor === "function") {
     publish() {
       const ex = this.ex, mem = ex.memory.buffer;
       const msg = { type: "frame" };
+      if (ex.web_drum_pad_note) {
+        const notes = Array.from({ length: 12 }, (_, i) => ex.web_drum_pad_note(i));
+        const track = ex.web_drum_selected_track();
+        const key = `${track}:${notes.join(",")}`;
+        if (key !== this.sentDrumPads) {
+          this.sentDrumPads = key;
+          msg.drumPads = { track, notes };
+        }
+      }
       const leds = [ex.web_lit_buttons(), ex.web_lit_keys(), ex.web_dim_buttons(), ex.web_dim_keys(), ex.web_dim_level(),
                     ex.web_breath_buttons(), ex.web_breath_keys(), ex.web_mid_keys ? ex.web_mid_keys() : 0];
       const an = ex.web_anim_levels ? ex.web_anim_levels() : 0;   // the power-on sweep: each LED's level
@@ -134,7 +144,7 @@ if (typeof registerProcessor === "function") {
         this.sentWrites = writes;
         msg.sectors = storeSectors(new Uint8Array(mem, ex.web_nor(), ex.web_nor_size()));
       }
-      if (msg.leds || msg.fb || msg.sectors || msg.load !== undefined) this.port.postMessage(msg, transfer);
+      if (msg.leds || msg.fb || msg.sectors || msg.drumPads || msg.load !== undefined) this.port.postMessage(msg, transfer);
     }
 
     // A click's down and up can arrive within one render quantum, but the FM-1's contacts never close for less than

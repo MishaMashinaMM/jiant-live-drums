@@ -505,6 +505,18 @@ EXPORT uint32_t web_screen_draws(void) { return web_draws; }
 EXPORT uint32_t web_now_ms(void) { return fm1_ms; }
 EXPORT uint32_t web_playing(void) { return song.playing; }
 EXPORT uint32_t web_live_only(void) { return FELUCCA_NO_SEQUENCER != 0; }
+/* Emulator drum audition buttons follow the selected track's actual MIDI map. */
+EXPORT uint32_t web_drum_pad_note(uint32_t lane)
+{
+    uint32_t ti = song.sel;
+    if (ti >= NPART || lane >= 12u) return 255u;
+    if (trk[ti].eng_req == ENGI_DRUM)
+        return drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane];
+    if (trk[ti].eng_req == ENGI_DRUMLAB)
+        return drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane;
+    return 255u;
+}
+EXPORT uint32_t web_drum_selected_track(void) { return song.sel; }
 EXPORT uint32_t web_sample_rate(void) { return FS; }
 
 /* (0.7.1) stems from the browser (web/emu/stems.js): a backup file's objects into this device, as the editor's RESTORE

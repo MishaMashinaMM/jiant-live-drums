@@ -115,8 +115,8 @@ footer small { font-size: 11px; opacity: .8; }
     <button id="midi-test-pulse" type="button" disabled>Play 200 ms</button>
     <button id="midi-test-panic" type="button" disabled>All Notes Off</button>
   </div>
-  <div class="pads" id="midi-test-pads" aria-label="MIDI notes 36–47"></div>
-  <p>Drum pads send notes 36–47. All Notes Off sends CC123 on every channel.</p>
+  <div class="pads" id="midi-test-pads" aria-label="Selected track drum MIDI assignments"></div>
+  <p id="midi-test-pad-status">Select a DRUM-X or DRUM-LAB track to use its MIDI note assignments. Set Channel to that track's RX channel. All Notes Off sends CC123 on every channel.</p>
 </details>
 <p class="keys">
   <span><kbd>Z</kbd>–<kbd>'</kbd> <kbd>Q</kbd>–<kbd>O</kbd> keys</span>
@@ -495,18 +495,38 @@ document.getElementById("midi-test-panic").addEventListener("click", () => {
   for (const key of [...testHeld]) testStop(Math.floor(key / 128), key % 128);
   for (let ch = 0; ch < 16; ch++) midiTestSend(0xB0 | ch, 123, 0);
 });
-for (let n = 36; n < 48; n++) {
+const testPads = [];
+for (let lane = 0; lane < 12; lane++) {
   const pad = document.createElement("button");
   pad.type = "button";
   pad.disabled = true;
   pad.className = "midi-test-pad";
-  pad.textContent = String(n);
-  pad.title = "MIDI note " + n;
-  pad.addEventListener("click", () => testPulse(testChannel(), n, testVelocity()));
+  pad.textContent = `${String(lane + 1).padStart(2, "0")} · —`;
+  pad.title = "Select a drum track";
+  pad.dataset.note = "255";
+  pad.addEventListener("click", () => {
+    const note = Number(pad.dataset.note);
+    if (note <= 127) testPulse(testChannel(), note, testVelocity());
+  });
   document.getElementById("midi-test-pads").append(pad);
+  testPads.push(pad);
+}
+function midiTestPadMap(map) {
+  const active = map.notes.some(n => n <= 127);
+  document.getElementById("midi-test-pad-status").textContent = active
+    ? `Track ${map.track + 1} drum pad notes (live assignments). Set Channel to this track's RX channel.`
+    : `Track ${map.track + 1} is not a drum engine. Select DRUM-X or DRUM-LAB to audition pads.`;
+  testPads.forEach((pad, i) => {
+    const note = map.notes[i];
+    pad.dataset.note = String(note);
+    pad.textContent = `${String(i + 1).padStart(2, "0")} · ${note <= 127 ? note : "—"}`;
+    pad.title = note <= 127 ? `Pad ${i + 1}, MIDI note ${note}` : "Select a drum track";
+    pad.disabled = !node || note > 127;
+  });
 }
 function midiTestEnable(on) {
   for (const b of document.querySelectorAll("#midi-test button")) b.disabled = !on;
+  for (const pad of testPads) if (Number(pad.dataset.note) > 127) pad.disabled = true;
 }
 
 // ------------------------------------------------------------------ Web MIDI in (channel messages)
@@ -571,6 +591,7 @@ async function switchOn() {
         else if (m.type === "sample-ready") showSampleStatus(m);
         else if (m.type === "error") rej(new Error(m.message));
         else if (m.type === "frame") {
+          if (m.drumPads) midiTestPadMap(m.drumPads);
           if (m.fb) drawScreen(m.fb);
           if (m.leds) drawLights(lastLeds = m.leds, m.anim);
           if (m.sectors && !backupMode && !saveFlash(m.sectors) && !warned) {
