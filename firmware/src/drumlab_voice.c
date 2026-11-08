@@ -20,6 +20,7 @@ typedef struct {
     int32_t noise_lp, wire_lp;                   /* Q15 one-pole states */
     int32_t body_fast_lp, body_slow_lp;          /* Stage 23C snare low-mid band */
     uint8_t active;
+    int8_t perf_timbre;                           /* per-hit velocity-to-sound offset */
 } dlab_voice_t;
 
 static uint32_t dlab_rand(uint32_t *seed)

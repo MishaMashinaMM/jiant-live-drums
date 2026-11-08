@@ -2134,10 +2134,53 @@ static void ui_input_frame(void)
                             (1u << panel.btn[B_PLAY]);
         if ((pressed & (1u << panel.btn[B_SEQ])) && !ui.menu && !dlg_on() && !name_on()) {
             ui.drum_map_open ^= 1u;
+            if (ui.drum_map_open) ui.drum_perf_open = 0;
+            ui.force = 1u;
+        }
+        if ((pressed & (1u << panel.btn[B_PLAY])) && !ui.menu && !dlg_on() && !name_on()) {
+            ui.drum_perf_open ^= 1u;
+            if (ui.drum_perf_open) ui.drum_map_open = 0;
             ui.force = 1u;
         }
         pressed &= ~disabled;
         fm1_in.buttons &= ~disabled;
+    }
+    if (ui.drum_perf_open) {
+        uint32_t ti = song.sel, lane = ui.drum_map_pad;
+        int drum = trk[ti].eng_req == ENGI_DRUM || trk[ti].eng_req == ENGI_DRUMLAB;
+        if ((s = panel_enc(EN_ALGO)) != 0)
+            track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
+        if ((s = panel_enc(EN_SELECT)) != 0) {
+            ui.drum_map_pad = (uint8_t)clamp((int32_t)ui.drum_map_pad + (s > 0 ? 1 : -1), 0, 11);
+            ui.force = 1u;
+        }
+        if (pressed & (1u << panel.btn[B_OCTDN])) { ui.drum_map_pad %= 6u; ui.force = 1u; }
+        if (pressed & (1u << panel.btn[B_OCTUP])) { ui.drum_map_pad = 6u + ui.drum_map_pad % 6u; ui.force = 1u; }
+        ti = song.sel;
+        lane = ui.drum_map_pad;
+        drum = trk[ti].eng_req == ENGI_DRUM || trk[ti].eng_req == ENGI_DRUMLAB;
+        if ((s = panel_enc(EN_K1)) != 0 && drum) {
+            fm1_irq_off();
+            drum_perf_curve[ti][lane] = (uint8_t)clamp((int32_t)drum_perf_curve[ti][lane] + (s > 0 ? 1 : -1), 0, 3);
+            fm1_irq_on(); ui.force = 1u;
+        }
+        if ((s = panel_enc(EN_K2)) != 0 && drum) {
+            fm1_irq_off();
+            drum_perf_sound[ti][lane] = (uint8_t)clamp((int32_t)drum_perf_sound[ti][lane] + (s > 0 ? 1 : -1), 0, 127);
+            fm1_irq_on(); ui.force = 1u;
+        }
+        if ((s = panel_enc(EN_K3)) != 0 && drum) {
+            fm1_irq_off();
+            drum_perf_choke[ti][lane] = (uint8_t)clamp((int32_t)drum_perf_choke[ti][lane] + (s > 0 ? 1 : -1), 0, 4);
+            fm1_irq_on(); ui.force = 1u;
+        }
+        if ((s = panel_enc(EN_K4)) != 0 && drum) {
+            fm1_irq_off();
+            drum_retrigger[ti][lane] = (uint8_t)clamp((int32_t)drum_retrigger[ti][lane] + (s > 0 ? 1 : -1), 0, 1);
+            fm1_irq_on(); ui.force = 1u;
+        }
+        panel_enc(EN_PRESET);
+        return;
     }
     if (ui.drum_map_open) {
         /* Keep the assigned track and pad separate from EDIT's sound pages. */

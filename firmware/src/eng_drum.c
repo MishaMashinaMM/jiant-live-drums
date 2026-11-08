@@ -58,6 +58,24 @@ static drum_lane_t drum_kit12[NPART][4];        /* hit state for the four MIDI-o
  * 0 = OVERLAP (default), 1 = RESTART (legacy one-voice-per-pad). */
 static drum_lane_t drum_overlap_voice[NPART][NVOICE];
 static uint8_t drum_retrigger[NPART][DV_NLANE12];
+/* Shared across DRUM-X and DRUM-LAB; zero is the backward-compatible default:
+ * linear velocity, no velocity-to-timbre, no extra choke, OVERLAP. */
+enum { DPERF_LINEAR, DPERF_SOFT, DPERF_HARD, DPERF_FIXED };
+static uint8_t drum_perf_curve[NPART][DV_NLANE12];
+static uint8_t drum_perf_sound[NPART][DV_NLANE12];
+static uint8_t drum_perf_choke[NPART][DV_NLANE12];
+static uint32_t drum_perf_velocity(uint32_t ti, uint32_t lane, uint32_t velocity)
+{
+    uint32_t v = velocity > 127u ? 127u : velocity;
+    if (ti >= NPART || lane >= DV_NLANE12 || !v) return v;
+    switch (drum_perf_curve[ti][lane]) {
+    case DPERF_SOFT: v = 127u - (127u - v) * (127u - v) / 127u; break;
+    case DPERF_HARD: v = (v * v + 63u) / 127u; break;
+    case DPERF_FIXED: v = 100u; break;
+    default: break;
+    }
+    return v ? v : 1u;
+}
 static int drum_overlaps(const track_t *t, uint32_t lane)
 {
     uint32_t ti = (uint32_t)(t - trk);
@@ -394,6 +412,9 @@ static void drum_note_on(track_t *t, voice_t *v)
     } else {
         L->rm = L->rt = 0;
     }
+    /* V->SOUND adds per-hit MORPH movement without changing the saved patch. */
+    L->rm = (int8_t)clamp((int32_t)L->rm +
+        (((int32_t)v->vel - 64) * drum_perf_sound[t - trk][lane]) / 127, -127, 127);
     if (lane == DV_KICK || lane == DV_B2)
         duck_hit = 1;
     dx_trigger(&L->x);

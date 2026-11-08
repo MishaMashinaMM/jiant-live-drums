@@ -472,6 +472,13 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
         if (v)
             return voice_reuse(t, v);
     }
+    if (t->engine == ENGI_DRUMLAB) {
+        uint32_t lane = drumlab_lane(note), ti = (uint32_t)(t - trk);
+        if (ti < NPART && drum_retrigger[ti][lane])
+            for (i = 0; i < np; i++)
+                if (t->v[i].active && drumlab_lane(t->v[i].note) == lane)
+                    return voice_reuse(t, &t->v[i]);
+    }
     for (i = 0; i < np; i++) {
         if (t->v[i].active && t->v[i].note == note &&
             !(t->engine == ENGI_DRUM && drum_overlaps(t, drum_lane(note))) &&
@@ -702,6 +709,22 @@ static void trk_note_on_raw(track_t *t, uint32_t note, uint32_t vel)
         t->xp_note[i] = (uint8_t)note;
         t->xp_vel[i] = (uint8_t)vel;
         return;
+    }
+    if (t->engine == ENGI_DRUM || t->engine == ENGI_DRUMLAB) {
+        uint32_t ti = (uint32_t)(t - trk);
+        uint32_t lane = t->engine == ENGI_DRUM ? drum_lane(note) : drumlab_lane(note);
+        if (ti < NPART && lane < DV_NLANE12) {
+            uint32_t group = drum_perf_choke[ti][lane];
+            if (group) for (i = 0; i < NVOICE; i++) {
+                voice_t *old = &t->v[i];
+                uint32_t old_lane = t->engine == ENGI_DRUM ?
+                    (uint32_t)old->s[0] : drumlab_lane(old->note);
+                if (old->active && old_lane < DV_NLANE12 && old_lane != lane &&
+                    drum_perf_choke[ti][old_lane] == group)
+                    voice_kill(old);                 /* six-millisecond click-free fade */
+            }
+            vel = drum_perf_velocity(ti, lane, vel);
+        }
     }
     mod_note(t, note, vel);                             /* the matrix's VEL / KEY / RAND */
     for (i = 0; i < NVOICE; i++)

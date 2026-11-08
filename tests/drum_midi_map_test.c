@@ -17,6 +17,27 @@ int main(void)
     int bad = 0;
     host_tracks_init();
     host_preset(t, ENGI_DRUM, 0);
+    bad += test("Stage 25B: default velocity curve is linear", drum_perf_velocity(0, 0, 75) == 75u);
+    drum_perf_curve[0][0] = DPERF_SOFT;
+    bad += test("Stage 25B: soft velocity raises quiet strikes", drum_perf_velocity(0, 0, 30) > 30u);
+    drum_perf_curve[0][0] = DPERF_HARD;
+    bad += test("Stage 25B: hard velocity softens quiet strikes", drum_perf_velocity(0, 0, 30) < 30u);
+    drum_perf_curve[0][0] = DPERF_FIXED;
+    bad += test("Stage 25B: fixed velocity ignores strike strength", drum_perf_velocity(0, 0, 30) == 100u);
+    drum_perf_curve[0][0] = DPERF_LINEAR;
+    drum_perf_sound[0][0] = 127u;
+    trk_note_on(t, 36, 127);
+    {
+        int changed = 0;
+        for (i = 0; i < NVOICE; i++) {
+            drum_lane_t *L = drum_lane_of(t, &t->v[i]);
+            if (t->v[i].active && L && t->v[i].s[0] == DV_KICK && L->rm > 0)
+                changed = 1;
+        }
+        bad += test("Stage 25B: DRUM-X velocity-to-sound changes hit MORPH", changed);
+    }
+    for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
+    drum_perf_sound[0][0] = 0u;
     {
         uint32_t voices = 0;
         trk_note_on(t, 36, 100);
@@ -67,6 +88,17 @@ int main(void)
 
     host_tracks_init();
     host_preset(t, ENGI_DRUMLAB, 0);
+    drum_perf_sound[0][0] = 127u;
+    trk_note_on(t, 36, 127);
+    {
+        int changed = 0;
+        for (i = 0; i < NVOICE; i++)
+            if (t->v[i].active && t->v[i].note == 36 && drumlab_state[0][i].perf_timbre > 0)
+                changed = 1;
+        bad += test("Stage 25B: DRUM-LAB velocity-to-sound changes hit timbre", changed);
+    }
+    for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
+    drum_perf_sound[0][0] = 0u;
     drumlab_midi_custom[0] = 0;
     bad += test("DRUM-LAB accepts independent duplicate MIDI 6",
                 drumlab_note_set(t, 0, 6) && drumlab_note_set(t, 2, 6));
@@ -93,6 +125,32 @@ int main(void)
             if (t->v[i].active && t->v[i].note == 36 &&
                 drumlab_state[0][i].base_inc == want) found = 1u;
         bad += test("DRUM-LAB applies signed pitch offset at note trigger", found);
+    }
+    {
+        uint32_t count = 0;
+        for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
+        drumlab_midi_custom[0] = 0;
+        trk_note_on(t, 36, 100);
+        trk_note_on(t, 36, 100);
+        for (i = 0; i < NVOICE; i++) count += t->v[i].active && t->v[i].note == 36;
+        bad += test("Stage 25B: DRUM-LAB default OVERLAP keeps two hits", count == 2u);
+        for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
+        drum_retrigger[0][0] = 1u;
+        trk_note_on(t, 36, 100);
+        trk_note_on(t, 36, 100);
+        count = 0;
+        for (i = 0; i < NVOICE; i++) count += t->v[i].active && t->v[i].note == 36;
+        bad += test("Stage 25B: DRUM-LAB RESTART reuses the same voice", count == 1u);
+        drum_retrigger[0][0] = 0u;
+        for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
+        drum_perf_choke[0][0] = drum_perf_choke[0][2] = 2u;
+        trk_note_on(t, 36, 100);
+        trk_note_on(t, 38, 100);
+        count = 0;
+        for (i = 0; i < NVOICE; i++)
+            count += t->v[i].active && t->v[i].note == 36 && t->v[i].stage == 4u;
+        bad += test("Stage 25B: matching choke groups fade previous pad", count == 1u);
+        drum_perf_choke[0][0] = drum_perf_choke[0][2] = 0u;
     }
     printf("DRUM MIDI MAP TESTS %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return bad != 0;

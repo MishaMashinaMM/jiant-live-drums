@@ -979,6 +979,16 @@ int main(void)
                  restored.pad_pitch[0][0] == -24 && restored.pad_pitch[0][2] == 17 &&
                  restored.pad_pitch[0][1] == 0;
             bad += check("Stage 22B: DRUM-LAB pitch offsets survive project save/import", ok);
+            lab.perf_curve[0][2] = DPERF_HARD;
+            lab.perf_sound[0][2] = 95u;
+            lab.perf_choke[0][2] = 4u;
+            lab.perf_retrigger[0][2] = 1u;
+            lab.sum = proj_sum(&lab);
+            ok = proj_pack(&saved, &lab) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.perf_curve[0][2] == DPERF_HARD && restored.perf_sound[0][2] == 95u &&
+                 restored.perf_choke[0][2] == 4u && restored.perf_retrigger[0][2] == 1u &&
+                 !restored.perf_choke[0][1] && !restored.perf_retrigger[0][1];
+            bad += check("Stage 25B: DRUM-LAB sparse pad performance settings round trip", ok);
         }
         {   /* Stage 22: DRUM-X uses the same custom-note capability independently. */
             static project_t dx, restored;
@@ -1014,6 +1024,15 @@ int main(void)
                  restored.pad_pitch[0][1] == 24 && restored.pad_pitch[0][11] == -12 &&
                  restored.pad_pitch[0][0] == 0;
             bad += check("Stage 22B: DRUM-X pitch offsets survive project save/import", ok);
+            dx.perf_curve[0][11] = DPERF_FIXED;
+            dx.perf_sound[0][11] = 127u;
+            dx.perf_choke[0][11] = 3u;
+            dx.perf_retrigger[0][11] = 1u;
+            dx.sum = proj_sum(&dx);
+            ok = proj_pack(&saved, &dx) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.perf_curve[0][11] == DPERF_FIXED && restored.perf_sound[0][11] == 127u &&
+                 restored.perf_choke[0][11] == 3u && restored.perf_retrigger[0][11] == 1u;
+            bad += check("Stage 25B: DRUM-X sparse pad performance settings round trip", ok);
         }
         {   /* Stage 9B2: the extra drums are independent across a project save/load, including their LEVEL values. */
             static project_t b2, restored;

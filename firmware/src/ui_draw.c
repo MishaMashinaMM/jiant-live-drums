@@ -2263,6 +2263,50 @@ static void draw_drum_midi_map(void)
     cv_blit(0, 198);
     ui.force = 0;
 }
+
+static void draw_drum_perf(void)
+{
+    const uint32_t ti = song.sel, first = ui.drum_map_pad < 6u ? 0u : 6u;
+    const track_t *t = &trk[ti];
+    uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB;
+    static const char *const curves[] = {"LIN", "SOFT", "HARD", "FIX"};
+    char b[24];
+    if (lab) drumlab_kit_ensure(&trk[ti]);
+    cv_begin(240, 40, T_BG);
+    cv_text(6, CAP_IN(M, 24), &AF_M, "DRUM PERFORMANCE", T_TEXT);
+    b[0] = 'T'; b[1] = (char)('1' + ti); b[2] = ' '; b[3] = 0;
+    str_cpy(b + 3, drum ? "DRUM-X" : lab ? "DRUM-LAB" : "NO DRUM", sizeof b - 3u);
+    cv_text(6, 30 + CAP_IN(S, 10), &AF_S, b, T_ACCENT);
+    cv_blit(0, 0);
+    cv_begin(240, 158, T_BG);
+    cv_text(6, CAP_IN(S, 14), &AF_S, "PAD", T_DIM);
+    cv_text(61, CAP_IN(S, 14), &AF_S, "CURVE", T_DIM);
+    cv_text(119, CAP_IN(S, 14), &AF_S, "V>S", T_DIM);
+    cv_text(159, CAP_IN(S, 14), &AF_S, "CH", T_DIM);
+    cv_text(194, CAP_IN(S, 14), &AF_S, "RETR", T_DIM);
+    if (drum || lab) for (uint32_t i = 0; i < 6u; i++) {
+        uint32_t lane = first + i;
+        int32_t y = 16 + (int32_t)i * 23;
+        uint16_t col = lane == ui.drum_map_pad ? T_ACCENT : T_TEXT;
+        if (lab) {
+            drumlab_pad_label(lane, drumlab_kit[ti][lane].kind, b);
+            cv_text(6, y + CAP_IN(S, 20), &AF_S, b, col);
+        } else cv_text(6, y + CAP_IN(S, 20), &AF_S, drum_lane_abbr(t, lane), col);
+        cv_text(61, y + CAP_IN(S, 20), &AF_S, curves[drum_perf_curve[ti][lane] & 3u], col);
+        fmt_int(b, drum_perf_sound[ti][lane]);
+        cv_text(119, y + CAP_IN(S, 20), &AF_S, b, col);
+        if (!drum_perf_choke[ti][lane]) str_cpy(b, "--", sizeof b);
+        else { b[0] = 'G'; b[1] = (char)('0' + drum_perf_choke[ti][lane]); b[2] = 0; }
+        cv_text(159, y + CAP_IN(S, 20), &AF_S, b, col);
+        cv_text(194, y + CAP_IN(S, 20), &AF_S, drum_retrigger[ti][lane] ? "RST" : "OVR", col);
+    }
+    cv_blit(0, 40);
+    cv_begin(240, 42, T_BG);
+    cv_text(6, CAP_IN(S, 14), &AF_S, "ALGO TRACK SELECT PAD", T_DIM);
+    cv_text(6, 20 + CAP_IN(S, 14), &AF_S, "K1 CUR K2 V>S K3 CH K4 RET", T_TEXT);
+    cv_blit(0, 198);
+    ui.force = 0;
+}
 #endif
 
 static void ui_draw_body(uint32_t counting)
@@ -2278,6 +2322,10 @@ static void ui_draw_body(uint32_t counting)
         return;
     }
 #if FELUCCA_NO_SEQUENCER
+    if (ui.drum_perf_open) {
+        draw_drum_perf();
+        return;
+    }
     if (ui.drum_map_open) {
         draw_drum_midi_map();
         return;

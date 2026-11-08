@@ -69,6 +69,22 @@ int main(void)
     apply_preset(1);
     bad += check("loading another DRUM-LAB kit resets its per-pad edits",
                  !drumlab_kit_dirty[0] && !drumlab_kit_ready[0]);
+#if FELUCCA_NO_SEQUENCER
+    press(B_PLAY);
+    bad += check("Stage 25B: PLAY opens per-pad performance screen", ui.drum_perf_open && !ui.drum_map_open);
+    turn(EN_K1, 1); turn(EN_K2, 1); turn(EN_K3, 1); turn(EN_K4, 1);
+    bad += check("Stage 25B: four knobs update selected drum pad only",
+                 drum_perf_curve[0][0] == DPERF_SOFT && drum_perf_sound[0][0] == 1u &&
+                 drum_perf_choke[0][0] == 1u && drum_retrigger[0][0] == 1u &&
+                 !drum_perf_curve[0][1] && !drum_retrigger[0][1]);
+    press(B_SEQ);
+    bad += check("Stage 25B: SEQ switches to MIDI map, closes PLAY",
+                 ui.drum_map_open && !ui.drum_perf_open);
+    press(B_PLAY);
+    bad += check("Stage 25B: PLAY switches back to performance controls",
+                 ui.drum_perf_open && !ui.drum_map_open);
+    press(B_PLAY);
+#endif
     printf("DRUMLAB UI TESTS %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return !!bad;
 }

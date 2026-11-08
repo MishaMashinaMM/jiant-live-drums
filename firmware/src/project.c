@@ -139,6 +139,8 @@ typedef struct {
     uint8_t dx_note[NPART][12];
     int8_t pad_pan[NPART][12];                   /* Stage 22B: optional per-track drum pan */
     int8_t pad_pitch[NPART][12];                 /* Stage 22B: extra semitones, -24..+24 */
+    uint8_t perf_curve[NPART][12], perf_sound[NPART][12];
+    uint8_t perf_choke[NPART][12], perf_retrigger[NPART][12];
     uint8_t dx_snd12[4], dx_lay12[4];          /* their independent sends, layers and feedback */
     uint16_t dx_mute;                          /* its mutes (eng_drum.c: the groups DXG_* in the first reserved byte, the
                                                 * sounds' DXM_LANE in the second) */
@@ -869,6 +871,17 @@ static uint32_t proj_bits(uint32_t m)
         n += m & 1u;
     return n;
 }
+static uint32_t proj_perf_mask(const project_t *q, uint32_t t)
+{
+    uint32_t lane, mask = 0;
+    if (q->t[t].engine != ENGI_DRUM && q->t[t].engine != ENGI_DRUMLAB)
+        return 0;
+    for (lane = 0; lane < 12u; lane++)
+        if (q->perf_curve[t][lane] || q->perf_sound[t][lane] ||
+            q->perf_choke[t][lane] || q->perf_retrigger[t][lane])
+            mask |= 1u << lane;
+    return mask;
+}
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
@@ -933,6 +946,14 @@ static uint32_t proj_packed_size(const project_t *q)
                 for (i = 0; i < 12u; i++)
                     if (q->pad_pitch[t][i]) { count++; break; }
         if (count) n += 3u + 12u * count;
+    }
+    {   /* optional sparse per-pad performance ('P' 'F') */
+        uint32_t count = 0;
+        for (t = 0; t < NPART; t++) {
+            uint32_t mask = proj_perf_mask(q, t);
+            if (mask) count += 2u + 2u * proj_bits(mask);
+        }
+        if (count) n += 3u + count;
     }
     if (proj_fg_used(q))                                /* (0.6.52) FUGUE's */
         n += 2u + sizeof q->fugue;
@@ -1132,6 +1153,24 @@ static int proj_pack(project_store_t *out, const project_t *q)
                     memcpy(b + pos, q->pad_pitch[t], 12u);
                     pos += 12u;
                 }
+        }
+    }
+    {   /* Stage 25B: changed pads only, two bytes each: flags + V->SOUND. */
+        uint32_t mask = 0, lane;
+        for (t = 0; t < NPART; t++) if (proj_perf_mask(q, t)) mask |= 1u << t;
+        if (mask) {
+            b[pos++] = 'P'; b[pos++] = 'F'; b[pos++] = (uint8_t)mask;
+            for (t = 0; t < NPART; t++) if (mask & (1u << t)) {
+                uint32_t lanes = proj_perf_mask(q, t);
+                b[pos++] = (uint8_t)lanes;
+                b[pos++] = (uint8_t)(lanes >> 8);
+                for (lane = 0; lane < 12u; lane++) if (lanes & (1u << lane)) {
+                    b[pos++] = (uint8_t)((q->perf_curve[t][lane] & 3u) |
+                        ((q->perf_choke[t][lane] & 7u) << 2u) |
+                        ((q->perf_retrigger[t][lane] & 1u) << 5u));
+                    b[pos++] = q->perf_sound[t][lane];
+                }
+            }
         }
     }
     if (proj_fg_used(q)) {                              /* (0.6.52) FUGUE's heads */
@@ -1500,6 +1539,30 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             }
             memcpy(q->pad_pitch[t], b + pos, 12u);
             pos += 12u;
+        }
+    }
+    memset(q->perf_curve, 0, sizeof q->perf_curve);
+    memset(q->perf_sound, 0, sizeof q->perf_sound);
+    memset(q->perf_choke, 0, sizeof q->perf_choke);
+    memset(q->perf_retrigger, 0, sizeof q->perf_retrigger);
+    if (pos + 3u <= room && b[pos] == 'P' && b[pos + 1u] == 'F') {
+        uint32_t tracks = b[pos + 2u], lane;
+        if (!tracks || (tracks >> NPART)) return 0;
+        pos += 3u;
+        for (t = 0; t < NPART; t++) if (tracks & (1u << t)) {
+            uint32_t lanes;
+            if ((q->t[t].engine != ENGI_DRUM && q->t[t].engine != ENGI_DRUMLAB) || pos + 2u > room) return 0;
+            lanes = (uint32_t)b[pos] | ((uint32_t)b[pos + 1u] << 8u);
+            pos += 2u;
+            if (!lanes || (lanes & ~0xFFFu) || pos + 2u * proj_bits(lanes) > room) return 0;
+            for (lane = 0; lane < 12u; lane++) if (lanes & (1u << lane)) {
+                uint32_t flags = b[pos++], sound = b[pos++];
+                if ((flags & 0xC0u) || ((flags >> 2u) & 7u) > 4u || sound > 127u) return 0;
+                q->perf_curve[t][lane] = (uint8_t)(flags & 3u);
+                q->perf_choke[t][lane] = (uint8_t)((flags >> 2u) & 7u);
+                q->perf_retrigger[t][lane] = (uint8_t)((flags >> 5u) & 1u);
+                q->perf_sound[t][lane] = (uint8_t)sound;
+            }
         }
     }
     memset(q->fugue, 0, sizeof q->fugue);
@@ -1884,6 +1947,10 @@ static void project_capture(project_t *p)
             memcpy(p->pad_pan[i], drum_pad_pan[i], 12u);
         if (trk[i].eng_req == ENGI_DRUM || trk[i].eng_req == ENGI_DRUMLAB)
             memcpy(p->pad_pitch[i], drum_pad_pitch[i], 12u);
+        memcpy(p->perf_curve[i], drum_perf_curve[i], 12u);
+        memcpy(p->perf_sound[i], drum_perf_sound[i], 12u);
+        memcpy(p->perf_choke[i], drum_perf_choke[i], 12u);
+        memcpy(p->perf_retrigger[i], drum_retrigger[i], 12u);
         if (!p->lab_mask[i]) continue;
         drumlab_kit_ensure(&trk[i]);
         for (lane = 0; lane < 12u; lane++)
@@ -2083,6 +2150,10 @@ static void sound_put(project_t *p, uint32_t k)
     }
     memcpy(drum_pad_pan[k % NTRK], p->pad_pan[k % NTRK], 12u);
     memcpy(drum_pad_pitch[k % NTRK], p->pad_pitch[k % NTRK], 12u);
+    memcpy(drum_perf_curve[k % NTRK], p->perf_curve[k % NTRK], 12u);
+    memcpy(drum_perf_sound[k % NTRK], p->perf_sound[k % NTRK], 12u);
+    memcpy(drum_perf_choke[k % NTRK], p->perf_choke[k % NTRK], 12u);
+    memcpy(drum_retrigger[k % NTRK], p->perf_retrigger[k % NTRK], 12u);
     fm1_irq_on();
     if (t == TSEL)
         sync_reload = 1;
@@ -2182,6 +2253,10 @@ static int project_restore_runtime(const project_t *input)
         uint32_t lane;
         memcpy(drum_pad_pan[k], p->pad_pan[k], 12u);
         memcpy(drum_pad_pitch[k], p->pad_pitch[k], 12u);
+        memcpy(drum_perf_curve[k], p->perf_curve[k], 12u);
+        memcpy(drum_perf_sound[k], p->perf_sound[k], 12u);
+        memcpy(drum_perf_choke[k], p->perf_choke[k], 12u);
+        memcpy(drum_retrigger[k], p->perf_retrigger[k], 12u);
         drum_midi_custom[k] = p->t[k].engine == ENGI_DRUM ? p->dx_note_on[k] : 0u;
         if (drum_midi_custom[k])
             memcpy(drum_midi_note[k], p->dx_note[k], 12u);

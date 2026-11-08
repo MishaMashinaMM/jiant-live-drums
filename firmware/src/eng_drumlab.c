@@ -154,6 +154,8 @@ static void drumlab_note_on(track_t *t, voice_t *v)
     if (slot >= NVOICE || !patch) return;
     dlab_trigger(&drumlab_state[t - trk][slot], patch,
                  0x13579BDFu ^ ((uint32_t)v->note << 16) ^ (uint32_t)v->age);
+    drumlab_state[t - trk][slot].perf_timbre = (int8_t)clamp(
+        (((int32_t)v->vel - 64) * drum_perf_sound[t - trk][lane]) / 127, -64, 63);
     if (drum_pad_pitch[t - trk][lane]) {
         int32_t note = 24 + (int32_t)patch->pitch * 60 / 127 + drum_pad_pitch[t - trk][lane];
         drumlab_state[t - trk][slot].base_inc = pitch_inc((uint32_t)clamp(note, 0, 127) * 16u);
@@ -182,6 +184,13 @@ static void drumlab_render(track_t *t, voice_t *v, int32_t *out,
     uint32_t i, slot = drumlab_slot(t, v);
     if (slot >= NVOICE || !patch) return;
     dlab_voice_t *state = &drumlab_state[t - trk][slot];
+    dlab_patch_t perf_patch;
+    if (state->perf_timbre) {
+        perf_patch = *patch;
+        perf_patch.noise = (uint8_t)clamp((int32_t)patch->noise + state->perf_timbre, 0, 127);
+        perf_patch.drive = (uint8_t)clamp((int32_t)patch->drive + state->perf_timbre / 2, 0, 127);
+        patch = &perf_patch;
+    }
     if (patch->kind == DLAB_HEAVY_SNARE)
         dlab_run_heavy_snare(state, patch, hit, n);
     else if (patch->kind == DLAB_KICK || patch->kind == DLAB_SNARE)
