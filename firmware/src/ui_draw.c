@@ -2201,6 +2201,7 @@ static void draw_drum_midi_map(void)
     const track_t *t = &trk[ti];
     uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB;
     char b[24];
+    if (lab) drumlab_kit_ensure(&trk[ti]);
     cv_begin(240, 40, T_BG);
     cv_text(6, CAP_IN(M, 24), &AF_M, "DRUM MIDI MAP", T_TEXT);
     b[0] = 'T'; b[1] = (char)('1' + ti); b[2] = ' '; b[3] = 0;
@@ -2219,8 +2220,11 @@ static void draw_drum_midi_map(void)
         uint16_t col = lane == ui.drum_map_pad ? T_ACCENT : T_TEXT;
         uint32_t note = drum ? (drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane])
                              : (drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane);
-        cv_text(6, y + CAP_IN(S, 20), &AF_S,
-                drum ? drum_lane_abbr(t, lane) : LAB_NAMES[lane], col);
+        if (lab) {
+            drumlab_pad_label(lane, drumlab_kit[ti][lane].kind, b);
+            cv_text(6, y + CAP_IN(S, 20), &AF_S, b, col);
+        } else
+            cv_text(6, y + CAP_IN(S, 20), &AF_S, drum_lane_abbr(t, lane), col);
         fmt_int(b, (int32_t)note);
         cv_text(68, y + CAP_IN(S, 20), &AF_S, b, col);
         {

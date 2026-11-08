@@ -256,6 +256,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "DRUMLAB: experimental fixed-point kick/snare synthesis" "$OUT/drumlab_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumlab_stage23c_test" tests/drumlab_stage23c_test.c -lm
     run "DRUM-LAB Stage 23C: percussive snare's ten sound controls and clipping" "$OUT/drumlab_stage23c_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumlab_stage24b_test" tests/drumlab_stage24b_test.c -lm
+    run "DRUM-LAB Stage 24B: five new electronic sound types" "$OUT/drumlab_stage24b_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumlab_heavy_test" tests/drumlab_heavy_test.c -lm
     run "DRUMLAB: independently sustained heavy snare models" "$OUT/drumlab_heavy_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumlab_engine_test" tests/drumlab_engine_test.c -lm

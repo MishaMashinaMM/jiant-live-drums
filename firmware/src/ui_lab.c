@@ -31,6 +31,15 @@ static void lab_knob(const page_t *pg, uint32_t k, int32_t steps)
         dx_ui_lane = (uint8_t)clamp((int32_t)dx_ui_lane + (steps > 0 ? 1 : -1), 0, 11);
         return;
     }
+    if (field == 10u) {
+        patch = drumlab_patch_of(TSEL, 36u + dx_ui_lane);
+        if (patch) {
+            int32_t kind = (int32_t)patch->kind;
+            kind = clamp(kind + (steps > 0 ? 1 : -1), DLAB_HEAVY_SNARE, DLAB_METAL);
+            drumlab_type_set(TSEL, dx_ui_lane, (uint32_t)kind);
+        }
+        return;
+    }
     if (field >= 10u) return;
     patch = drumlab_patch_of(TSEL, 36u + dx_ui_lane);
     if (patch) {
@@ -47,7 +56,9 @@ static void lab_cards(const page_t *pg)
     char val[12];
     lab_follow();
     patch = drumlab_patch_of(TSEL, 36u + dx_ui_lane);
-    draw_column(0, "SOUND", LAB_NAMES[dx_ui_lane], "", VAL(0u),
+    char pad_name[12];
+    drumlab_pad_label(dx_ui_lane, patch ? patch->kind : DLAB_KICK, pad_name);
+    draw_column(0, "SOUND", pad_name, "", VAL(0u),
                 (int32_t)dx_ui_lane * 1000 / 11, ICON_X_PATTERN);
     for (k = 0; k < 3u; k++) {
         uint32_t field = first + k;
@@ -56,6 +67,9 @@ static void lab_cards(const page_t *pg)
             fmt_int(val, v[field]);
             draw_column(k + 1u, LAB_FIELDS[field], val, "", VAL(k + 1u),
                         (int32_t)v[field] * 1000 / 127, ICON_LEVEL);
+        } else if (patch && field == 10u) {
+            draw_column(k + 1u, "TYPE", drumlab_type_name(patch->kind), "", VAL(k + 1u),
+                        (int32_t)patch->kind * 1000 / (DLAB_KIND_COUNT - 1), ICON_LEVEL);
         } else {
             draw_column(k + 1u, "", "", "", T_DIM, -1, ICON_NONE);
         }

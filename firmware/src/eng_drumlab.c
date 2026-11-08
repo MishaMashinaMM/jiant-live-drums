@@ -15,6 +15,12 @@ static dlab_voice_t drumlab_state[NPART][NVOICE];
 static const char *const LAB_NAMES[DLAB_LANES] = {
     "K1", "S1", "SN", "S2", "K2", "K3", "S3", "K4", "S4", "K5", "S5", "K6"
 };
+static const char *const LAB_TYPES[DLAB_KIND_COUNT] = {
+    "KICK", "SNARE", "SNARE", "CLAP", "C-HAT", "O-HAT", "TOM", "METAL"
+};
+static const char *const LAB_SHORT[DLAB_KIND_COUNT] = {
+    "KIK", "SNR", "SNR", "CLP", "CH", "OH", "TOM", "MTL"
+};
 static dlab_patch_t drumlab_kit[NPART][DLAB_LANES];
 static uint8_t drumlab_kit_ready[NPART];
 static uint16_t drumlab_kit_dirty[NPART]; /* sparse project encoding: 12 bits per track */
@@ -53,6 +59,24 @@ static uint32_t drumlab_is_snare(uint32_t note)
 {
     static const uint8_t SNARE[12] = {0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0};
     return SNARE[drumlab_lane(note)];
+}
+static uint8_t drumlab_default_kind(uint32_t lane)
+{
+    return drumlab_is_snare(36u + lane) ? DLAB_HEAVY_SNARE : DLAB_KICK;
+}
+static const char *drumlab_type_name(uint32_t kind)
+{
+    return LAB_TYPES[kind < DLAB_KIND_COUNT ? kind : DLAB_KICK];
+}
+static void drumlab_pad_label(uint32_t lane, uint32_t kind, char *b)
+{
+    const char *s = LAB_SHORT[kind < DLAB_KIND_COUNT ? kind : DLAB_KICK];
+    uint32_t j = 0;
+    b[0] = (char)('0' + (lane + 1u) / 10u);
+    b[1] = (char)('0' + (lane + 1u) % 10u);
+    b[2] = ' ';
+    while (s[j] && j < 8u) { b[3u + j] = s[j]; j++; }
+    b[3u + j] = 0;
 }
 
 static dlab_patch_t drumlab_default_patch(const track_t *t, uint32_t note)
@@ -112,6 +136,16 @@ static int drumlab_patch_set(track_t *t, uint32_t lane, uint32_t field, uint32_t
     drumlab_kit_dirty[t - trk] |= (uint16_t)(1u << lane);
     return 1;
 }
+static int drumlab_type_set(track_t *t, uint32_t lane, uint32_t kind)
+{
+    dlab_patch_t *p;
+    if (lane >= DLAB_LANES || kind >= DLAB_KIND_COUNT || kind == DLAB_SNARE) return 0;
+    p = drumlab_patch_of(t, 36u + lane);
+    if (!p) return 0;
+    p->kind = (uint8_t)kind;
+    drumlab_kit_dirty[t - trk] |= (uint16_t)(1u << lane);
+    return 1;
+}
 
 static void drumlab_note_on(track_t *t, voice_t *v)
 {
@@ -150,8 +184,10 @@ static void drumlab_render(track_t *t, voice_t *v, int32_t *out,
     dlab_voice_t *state = &drumlab_state[t - trk][slot];
     if (patch->kind == DLAB_HEAVY_SNARE)
         dlab_run_heavy_snare(state, patch, hit, n);
-    else
+    else if (patch->kind == DLAB_KICK || patch->kind == DLAB_SNARE)
         dlab_run(state, patch, hit, n);
+    else
+        dlab_run_extra(state, patch, hit, n);
     {
         uint32_t lane = drumlab_lane(v->note);
         int32_t p0 = dx_lpan0[lane], dp = (int32_t)dx_lpan[lane] - p0;

@@ -6,13 +6,15 @@
 #ifndef FELUCCA_DRUMLAB_VOICE_C
 #define FELUCCA_DRUMLAB_VOICE_C
 
-enum { DLAB_KICK, DLAB_SNARE, DLAB_HEAVY_SNARE };
+enum { DLAB_KICK, DLAB_SNARE, DLAB_HEAVY_SNARE,
+       DLAB_CLAP, DLAB_HAT_C, DLAB_HAT_O, DLAB_TOM, DLAB_METAL, DLAB_KIND_COUNT };
 typedef struct {
     uint8_t kind, pitch, sweep, body, snap, noise, tone, drive;
     uint8_t wire, weight, metal; /* Heavy snare: wire length, sub-body and inharmonic ring. */
 } dlab_patch_t;
 typedef struct {
     uint32_t phase, phase2, phase3, seed, base_inc;
+    uint32_t age_samples;
     int32_t body_env, snap_env, sweep_env, wire_env; /* Q24, initially 1.0 */
     int32_t noise_lp, wire_lp;                   /* Q15 one-pole states */
     int32_t body_fast_lp, body_slow_lp;          /* Stage 23C snare low-mid band */
@@ -241,5 +243,63 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
     v->snap_env = se_end;
     v->sweep_env = pe_end;
     if (be_end < 100 && we_end < 100 && se_end < 100) v->active = 0;
+}
+
+/* Stage 24B: five editable electronic/industrial percussion characters.
+ * HAT C/O share exactly one noise-based synthesis path; no pitched component
+ * reaches the hats. Existing kick and snare renderers are not changed. */
+static void dlab_run_extra(dlab_voice_t *v, const dlab_patch_t *p,
+                           int32_t *out, uint32_t n)
+{
+    uint32_t i, kind = p->kind, at = v->age_samples;
+    uint32_t tau = 18000u + DLAB_CURVE_US(p->body, 300000u);
+    int32_t env = v->body_env, lp = v->noise_lp, fast = v->wire_lp;
+    uint32_t phase = v->phase, phase2 = v->phase2, phase3 = v->phase3, rng = v->seed;
+    if (!v->active) { for (i = 0; i < n; i++) out[i] = 0; return; }
+    if (kind == DLAB_CLAP) tau = 28000u + DLAB_CURVE_US(p->body, 160000u);
+    if (kind == DLAB_HAT_C) tau = 10000u + DLAB_CURVE_US(p->body, 95000u);
+    if (kind == DLAB_HAT_O) tau = 60000u + DLAB_CURVE_US(p->body, 420000u);
+    if (kind == DLAB_TOM) tau = 35000u + DLAB_CURVE_US(p->body, 400000u);
+    int32_t end = (int32_t)(((int64_t)env * dlab_decay_long(n, tau)) >> 16);
+    int32_t step = (end - env) / (int32_t)n;
+    for (i = 0; i < n; i++, env += step, at++) {
+        int32_t white = (int32_t)(dlab_rand(&rng) >> 16) - 32768;
+        int32_t s = sine_i(phase), s2 = sine_i(phase2), s3 = sine_i(phase3), raw = 0;
+        if (kind == DLAB_CLAP) {
+            lp += (int32_t)(((int64_t)(white - lp) * (1100 + p->tone * 32u)) >> 15);
+            uint32_t d = at % 410u;
+            int32_t burst = at < 1230u ? (int32_t)(410u - d) : 0;
+            raw = (int32_t)(((int64_t)(white - lp) * env * (45 + burst / 4 + p->snap / 3)) >> 31);
+        } else if (kind == DLAB_HAT_C || kind == DLAB_HAT_O) {
+            lp += (int32_t)(((int64_t)(white - lp) * (1700 + p->tone * 16u)) >> 15);
+            fast += (int32_t)(((int64_t)(white - fast) * (7200 + p->tone * 32u)) >> 15);
+            int32_t top = white - fast, texture = fast - lp;
+            int32_t blend = kind == DLAB_HAT_C ? (top * 3 + texture) / 4 :
+                                                        (top * 2 + texture * 2) / 4;
+            raw = (int32_t)(((int64_t)blend * env * (100 + p->noise / 2)) >> 31);
+        } else if (kind == DLAB_TOM) {
+            uint32_t sweep = at < 3500u ? 3500u - at : 0u;
+            uint32_t inc = v->base_inc + (uint32_t)(((uint64_t)v->base_inc * sweep * (20u + p->sweep)) >> 20);
+            raw = (int32_t)(((int64_t)(s * 3 + s2) * env * (64 + p->weight)) >> 34);
+            phase += inc;
+            phase2 += inc * 2u;
+        } else { /* DLAB_METAL */
+            raw = (int32_t)(((int64_t)(s + s2 + s3) * env * (80u + p->metal)) >> 32);
+            if (at < 2500u) raw += (int32_t)(((int64_t)white * env * p->noise) >> 32);
+        }
+        if (kind != DLAB_TOM) {
+            phase += v->base_inc;
+            phase2 += (uint32_t)(((uint64_t)v->base_inc * 6021u) >> 12);
+        }
+        phase3 += (uint32_t)(((uint64_t)v->base_inc * (7800u + p->metal * 12u)) >> 12);
+        raw = (int32_t)(((int64_t)raw * (120 + p->drive * 2u)) >> 8);
+        if (raw > 18000) raw = 18000 + (raw - 18000) / 5;
+        if (raw < -18000) raw = -18000 + (raw + 18000) / 5;
+        out[i] = raw > 32767 ? 32767 : raw < -32768 ? -32768 : raw;
+    }
+    v->body_env = end; v->noise_lp = lp; v->wire_lp = fast;
+    v->phase = phase; v->phase2 = phase2; v->phase3 = phase3;
+    v->seed = rng; v->age_samples = at;
+    if (end < 100) v->active = 0;
 }
 #endif /* FELUCCA_DRUMLAB_VOICE_C */

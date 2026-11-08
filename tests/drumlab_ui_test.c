@@ -39,6 +39,10 @@ int main(void)
     before = drumlab_patch_of(TSEL, 38)->metal;
     turn(EN_K2, 1); frame();
     bad += check("SOUND 4 edits the selected pad's METAL", drumlab_patch_of(TSEL, 38)->metal > before);
+    turn(EN_K3, 1); frame();
+    bad += check("Stage 24B: SOUND 4 knob 3 selects CLAP independently",
+                 drumlab_patch_of(TSEL, 38)->kind == DLAB_CLAP &&
+                 drumlab_patch_of(TSEL, 36)->kind == DLAB_KICK);
     apply_preset(1);
     bad += check("loading another DRUM-LAB kit resets its per-pad edits",
                  !drumlab_kit_dirty[0] && !drumlab_kit_ready[0]);
