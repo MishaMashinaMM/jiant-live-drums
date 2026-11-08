@@ -1282,6 +1282,17 @@ static void edit_param(uint32_t slot, int32_t steps)
         fop_knob(slot, steps);
         return;
     }
+    if (pg->scope == SC_ENGINE && trk_eng(TSEL) == ENGI_DRUMLAB &&
+        pg->id[slot] >= P_E0 && pg->id[slot] < P_E0 + 8u) {
+        uint32_t field = pg->id[slot] - P_E0, ti = song.sel;
+        drumlab_global_ensure(ti);
+        fm1_irq_off();
+        drumlab_global[ti][field] = (uint8_t)clamp(
+            (int32_t)drumlab_global[ti][field] + accel(EN_K1 + slot, steps, 100), 0, 100);
+        fm1_irq_on();
+        ui.force = 1u;
+        return;
+    }
     if (pg->graph == GR_MOD && slot == 0u) {             /* MOD: KNOB 1 the slot, 2..4 its SRC DST AMT */
         mod_ui_slot = (uint8_t)clamp((int32_t)mod_ui_slot + (steps > 0 ? 1 : -1), 0, 3);
         return;

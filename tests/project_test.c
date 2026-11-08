@@ -886,6 +886,8 @@ int main(void)
         static project_store_t fs, gs;
         uint32_t k, i, n;
         memset(&f, 0, sizeof f);
+        for (uint32_t ti = 0; ti < NPART; ti++)
+            for (uint32_t field = 0; field < 8u; field++) f.lab_global[ti][field] = 100u;
         f.magic = PROJ_MAGIC; f.size = sizeof f; f.parts = NPART; f.phys = PROJ_PHYS;
         chain_defaults(&f.chain);
         proj_new_tracks(&f, 0u);
@@ -989,6 +991,29 @@ int main(void)
                  restored.perf_choke[0][2] == 4u && restored.perf_retrigger[0][2] == 1u &&
                  !restored.perf_choke[0][1] && !restored.perf_retrigger[0][1];
             bad += check("Stage 25B: DRUM-LAB sparse pad performance settings round trip", ok);
+            /* Stage 25E: the new kit-wide modulation layer is a separate
+             * sparse block, never a rewrite of an individual pad's patch. */
+            lab.lab_global[0][0] = 50u;
+            lab.lab_global[0][2] = 0u;
+            lab.sum = proj_sum(&lab);
+            ok = proj_pack(&saved, &lab) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.lab_global[0][0] == 50u && restored.lab_global[0][2] == 0u &&
+                 restored.lab_global[0][1] == 100u && restored.lab_global[1][0] == 100u &&
+                 restored.lab_patch[0][2][0] == lab.lab_patch[0][2][0];
+            bad += check("Stage 25E: sparse global kit percentages preserve independent pads", ok);
+            lab.lab_global[0][0] = lab.lab_global[0][2] = 100u;
+            lab.sum = proj_sum(&lab);
+            ok = proj_pack(&saved, &lab) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.lab_global[0][0] == 100u && restored.lab_global[0][2] == 100u;
+            bad += check("Stage 25E: neutral kit globals survive project round trip", ok);
+            /* Legacy FUNB images have no kit multiplier block, even when their
+             * old P_E values are not 100. Every global must migrate neutral. */
+            lab.t[0].p[P_E0] = 18;
+            lab.sum = proj_sum(&lab);
+            ok = proj_pack_vb(&saved, &lab) && proj_import(&restored, &saved, sizeof saved);
+            for (uint32_t field = 0; field < 8u && ok; field++)
+                ok = restored.lab_global[0][field] == 100u;
+            bad += check("Stage 25E: legacy projects initialize all kit multipliers to 100%", ok);
         }
         {   /* Stage 22: DRUM-X uses the same custom-note capability independently. */
             static project_t dx, restored;

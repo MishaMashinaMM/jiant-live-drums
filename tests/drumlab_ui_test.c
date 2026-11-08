@@ -18,6 +18,38 @@ int main(void)
                      xmod < NPAGES && !page_visible(xmod));
     }
     go_title("SOUND"); frame();
+    {
+        dlab_patch_t original = *drumlab_patch_of(TSEL, 36u);
+        dlab_patch_t sounding = original;
+        drumlab_global_reset(0u);
+        drumlab_global_patch(0u, &sounding);
+        bad += check("Stage 25E: eight neutral global kit controls leave pad unchanged",
+                     !memcmp(&sounding, &original, sizeof sounding));
+        drumlab_global[0][0] = 50u;
+        drumlab_global[0][2] = 0u;
+        sounding = original;
+        drumlab_global_patch(0u, &sounding);
+        bad += check("Stage 25E: global pitch and body scale without modifying pad",
+                     sounding.pitch == original.pitch / 2u && !sounding.body &&
+                     !memcmp(&original, drumlab_patch_of(TSEL, 36u), sizeof original));
+        drumlab_global_reset(0u);
+        go_title("EDIT 1"); frame();
+        uint32_t pitch_before = drumlab_global[0][0];
+        turn(EN_K1, -1); frame();
+        bad += check("Stage 25E: STRIKE knob edits global pitch, not pad pitch",
+                     drumlab_global[0][0] < pitch_before &&
+                     !memcmp(&original, drumlab_patch_of(TSEL, 36u), sizeof original));
+        go_title("EDIT 2"); frame();
+        uint32_t noise_before = drumlab_global[0][4];
+        turn(EN_K1, -1); frame();
+        bad += check("Stage 25E: BODY page knob edits kit noise independently",
+                     drumlab_global[0][4] < noise_before && drumlab_global[0][0] < 100u);
+        apply_preset(0u);
+        bad += check("Stage 25E: loading a kit preset resets all global controls to 100%",
+                     drumlab_global[0][0] == 100u && drumlab_global[0][4] == 100u);
+        drumlab_global_reset(0u);
+        go_title("SOUND"); frame();
+    }
     dx_ui_lane = 2u;
     lab_ui_seen = last_note;
     before = drumlab_patch_of(TSEL, 38)->pitch;

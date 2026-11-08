@@ -141,6 +141,7 @@ typedef struct {
     int8_t pad_pitch[NPART][12];                 /* Stage 22B: extra semitones, -24..+24 */
     uint8_t perf_curve[NPART][12], perf_sound[NPART][12];
     uint8_t perf_choke[NPART][12], perf_retrigger[NPART][12];
+    uint8_t lab_global[NPART][8];              /* Stage 25E: 100 = neutral, absent in older projects */
     uint8_t dx_snd12[4], dx_lay12[4];          /* their independent sends, layers and feedback */
     uint16_t dx_mute;                          /* its mutes (eng_drum.c: the groups DXG_* in the first reserved byte, the
                                                 * sounds' DXM_LANE in the second) */
@@ -667,6 +668,10 @@ static int proj_import(project_t *q, const void *b, int n)
         if (!q->lab_type_present[t])
             for (uint32_t lane = 0; lane < 12u; lane++)
                 q->lab_kind[t][lane] = drumlab_default_kind(lane);
+    if (((const uint32_t *)b)[0] != PROJ_MAGIC)
+        for (uint32_t t = 0; t < NPART; t++)
+            for (uint32_t field = 0; field < 8u; field++)
+                q->lab_global[t][field] = 100u;
     q->sum = proj_sum(q);
     return 1;
 }
@@ -955,6 +960,12 @@ static uint32_t proj_packed_size(const project_t *q)
         }
         if (count) n += 3u + count;
     }
+    {   /* optional global DRUM-LAB multipliers ('K' 'G') */
+        uint32_t count = 0;
+        for (t = 0; t < NPART; t++) if (q->t[t].engine == ENGI_DRUMLAB)
+            for (i = 0; i < 8u; i++) if (q->lab_global[t][i] != 100u) { count++; break; }
+        if (count) n += 3u + count * 8u;
+    }
     if (proj_fg_used(q))                                /* (0.6.52) FUGUE's */
         n += 2u + sizeof q->fugue;
     for (t = 0; t < NTRK; t++)                          /* (0.8.5) the lyrics' */
@@ -1170,6 +1181,18 @@ static int proj_pack(project_store_t *out, const project_t *q)
                         ((q->perf_retrigger[t][lane] & 1u) << 5u));
                     b[pos++] = q->perf_sound[t][lane];
                 }
+            }
+        }
+    }
+    {   /* Stage 25E: kit-level multipliers, only non-neutral tracks. */
+        uint32_t mask = 0;
+        for (t = 0; t < NPART; t++) if (q->t[t].engine == ENGI_DRUMLAB)
+            for (i = 0; i < 8u; i++) if (q->lab_global[t][i] != 100u) { mask |= 1u << t; break; }
+        if (mask) {
+            b[pos++] = 'K'; b[pos++] = 'G'; b[pos++] = (uint8_t)mask;
+            for (t = 0; t < NPART; t++) if (mask & (1u << t)) {
+                memcpy(b + pos, q->lab_global[t], 8u);
+                pos += 8u;
             }
         }
     }
@@ -1565,6 +1588,19 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             }
         }
     }
+    for (t = 0; t < NPART; t++)
+        for (i = 0; i < 8u; i++) q->lab_global[t][i] = 100u;
+    if (pos + 3u <= room && b[pos] == 'K' && b[pos + 1u] == 'G') {
+        uint32_t mask = b[pos + 2u];
+        if (!mask || (mask >> NPART)) return 0;
+        pos += 3u;
+        for (t = 0; t < NPART; t++) if (mask & (1u << t)) {
+            if (q->t[t].engine != ENGI_DRUMLAB || pos + 8u > room) return 0;
+            for (i = 0; i < 8u; i++) if (b[pos + i] > 100u) return 0;
+            memcpy(q->lab_global[t], b + pos, 8u);
+            pos += 8u;
+        }
+    }
     memset(q->fugue, 0, sizeof q->fugue);
     if (pos + 2u + sizeof q->fugue <= room && b[pos] == 'F' && b[pos + 1u] == 'G') {   /* (0.6.52) FUGUE's heads */
         uint32_t k;
@@ -1951,6 +1987,10 @@ static void project_capture(project_t *p)
         memcpy(p->perf_sound[i], drum_perf_sound[i], 12u);
         memcpy(p->perf_choke[i], drum_perf_choke[i], 12u);
         memcpy(p->perf_retrigger[i], drum_retrigger[i], 12u);
+        if (trk[i].eng_req == ENGI_DRUMLAB) {
+            drumlab_global_ensure(i);
+            memcpy(p->lab_global[i], drumlab_global[i], 8u);
+        } else for (uint32_t j = 0; j < 8u; j++) p->lab_global[i][j] = 100u;
         if (!p->lab_mask[i]) continue;
         drumlab_kit_ensure(&trk[i]);
         for (lane = 0; lane < 12u; lane++)
@@ -2129,6 +2169,8 @@ static void sound_put(project_t *p, uint32_t k)
     }
     if (e == ENGI_DRUMLAB) {
         uint32_t lane, ti = k % NTRK;
+        memcpy(drumlab_global[ti], p->lab_global[ti], 8u);
+        drumlab_global_ready[ti] = 1u;
         drumlab_midi_custom[ti] = p->lab_note_on[ti];
         if (drumlab_midi_custom[ti])
             memcpy(drumlab_midi_note[ti], p->lab_note[ti], 12u);
@@ -2257,6 +2299,8 @@ static int project_restore_runtime(const project_t *input)
         memcpy(drum_perf_sound[k], p->perf_sound[k], 12u);
         memcpy(drum_perf_choke[k], p->perf_choke[k], 12u);
         memcpy(drum_retrigger[k], p->perf_retrigger[k], 12u);
+        memcpy(drumlab_global[k], p->lab_global[k], 8u);
+        drumlab_global_ready[k] = 1u;
         drum_midi_custom[k] = p->t[k].engine == ENGI_DRUM ? p->dx_note_on[k] : 0u;
         if (drum_midi_custom[k])
             memcpy(drum_midi_note[k], p->dx_note[k], 12u);

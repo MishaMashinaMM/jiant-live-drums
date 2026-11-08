@@ -1686,6 +1686,15 @@ static void draw_columns(void)
             draw_act_column(c, d->label, T_THEME, ICON_AUTO);
             continue;
         }
+        if (cur_page()->scope == SC_ENGINE && trk_eng(TSEL) == ENGI_DRUMLAB &&
+            cur_page()->id[c] >= P_E0 && cur_page()->id[c] < P_E0 + 8u) {
+            uint32_t field = cur_page()->id[c] - P_E0;
+            drumlab_global_ensure(song.sel);
+            fmt_int(val, drumlab_global[song.sel][field]);
+            draw_column(c, d->label, val, "%", VAL(c),
+                        (int32_t)drumlab_global[song.sel][field] * 10, ICON_LEVEL);
+            continue;
+        }
         if (cur_page()->id[c] == G_INFO && cur_page()->scope == SC_GLOBAL) {
             fmt_int(val, (int32_t)(song.cpu_q8 * 100u / 256u));
             unit = "%";

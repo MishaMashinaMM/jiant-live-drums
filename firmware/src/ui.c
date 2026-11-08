@@ -1422,6 +1422,7 @@ static void set_engine_of(track_t *t, uint32_t ei)
     for (i = 0; i < 8u; i++)
         t->p[P_E0 + i] = e->edit[i].def;
     apply_preset_to(t, 0);
+    if (ei % NENGINES == ENGI_DRUMLAB) drumlab_global_reset((uint32_t)(t - trk));
     fm1_irq_on();
     load_end(t);
 }
@@ -1441,6 +1442,7 @@ static void apply_preset(uint32_t pi)                 /* the selected track's so
     if (trk_eng(TSEL) == ENGI_DRUMLAB) {                /* a new kit preset replaces its independent pad patches */
         uint32_t ti = (uint32_t)(TSEL - trk);
         if (ti < NPART) {
+            drumlab_global_reset(ti);
             drumlab_kit_ready[ti] = 0;
             drumlab_kit_dirty[ti] = 0;
         }

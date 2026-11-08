@@ -24,6 +24,29 @@ static const char *const LAB_SHORT[DLAB_KIND_COUNT] = {
 static dlab_patch_t drumlab_kit[NPART][DLAB_LANES];
 static uint8_t drumlab_kit_ready[NPART];
 static uint16_t drumlab_kit_dirty[NPART]; /* sparse project encoding: 12 bits per track */
+/* Stage 25E: a second, independent kit-wide layer. 100 is transparent;
+ * legacy P_E0..P_E7 remain the seed values for unedited pad patches. */
+static uint8_t drumlab_global[NPART][8];
+static uint8_t drumlab_global_ready[NPART];
+static void drumlab_global_reset(uint32_t ti)
+{
+    if (ti >= NPART) return;
+    for (uint32_t i = 0; i < 8u; i++) drumlab_global[ti][i] = 100u;
+    drumlab_global_ready[ti] = 1u;
+}
+static void drumlab_global_ensure(uint32_t ti)
+{
+    if (ti < NPART && !drumlab_global_ready[ti]) drumlab_global_reset(ti);
+}
+static void drumlab_global_patch(uint32_t ti, dlab_patch_t *patch)
+{
+    uint8_t *fields = &patch->pitch;
+    drumlab_global_ensure(ti);
+    if (ti >= NPART) return;
+    for (uint32_t i = 0; i < 8u; i++)
+        if (drumlab_global[ti][i] != 100u)
+            fields[i] = (uint8_t)(((uint32_t)fields[i] * drumlab_global[ti][i]) / 100u);
+}
 /* Stage 22A: MIDI input-to-pad assignment. Until a map is enabled, retain
  * Stage 21B's octave-wrapped note behavior for old projects. */
 static uint8_t drumlab_midi_note[NPART][DLAB_LANES];
@@ -150,14 +173,17 @@ static int drumlab_type_set(track_t *t, uint32_t lane, uint32_t kind)
 static void drumlab_note_on(track_t *t, voice_t *v)
 {
     dlab_patch_t *patch = drumlab_patch_of(t, v->note);
+    dlab_patch_t sounding;
     uint32_t slot = drumlab_slot(t, v), lane = drumlab_lane(v->note);
     if (slot >= NVOICE || !patch) return;
-    dlab_trigger(&drumlab_state[t - trk][slot], patch,
+    sounding = *patch;
+    drumlab_global_patch((uint32_t)(t - trk), &sounding);
+    dlab_trigger(&drumlab_state[t - trk][slot], &sounding,
                  0x13579BDFu ^ ((uint32_t)v->note << 16) ^ (uint32_t)v->age);
     drumlab_state[t - trk][slot].perf_timbre = (int8_t)clamp(
         (((int32_t)v->vel - 64) * drum_perf_sound[t - trk][lane]) / 127, -64, 63);
     if (drum_pad_pitch[t - trk][lane]) {
-        int32_t note = 24 + (int32_t)patch->pitch * 60 / 127 + drum_pad_pitch[t - trk][lane];
+        int32_t note = 24 + (int32_t)sounding.pitch * 60 / 127 + drum_pad_pitch[t - trk][lane];
         drumlab_state[t - trk][slot].base_inc = pitch_inc((uint32_t)clamp(note, 0, 127) * 16u);
     }
 }
@@ -195,6 +221,11 @@ static void drumlab_render(track_t *t, voice_t *v, int32_t *out,
         perf_patch.snap = (uint8_t)clamp((int32_t)patch->snap + state->perf_timbre, 0, 127);
         perf_patch.drive = (uint8_t)clamp((int32_t)patch->drive + state->perf_timbre / 2, 0, 127);
         patch = &perf_patch;
+    }
+    if (drumlab_global_ready[t - trk]) {
+        /* Reuse the scratch patch even when V>S is disabled. */
+        if (patch != &perf_patch) { perf_patch = *patch; patch = &perf_patch; }
+        drumlab_global_patch((uint32_t)(t - trk), &perf_patch);
     }
     if (patch->kind == DLAB_HEAVY_SNARE)
         dlab_run_heavy_snare(state, patch, hit, n);
