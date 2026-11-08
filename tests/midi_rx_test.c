@@ -112,6 +112,24 @@ int main(void)
     ml_table[0] = 0x80u | 30u; ml_table[1] = 2; ml_table[2] = P_PAN + 1u;
     send_rx(0xB0, 30, 127, 1);
     assert(trk[2].p[P_PAN] == 63 && trk[0].p[P_PAN] != 63 && trk[1].p[P_PAN] != 63);
+    /* Stage 26: reuse the 32-entry learned mapping, including fan-out to
+     * different tracks/targets. DRUM-LAB CCs edit the kit layer, not seeds. */
+    trk[0].eng_req = trk[0].engine = ENGI_DRUMLAB;
+    trk[1].eng_req = trk[1].engine = ENGI_DRUMLAB;
+    drumlab_global_reset(0); drumlab_global_reset(1);
+    trk[0].p[P_E0] = 19; trk[1].p[P_E2] = 83;
+    ml_table[3] = 0x80u | 31u; ml_table[4] = 0; ml_table[5] = ML_E0;
+    ml_table[6] = 0x80u | 31u; ml_table[7] = 1; ml_table[8] = ML_E0 + 2u;
+    send_rx(0xB0, 31, 64, 1);
+    assert(drumlab_global[0][0] == 50 && drumlab_global[1][2] == 50);
+    assert(trk[0].p[P_E0] == 19 && trk[1].p[P_E2] == 83);
+    assert(drumlab_global[0][1] == 100 && drumlab_global[1][0] == 100);
+    send_rx(0xB0, 31, 127, 2);
+    assert(drumlab_global[0][0] == 100 && drumlab_global[1][2] == 100);
+    send_rx(0xB0, 16, 0, 1);
+    assert(drumlab_global[0][0] == 0 && drumlab_global[1][0] == 0);
+    assert(trk[0].p[P_E0] == 19);
+    puts("RX: learned CC fans out across DRUM-LAB kit controls; CC16 also scales kit, seeds intact");
     send_rx(0x90, 60, 100, 1); send_rx(0xB0, 120, 0, 2);
     assert(!mn_get(0, 60) && !midi_owners[0] && !midi_owners[1]);
     memset((void *)midi_pc_req, 0, sizeof midi_pc_req);

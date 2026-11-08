@@ -255,6 +255,13 @@ static const uint8_t MIDI_CC_ENG[NENGINES] = {
 /* a CC sets parameter id of track t as a knob would: 0..127 over its range (the map's and MIDI LEARN's) */
 static void midi_cc_set(track_t *t, uint32_t id, uint32_t value)
 {
+    if (eng_idx(t->eng_req) == ENGI_DRUMLAB && id >= P_E0 && id < P_E0 + 8u) {
+        uint32_t ti = (uint32_t)(t - trk);
+        uint8_t scaled = (uint8_t)((value * 100u + 63u) / 127u);
+        drumlab_global_ensure(ti);
+        drumlab_global[ti][id - P_E0] = scaled;
+        return;
+    }
     const param_desc_t *d = param_desc_of(eng_idx(t->eng_req), id);
     int32_t v = d->min + ((int32_t)value * (d->max - d->min) + 63) / 127;
     if (d->max <= d->min || t->p[id] == v)

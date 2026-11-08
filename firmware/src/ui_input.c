@@ -1291,6 +1291,7 @@ static void edit_param(uint32_t slot, int32_t steps)
             (int32_t)drumlab_global[ti][field] + accel(EN_K1 + slot, steps, 100), 0, 100);
         fm1_irq_on();
         ui.force = 1u;
+        ml_knob(TSEL, P_E0 + field);
         return;
     }
     if (pg->graph == GR_MOD && slot == 0u) {             /* MOD: KNOB 1 the slot, 2..4 its SRC DST AMT */

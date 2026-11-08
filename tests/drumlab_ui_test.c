@@ -34,11 +34,15 @@ int main(void)
                      !memcmp(&original, drumlab_patch_of(TSEL, 36u), sizeof original));
         drumlab_global_reset(0u);
         go_title("EDIT 1"); frame();
+        ml_set(1u);
         uint32_t pitch_before = drumlab_global[0][0];
         turn(EN_K1, -1); frame();
         bad += check("Stage 25E: STRIKE knob edits global pitch, not pad pitch",
                      drumlab_global[0][0] < pitch_before &&
                      !memcmp(&original, drumlab_patch_of(TSEL, 36u), sizeof original));
+        bad += check("Stage 26: global STRIKE knob is picked by existing MIDI CC Learn",
+                     ml.pick && ml.trk == 0u && ml.id == P_E0);
+        ml_set(0u);
         go_title("EDIT 2"); frame();
         uint32_t noise_before = drumlab_global[0][4];
         turn(EN_K1, -1); frame();
