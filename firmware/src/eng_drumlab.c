@@ -188,6 +188,11 @@ static void drumlab_render(track_t *t, voice_t *v, int32_t *out,
     if (state->perf_timbre) {
         perf_patch = *patch;
         perf_patch.noise = (uint8_t)clamp((int32_t)patch->noise + state->perf_timbre, 0, 127);
+        /* A driven snare is already saturated: changing DRIVE alone barely
+         * changes its timbre. V>S must also move the spectral filter and
+         * transient, with no change whatsoever when the amount is zero. */
+        perf_patch.tone = (uint8_t)clamp((int32_t)patch->tone + 2 * (int32_t)state->perf_timbre, 0, 127);
+        perf_patch.snap = (uint8_t)clamp((int32_t)patch->snap + state->perf_timbre, 0, 127);
         perf_patch.drive = (uint8_t)clamp((int32_t)patch->drive + state->perf_timbre / 2, 0, 127);
         patch = &perf_patch;
     }
