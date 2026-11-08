@@ -190,10 +190,14 @@ static void drumlab_render(track_t *t, voice_t *v, int32_t *out,
         dlab_run_extra(state, patch, hit, n);
     {
         uint32_t lane = drumlab_lane(v->note);
+        /* Reuse the twelve already-persisted DRUM-X LEVELS parameters.
+         * Full level preserves the approved DRUM-LAB sound bit for bit. */
+        int32_t level = clamp(t->p[lane < 8u ? P_LN0 + lane : P_LN8 + lane - 8u], 0, 127);
+        int32_t gain = level == 127 ? 32768 : (level * level * 32768) / 16129;
         int32_t p0 = dx_lpan0[lane], dp = (int32_t)dx_lpan[lane] - p0;
         int32_t pq = p0 * 256, step = n ? dp * 256 / (int32_t)n : 0;
         for (i = 0; i < n; i++, pq += step) {
-            int32_t x = voice_amp(hit[i], m, i), pan = pq >> 8;
+            int32_t x = voice_amp((int32_t)(((int64_t)hit[i] * gain) >> 15), m, i), pan = pq >> 8;
             out[i] += x;
             if (dx_xon & 1u) {
                 if (pan > 0) dx_sl[i] += (x >> 6) * pan;

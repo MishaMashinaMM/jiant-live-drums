@@ -49,6 +49,23 @@ int main(void)
     bad += check("Stage 24B: SOUND 4 knob 3 selects CLAP independently",
                  drumlab_patch_of(TSEL, 38)->kind == DLAB_CLAP &&
                  drumlab_patch_of(TSEL, 36)->kind == DLAB_KICK);
+    {
+        char label[12];
+        uint32_t count = 0;
+        for (uint32_t p = 0; p < NPAGES; p++)
+            if (PAGES[p].fam == FAM_EDIT && PAGES[p].title &&
+                (str_eq(PAGES[p].title, "LEVELS") || str_eq(PAGES[p].title, "LEVELS 2") ||
+                 str_eq(PAGES[p].title, "LEVELS 3")))
+                count += page_visible(p);
+        bad += check("Stage 25A: DRUM-LAB displays all three LEVELS pages", count == 3u);
+        drumlab_pad_label(2u, drumlab_patch_of(TSEL, 38)->kind, label);
+        bad += check("Stage 25A: pad number and selected type label", str_eq(label, "03 CLP"));
+        go_title("LEVELS"); frame();
+        TSEL->p[P_LN2] = 127;
+        turn(EN_K3, -1); frame();
+        bad += check("Stage 25A: LEVELS edits independently persisted pad levels",
+                     TSEL->p[P_LN2] < 127 && TSEL->p[P_LN0] == 127);
+    }
     apply_preset(1);
     bad += check("loading another DRUM-LAB kit resets its per-pad edits",
                  !drumlab_kit_dirty[0] && !drumlab_kit_ready[0]);
