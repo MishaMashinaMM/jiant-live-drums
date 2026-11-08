@@ -19,10 +19,10 @@
  * (x1..x4, level kept). Each lane has its LEVEL (P_LN0..P_LN7, EDIT > LANES / LANES 2, #97: square law, 100 % the
  * default) on the voice amplitude after the knee. The knobs move a hit while it rings.
  *
- * Polyphony: a lane per drum and part, mono: a hit reuses its lane's voice even at another pitch, the 8 lanes ring
- * together. A sounding voice plays one lane (s[0]); the lane remembers its voice (owner), and a voice
- * whose lane was struck again by another voice, or has rung out (-84 dB), ends itself (drum_amp). The
- * voices come from the shared budget (voice.c), up to 8 per part. A closed hat chokes the open one.
+ * Polyphony: OVERLAP gives each hit an independent voice/tail; RESTART uses
+ * the legacy single sounding voice per lane. Both share the track's normal
+ * voice budget (voice.c), up to 8 per part. A closed hat chokes every ringing
+ * open hat, without choking the independent O2 duplicate.
  *
  * What applies (engine_t.oneshot): the hit is the envelope. VOICE (always POLY), GLIDE, the ADSR, ENV DEST,
  * LFO DEST PIT / FLT / SHP, the global TUNE and the matrix's PITCH CUT SHP do nothing; LEVEL, PAN, the
@@ -54,6 +54,15 @@ static uint32_t dx_mot_rng = 0x9E3779B9u;
 
 static drum_lane_t drum_kit[NPART][DV_NLANE];   /* (0.6.53: in .bss, was .pool: the pool kept for the FX lines) */
 static drum_lane_t drum_kit12[NPART][4];        /* hit state for the four MIDI-only lanes (B2 S2 O2 T2) */
+/* Each free voice can carry an independent hit tail for the same pad.
+ * 0 = OVERLAP (default), 1 = RESTART (legacy one-voice-per-pad). */
+static drum_lane_t drum_overlap_voice[NPART][NVOICE];
+static uint8_t drum_retrigger[NPART][DV_NLANE12];
+static int drum_overlaps(const track_t *t, uint32_t lane)
+{
+    uint32_t ti = (uint32_t)(t - trk);
+    return ti < NPART && lane < DV_NLANE12 && !drum_retrigger[ti][lane];
+}
 
 /* The group mutes (JIANT): KICK (the kick), SNARE (snare and clap), HAT (both hats), PERCS (tom, rim, bell), on every
  * DRUM track. A section's (project.c keeps them with its DRUM-X kit, the song stages them); set live on the
@@ -266,6 +275,10 @@ static drum_lane_t *drum_lane_of(track_t *t, const voice_t *v)
     uint32_t lane = (uint32_t)v->s[0];
     if (lane >= DV_NLANE12)
         return 0;
+    if (drum_overlaps(t, lane)) {
+        drum_lane_t *L = &drum_overlap_voice[t - trk][i];
+        return L->owner == i + 1u ? L : 0;
+    }
     if (lane < DV_NLANE) {
         drum_lane_t *K = drum_kit_of(t);
         if (!K)
@@ -285,6 +298,7 @@ static voice_t *drum_reuse(track_t *t, uint32_t note)
 {
     uint32_t lane = drum_lane(note);
     uint32_t owner;
+    if (drum_overlaps(t, lane)) return 0;
     if (lane < DV_NLANE) {
         drum_lane_t *K = drum_kit_of(t);
         if (!K)
@@ -302,6 +316,19 @@ static voice_t *drum_reuse(track_t *t, uint32_t note)
     return v->active && (uint32_t)v->s[0] == lane ? v : 0;
 }
 
+/* CH always chokes every ringing OH, including overlapping tails. O2 is
+ * independent, as required by the existing Stage 9B choke behavior. */
+static void drum_choke_open_hat(track_t *t)
+{
+    drum_lane_t *K = drum_kit_of(t);
+    if (K) dx_choke(&K[DV_HATO].x);
+    for (uint32_t j = 0; j < NVOICE; j++) {
+        drum_lane_t *L = &drum_overlap_voice[t - trk][j];
+        if (L->owner == j + 1u && t->v[j].active && t->v[j].s[0] == DV_HATO)
+            dx_choke(&L->x);
+    }
+}
+
 static void drum_note_on(track_t *t, voice_t *v)
 {
     uint32_t i = (uint32_t)(v - t->v), lane;
@@ -316,7 +343,9 @@ static void drum_note_on(track_t *t, voice_t *v)
     /* release the lane this voice was playing */
     {
         uint32_t old_lane = (uint32_t)v->s[0];
-        if (old_lane < DV_NLANE) {
+        if (drum_overlaps(t, old_lane)) {
+            L = &drum_overlap_voice[t - trk][i];
+        } else if (old_lane < DV_NLANE) {
             L = &K[old_lane];
         } else if (old_lane < DV_NLANE12) {
             L = &K12[old_lane - DV_NLANE];
@@ -327,7 +356,9 @@ static void drum_note_on(track_t *t, voice_t *v)
             L->owner = 0;
     }
     /* claim the new lane */
-    if (lane < DV_NLANE) {
+    if (drum_overlaps(t, lane)) {
+        L = &drum_overlap_voice[t - trk][i];
+    } else if (lane < DV_NLANE) {
         L = &K[lane];
     } else if (lane < DV_NLANE12) {
         L = &K12[lane - DV_NLANE];
@@ -367,7 +398,7 @@ static void drum_note_on(track_t *t, voice_t *v)
         duck_hit = 1;
     dx_trigger(&L->x);
     if (lane == DV_HATC) {
-        dx_choke(&K[DV_HATO].x);
+        drum_choke_open_hat(t);
     }
 }
 
@@ -575,7 +606,7 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         dx_trigger(&L->x);
         L->age = 0;
         if (((uint32_t)v->s[0]) == DV_HATC) {
-        dx_choke(&drum_kit_of(t)[DV_HATO].x);
+        drum_choke_open_hat(t);
     }
     }
     if (lv < 127) {                                      /* the lane's LEVEL (square law) on the block's amplitude

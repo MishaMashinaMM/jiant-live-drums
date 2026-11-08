@@ -61,6 +61,15 @@ static track_t *kitx(int16_t morph, int16_t tune)
         t->p[P_DIST + i] = 0;
     return t;
 }
+/* The default OVERLAP mode holds drum synthesis state per active voice. */
+static const drum_lane_t *sounding_lane(track_t *t, uint32_t lane)
+{
+    uint32_t i;
+    for (i = 0; i < NVOICE; i++)
+        if (t->v[i].active && (uint32_t)t->v[i].s[0] == lane)
+            return drum_lane_of(t, &t->v[i]);
+    return 0;
+}
 /* lane l struck, n samples of the left output into buf; returns the voice still sounding at the end */
 static int strike(track_t *t, uint32_t l, uint32_t n)
 {
@@ -208,12 +217,12 @@ int main(int argc, char **argv)
         before = 1;
         {
             uint32_t v;
-            const drum_lane_t *L = &drum_kit[0][DV_HATO];
-            before = L->x.ea;
+            const drum_lane_t *L = sounding_lane(t, DV_HATO);
+            before = L ? L->x.ea : 0;
             (void)v;
         }
-        after = drum_kit[0][DV_HATO].x.ea;
-        check("the closed hat chokes the open one", !drum_kit[0][DV_HATO].x.live || after < (1 << 30) / 1000.0,
+        { const drum_lane_t *L = sounding_lane(t, DV_HATO); after = L ? L->x.ea : 0; }
+        check("the closed hat chokes the open one", after < (1 << 30) / 1000.0,
               "open hat envelope %.0f", after);
         (void)before;
     }
@@ -649,19 +658,19 @@ int main(int argc, char **argv)
             double before_oh, after_oh, before_o2, after_o2;
             trk_note_on(t, NOTE[4], 100);   /* HAT OP */
             strike(t, 4, FS / 50u);
-            before_oh = drum_kit[0][DV_HATO].x.ea;
+            { const drum_lane_t *L = sounding_lane(t, DV_HATO); before_oh = L ? L->x.ea : 0; }
             trk_note_on(t, NOTE[3], 1);     /* HAT CL quiet */
             strike(t, 3, FS / 50u);
-            after_oh = drum_kit[0][DV_HATO].x.ea;
+            { const drum_lane_t *L = sounding_lane(t, DV_HATO); after_oh = L ? L->x.ea : 0; }
             trk_note_on(t, NOTE[10], 100);  /* O2 */
             strike(t, 10, FS / 50u);
-            before_o2 = drum_kit12[0][2].x.ea;
+            { const drum_lane_t *L = sounding_lane(t, DV_O2); before_o2 = L ? L->x.ea : 0; }
             trk_note_on(t, NOTE[3], 1);     /* HAT CL quiet */
             strike(t, 3, FS / 50u);
-            after_o2 = drum_kit12[0][2].x.ea;
+            { const drum_lane_t *L = sounding_lane(t, DV_O2); after_o2 = L ? L->x.ea : 0; }
             check("CH chokes OH but leaves O2 ringing",
-                (!drum_kit[0][DV_HATO].x.live || after_oh < before_oh / 100.0) &&
-                drum_kit12[0][2].x.live &&
+                after_oh < before_oh / 100.0 &&
+                sounding_lane(t, DV_O2) &&
                 before_o2 > 0 &&
                 after_o2 > before_o2 / 100.0, 0);
         }

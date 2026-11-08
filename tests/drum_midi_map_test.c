@@ -17,6 +17,24 @@ int main(void)
     int bad = 0;
     host_tracks_init();
     host_preset(t, ENGI_DRUM, 0);
+    {
+        uint32_t voices = 0;
+        trk_note_on(t, 36, 100);
+        trk_note_on(t, 36, 100);
+        for (i = 0; i < NVOICE; i++)
+            voices += t->v[i].active && t->v[i].s[0] == DV_KICK;
+        bad += test("Stage 25B: DRUM-X default OVERLAP has two independent kick tails", voices == 2u);
+        for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
+        drum_retrigger[0][DV_KICK] = 1u;
+        trk_note_on(t, 36, 100);
+        trk_note_on(t, 36, 100);
+        voices = 0;
+        for (i = 0; i < NVOICE; i++)
+            voices += t->v[i].active && t->v[i].s[0] == DV_KICK;
+        bad += test("Stage 25B: DRUM-X RESTART reuses one voice", voices == 1u);
+        for (i = 0; i < NVOICE; i++) t->v[i].active = 0;
+        drum_retrigger[0][DV_KICK] = 0u;
+    }
 #if FELUCCA_NO_SEQUENCER
     before = vage;
     trk_note_on(t, 24, 100);  /* formerly SHORT kick: not a sound slot */

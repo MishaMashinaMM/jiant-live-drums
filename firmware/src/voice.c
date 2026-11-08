@@ -473,7 +473,9 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
             return voice_reuse(t, v);
     }
     for (i = 0; i < np; i++) {
-        if (t->v[i].active && t->v[i].note == note)
+        if (t->v[i].active && t->v[i].note == note &&
+            !(t->engine == ENGI_DRUM && drum_overlaps(t, drum_lane(note))) &&
+            t->engine != ENGI_DRUMLAB)
             return voice_reuse(t, &t->v[i]);
         nfree += !t->v[i].active;
     }
