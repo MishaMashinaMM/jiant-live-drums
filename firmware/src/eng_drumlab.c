@@ -16,10 +16,10 @@ static const char *const LAB_NAMES[DLAB_LANES] = {
     "K1", "S1", "SN", "S2", "K2", "K3", "S3", "K4", "S4", "K5", "S5", "K6"
 };
 static const char *const LAB_TYPES[DLAB_KIND_COUNT] = {
-    "KICK", "SNARE", "SNARE", "CLAP", "C-HAT", "O-HAT", "TOM", "METAL"
+    "KICK", "SNARE", "SNARE", "CLAP", "C-HAT", "O-HAT", "TOM", "METAL", "CRASH", "TOM 2"
 };
 static const char *const LAB_SHORT[DLAB_KIND_COUNT] = {
-    "KIK", "SNR", "SNR", "CLP", "CH", "OH", "TOM", "MTL"
+    "KIK", "SNR", "SNR", "CLP", "CH", "OH", "TOM", "MTL", "CRH", "TM2"
 };
 static dlab_patch_t drumlab_kit[NPART][DLAB_LANES];
 static uint8_t drumlab_kit_ready[NPART];

@@ -39,7 +39,7 @@ static void lab_knob(const page_t *pg, uint32_t k, int32_t steps)
              * The approved snare uses DLAB_HEAVY_SNARE (2). */
             if (steps > 0)
                 kind = kind < DLAB_HEAVY_SNARE ? DLAB_HEAVY_SNARE :
-                       clamp(kind + 1, DLAB_HEAVY_SNARE, DLAB_METAL);
+                       clamp(kind + 1, DLAB_HEAVY_SNARE, DLAB_TOM_NOISE);
             else
                 kind = kind <= DLAB_HEAVY_SNARE ? DLAB_KICK : kind - 1;
             drumlab_type_set(TSEL, dx_ui_lane, (uint32_t)kind);

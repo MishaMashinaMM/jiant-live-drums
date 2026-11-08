@@ -7,7 +7,8 @@
 #define FELUCCA_DRUMLAB_VOICE_C
 
 enum { DLAB_KICK, DLAB_SNARE, DLAB_HEAVY_SNARE,
-       DLAB_CLAP, DLAB_HAT_C, DLAB_HAT_O, DLAB_TOM, DLAB_METAL, DLAB_KIND_COUNT };
+       DLAB_CLAP, DLAB_HAT_C, DLAB_HAT_O, DLAB_TOM, DLAB_METAL,
+       DLAB_CRASH, DLAB_TOM_NOISE, DLAB_KIND_COUNT };
 typedef struct {
     uint8_t kind, pitch, sweep, body, snap, noise, tone, drive;
     uint8_t wire, weight, metal; /* Heavy snare: wire length, sub-body and inharmonic ring. */
@@ -264,6 +265,8 @@ static void dlab_run_extra(dlab_voice_t *v, const dlab_patch_t *p,
     if (kind == DLAB_HAT_C) tau = 10000u + DLAB_CURVE_US(p->body, 95000u);
     if (kind == DLAB_HAT_O) tau = 60000u + DLAB_CURVE_US(p->body, 420000u);
     if (kind == DLAB_TOM) tau = 35000u + DLAB_CURVE_US(p->body, 400000u);
+    if (kind == DLAB_CRASH) tau = 200000u + DLAB_CURVE_US(p->body, 1100000u);
+    if (kind == DLAB_TOM_NOISE) tau = 40000u + DLAB_CURVE_US(p->body, 270000u);
     int32_t end = (int32_t)(((int64_t)env * dlab_decay_long(n, tau)) >> 16);
     int32_t step = (end - env) / (int32_t)n;
     for (i = 0; i < n; i++, env += step, at++) {
@@ -287,11 +290,32 @@ static void dlab_run_extra(dlab_voice_t *v, const dlab_patch_t *p,
             raw = (int32_t)(((int64_t)(s * 3 + s2) * env * (64 + p->weight)) >> 34);
             phase += inc;
             phase2 += inc * 2u;
+        } else if (kind == DLAB_CRASH) {
+            /* Wide, decaying metallic wash: bright noise, moving inharmonic
+             * partials and an immediate strike, unlike either hi-hat. */
+            lp += (int32_t)(((int64_t)(white - lp) * (1400 + p->tone * 24u)) >> 15);
+            fast += (int32_t)(((int64_t)(white - fast) * (8500 + p->tone * 30u)) >> 15);
+            int32_t wash = (white - fast) / 2 + (fast - lp) / 2;
+            int32_t shimmer = (s + s2 + s3) / 3;
+            raw = (int32_t)(((int64_t)(wash * (170 + p->noise) / 256 +
+                                        shimmer * (28 + p->metal) / 256) * env) >> 24);
+            if (at < 900u)
+                raw += (int32_t)(((int64_t)(white - lp) * env * (900u - at)) >> 35);
+        } else if (kind == DLAB_TOM_NOISE) {
+            /* A low, thudding membrane with deliberately little sustained
+             * pitch: broad noise-band body and a short bent oscillator. */
+            lp += (int32_t)(((int64_t)(white - lp) * (1700 + p->tone * 24u + spectral * 12u)) >> 15);
+            fast += (int32_t)(((int64_t)(white - fast) * (450 + p->tone * 5u + spectral * 3u)) >> 15);
+            int32_t thud = lp - fast;
+            uint32_t transient = at < 1600u ? 1600u - at : 0u;
+            raw = (int32_t)(((int64_t)thud * env * (110u + p->weight)) >> 32);
+            raw += (int32_t)(((int64_t)s * env * transient * (32u + p->snap)) >> 40);
+            phase += v->base_inc + (uint32_t)(((uint64_t)v->base_inc * transient * (20u + p->sweep)) >> 19);
         } else { /* DLAB_METAL */
             raw = (int32_t)(((int64_t)(s + s2 + s3) * env * (80u + p->metal)) >> 32);
             if (at < 2500u) raw += (int32_t)(((int64_t)white * env * p->noise) >> 32);
         }
-        if (kind != DLAB_TOM) {
+        if (kind != DLAB_TOM && kind != DLAB_TOM_NOISE) {
             phase += v->base_inc;
             phase2 += (uint32_t)(((uint64_t)v->base_inc * 6021u) >> 12);
         }

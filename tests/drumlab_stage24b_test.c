@@ -24,10 +24,10 @@ static uint64_t render(const dlab_patch_t *p, uint32_t *clipped, uint64_t *energ
 
 int main(void)
 {
-    static const char *const names[] = {"CLAP", "CLOSED HAT", "OPEN HAT", "TOM", "METAL"};
-    static const uint8_t pitches[] = {65, 85, 85, 51, 93};
+    static const char *const names[] = {"CLAP", "CLOSED HAT", "OPEN HAT", "TOM", "METAL", "CRASH", "TOM 2"};
+    static const uint8_t pitches[] = {65, 85, 85, 51, 93, 96, 43};
     unsigned bad = 0;
-    for (unsigned k = 0; k < 5u; k++) {
+    for (unsigned k = 0; k < sizeof pitches / sizeof pitches[0]; k++) {
         dlab_patch_t p = {(uint8_t)(DLAB_CLAP + k), pitches[k], 35, 70, 80, 75, 65, 45, 60, 100, 70};
         uint32_t clipped = 0;
         uint64_t energy = 0;
