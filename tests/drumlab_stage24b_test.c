@@ -37,6 +37,14 @@ int main(void)
         int ok = a == b && energy == energy2 && energy > 1000000u && !clipped;
         printf("drumlab 24B: %-12s audible, deterministic, no clipping %s\n", names[k], ok ? "ok" : "FAIL");
         bad += !ok;
+        if (p.kind == DLAB_CLAP || p.kind == DLAB_HAT_C || p.kind == DLAB_HAT_O) {
+            p.pitch = (uint8_t)(pitches[k] > 40u ? pitches[k] - 40u : pitches[k] + 40u);
+            uint64_t different_energy = 0;
+            uint64_t shifted = render(&p, &clipped, &different_energy);
+            ok = shifted != a && !clipped;
+            printf("drumlab 24B: %-12s PITCH tunes noise spectrum %s\n", names[k], ok ? "ok" : "FAIL");
+            bad += !ok;
+        }
     }
     printf("DRUMLAB STAGE 24B %s (%u failures)\n", bad ? "FAILED" : "PASSED", bad);
     return bad != 0;

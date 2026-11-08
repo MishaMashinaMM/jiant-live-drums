@@ -181,6 +181,9 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
     int32_t body_fast_lp = v->body_fast_lp, body_slow_lp = v->body_slow_lp;
     int32_t wire_k = 1800 + (int32_t)p->tone * 170;
     uint32_t base = v->base_inc;
+    /* Pitch of noise-dominant snares moves their low-mid spectral band,
+     * not just the very short tonal impact. +/−24 stays musically useful. */
+    int32_t spectral = (int32_t)((base >> 19) > 300u ? 300u : (base >> 19));
     if (!v->active) {
         for (i = 0; i < n; i++) out[i] = 0;
         return;
@@ -208,8 +211,8 @@ static void dlab_run_heavy_snare(dlab_voice_t *v, const dlab_patch_t *p,
         /* Stage 23C: the broad low-mid band IS the body. TONE moves the
          * filters gradually, BODY controls weight and duration, while the
          * audible oscillator impact dies away in a few milliseconds. */
-        body_fast_lp += (int32_t)(((int64_t)(white - body_fast_lp) * (3000 + p->tone * 28)) >> 15);
-        body_slow_lp += (int32_t)(((int64_t)(white - body_slow_lp) * (450 + p->tone * 3)) >> 15);
+        body_fast_lp += (int32_t)(((int64_t)(white - body_fast_lp) * (3000 + p->tone * 28 + spectral * 18)) >> 15);
+        body_slow_lp += (int32_t)(((int64_t)(white - body_slow_lp) * (450 + p->tone * 3 + spectral * 3)) >> 15);
         int32_t membrane_noise = body_fast_lp - body_slow_lp;
         raw = (int32_t)(((int64_t)membrane_noise * be * (180 + p->weight)) >> 32);
         raw += (int32_t)(((int64_t)(membrane + second / 3) * pe) >> 24);
@@ -255,6 +258,7 @@ static void dlab_run_extra(dlab_voice_t *v, const dlab_patch_t *p,
     uint32_t tau = 18000u + DLAB_CURVE_US(p->body, 300000u);
     int32_t env = v->body_env, lp = v->noise_lp, fast = v->wire_lp;
     uint32_t phase = v->phase, phase2 = v->phase2, phase3 = v->phase3, rng = v->seed;
+    uint32_t spectral = (v->base_inc >> 19) > 300u ? 300u : (v->base_inc >> 19);
     if (!v->active) { for (i = 0; i < n; i++) out[i] = 0; return; }
     if (kind == DLAB_CLAP) tau = 28000u + DLAB_CURVE_US(p->body, 160000u);
     if (kind == DLAB_HAT_C) tau = 10000u + DLAB_CURVE_US(p->body, 95000u);
@@ -266,13 +270,13 @@ static void dlab_run_extra(dlab_voice_t *v, const dlab_patch_t *p,
         int32_t white = (int32_t)(dlab_rand(&rng) >> 16) - 32768;
         int32_t s = sine_i(phase), s2 = sine_i(phase2), s3 = sine_i(phase3), raw = 0;
         if (kind == DLAB_CLAP) {
-            lp += (int32_t)(((int64_t)(white - lp) * (1100 + p->tone * 32u)) >> 15);
+            lp += (int32_t)(((int64_t)(white - lp) * (1100 + p->tone * 32u + spectral * 32u)) >> 15);
             uint32_t d = at % 410u;
             int32_t burst = at < 1230u ? (int32_t)(410u - d) : 0;
             raw = (int32_t)(((int64_t)(white - lp) * env * (45 + burst / 4 + p->snap / 3)) >> 31);
         } else if (kind == DLAB_HAT_C || kind == DLAB_HAT_O) {
-            lp += (int32_t)(((int64_t)(white - lp) * (1700 + p->tone * 16u)) >> 15);
-            fast += (int32_t)(((int64_t)(white - fast) * (7200 + p->tone * 32u)) >> 15);
+            lp += (int32_t)(((int64_t)(white - lp) * (1700 + p->tone * 16u + spectral * 25u)) >> 15);
+            fast += (int32_t)(((int64_t)(white - fast) * (7200 + p->tone * 32u + spectral * 55u)) >> 15);
             int32_t top = white - fast, texture = fast - lp;
             int32_t blend = kind == DLAB_HAT_C ? (top * 3 + texture) / 4 :
                                                         (top * 2 + texture * 2) / 4;
