@@ -658,6 +658,14 @@ static int proj_import(project_t *q, const void *b, int n)
     proj_fm4(q);
     proj_perc(q);                                       /* (SAMPLE PERC: DRUM, before the retired engines) */
     proj_phys_gone(q);
+    /* Normalize new optional TYPE defaults after *every* legacy importer,
+     * not only the modern FUNC parser. Otherwise an old FUN7/FUN6 image
+     * changes project_t bytes when it is saved and loaded a second time. */
+    for (uint32_t t = 0; t < NPART; t++)
+        if (!q->lab_type_present[t])
+            for (uint32_t lane = 0; lane < 12u; lane++)
+                q->lab_kind[t][lane] = drumlab_default_kind(lane);
+    q->sum = proj_sum(q);
     return 1;
 }
 static int proj_import_any(project_t *q, const void *b, int n)
