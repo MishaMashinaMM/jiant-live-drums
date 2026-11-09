@@ -28,11 +28,13 @@ function render(ms) {
 
 render(2500); // Finish the startup splash and enter the live HOME screen.
 assert.equal(ex.web_playing(), 0);
-assert.equal(ex.web_midi(0x90, 64, 100), 1, 'MIDI note-on must enter the queue');
+// The physical key bypasses configurable external MIDI RX routing. Host
+// midi_rx_test and drum_midi_map_test separately verify per-track MIDI input.
+ex.web_keys(1 << 7); // C4 on the FM1 keybed, as in the upstream emulator test.
 const peak = render(300);
-ex.web_midi(0x80, 64, 0);
+ex.web_keys(0);
 render(300);
-assert.ok(peak > 0.001, `MIDI note must produce audio (peak ${peak})`);
+assert.ok(peak > 0.001, `physical key must produce audio (peak ${peak})`);
 
 // PLAY and SEQ have live edit pages, not transport functions.
 for (const button of [10, 9]) {
@@ -42,4 +44,4 @@ for (const button of [10, 9]) {
   render(80);
   assert.equal(ex.web_playing(), 0, 'PLAY/SEQ must not start the sequencer');
 }
-console.log('PASS: live-only emulator boots, MIDI sounds, SEQ/PLAY do not start transport');
+console.log('PASS: live-only emulator boots, keybed sounds, SEQ/PLAY do not start transport');
