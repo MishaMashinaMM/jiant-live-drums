@@ -167,7 +167,7 @@ Before clicking **Switch on**:
 
 The original backup file and the FM1 are not changed. An imported backup is **not silently written over an existing browser flash session**. The restore path has been verified with a real JIANT v0.9.17 backup, including user banks and a project, but **this does not yet prove hardware flashing or every backup version is compatible**.
 
-The emulator also displays some inherited sample-bank controls. Those controls do **not** imply that Drums includes the SAMPLE synthesis engine.
+The Drums emulator does not load a sample bank or offer sample-kit playback. It retains the hardware controls, backup import, and MIDI test tools.
 
 ## Status and safety
 

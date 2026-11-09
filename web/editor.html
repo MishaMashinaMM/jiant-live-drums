@@ -152,7 +152,7 @@
   <button class="lang" id="lang"></button>
   <h1 class="jiant-wordmark"><a href="https://github.com/MishaMashinaMM/jiant-live-drums" aria-label="JIANT LIVE DRUMS home">JIANT<span class="fm"> LIVE DRUMS</span></a><span class="jiant-tool">EDITOR</span></h1>
   <p class="dim"><a href="../installer/" style="color:inherit" data-t="installer"></a></p>
-  <!-- always visible: connection, version, sync mode, the tabs and (Sound / Sequencer / Tracks) the track selector -->
+  <!-- always visible: connection, version, sync mode, and the available editing tabs -->
   <header class="top">
     <div class="bar">
       <button id="connect" data-t="connect" data-ic="port_usb_c"></button>
@@ -168,7 +168,6 @@
     <nav class="tabs" id="tabs" role="tablist">
       <button role="tab" data-tab="sound" data-t="sound" data-ic="symbol_audio"></button>
       <button role="tab" data-tab="fm6" data-t="tabFm6" data-ic="ui_knob"></button>
-      <button role="tab" data-tab="sequencer" data-t="tabSeq" data-ic="symbol_grid"></button>
       <button role="tab" data-tab="tracks" data-t="tabTracks" data-ic="ui_slider_vertical"></button>
       <button role="tab" data-tab="library" data-t="library" data-ic="symbol_books"></button>
       <button role="tab" data-tab="projects" data-t="projects" data-ic="symbol_folder"></button>
@@ -2988,9 +2987,9 @@ $("lang").addEventListener("click", () => { lang = lang === "ja" ? "en" : "ja"; 
 
 /* ---------------------------------------------------------------- tabs --- */
 /* one panel at a time; the last one is remembered (localStorage) and in the URL hash (#sound ...) */
-const TABS = ["sound", "fm6", "sequencer", "tracks", "library", "projects", "settings"];
+const TABS = ["sound", "fm6", "tracks", "library", "projects", "settings"];
 const TAB_KEY = "felucca-editor-tab";
-const TRACK_TABS = new Set(["sound", "sequencer", "tracks"]);
+const TRACK_TABS = new Set(["sound", "tracks"]);
 let tab = (() => {
   const h = location.hash.slice(1);
   if (TABS.includes(h)) return h;
