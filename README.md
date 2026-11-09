@@ -3,17 +3,17 @@
 **Performance-focused firmware for the M-VAVE FM1**, modified by **Misha Mashina** from **JIANT by Juan Jiant** (based on Felucca).
 
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
-[![Status: experimental](https://img.shields.io/badge/device%20testing-pending-orange.svg)](#status-and-safety)
+[![Status: experimental](https://img.shields.io/badge/device%20tested-limited-yellow.svg)](#status-and-safety)
 
 ![JIANT LIVE DRUMS: dual 12-pad engines, live SEQ and PLAY pages, and eight shared voices](docs/jiant-live-drums-overview.svg)
 
 **[Project homepage](https://mishamashinamm.github.io/jiant-live-drums/)** · **[Emulator](https://mishamashinamm.github.io/jiant-live-drums/emu/)** · **[Drums installer](https://mishamashinamm.github.io/jiant-live-drums/webapp/installer/)** · **[Drums editor](https://mishamashinamm.github.io/jiant-live-drums/webapp/editor/)** · **[Interactive manual (inherited)](https://mishamashinamm.github.io/jiant-live-drums/manual/)**
 
-The links above are the intended GitHub Pages routes for this separate Drums repository; they only become available after its GitHub Pages deployment succeeds. The repository includes the Drums-specific browser emulator, firmware installer, editor, and an inherited interactive manual. The inherited manual still describes some original sequencer behavior and is **not a fully updated Drums control reference**.
+The links above are the GitHub Pages routes for this separate Drums repository. The repository includes the Drums-specific browser emulator, firmware installer, editor, and an inherited interactive manual. The inherited manual still describes some original sequencer behavior and is **not a fully updated Drums control reference**.
 
 JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbral drum sound module**. It extends DRUM-X, adds DRUM-LAB, expands MIDI routing and CC control, and keeps the eight-voice shared pool. The **sequencer is disabled** in this edition (`FELUCCA_NO_SEQUENCER=1`); original Jiant Live remains a separate project.
 
-> **Current status:** experimental, **not an official Juan Jiant release**. Ten dedicated live-drum host test suites pass; the direct Jiant Live → Drums upgrade simulation and package/loader integrity checks pass. **Physical FM1 operation has not been verified.** Back up your data and prepare a recovery method before installing. Do not use the original JIANT web installer to install Drums.
+> **Current status:** experimental, **not an official Juan Jiant release**. Ten dedicated live-drum host test suites and update-package simulations pass. **A physical FM1 has successfully installed and booted Jiant Live Drums via the dedicated web installer.** DRUM-LAB editing and sound output, plus the SEQ/PLAY page controls and flicker-free knob updates (Stage 29C), have been checked on that device. This is **limited device testing**, not a complete hardware qualification. Back up your data and prepare a recovery method before installing. Do not use the original JIANT web installer to install Drums.
 
 ## What's different from JIANT / Jiant Live
 
@@ -110,6 +110,8 @@ With the sequencer disabled, these buttons open two dedicated **per-track, per-p
 
 Six pads are visible at a time, and the selected row is highlighted. Each page uses the full screen. Press **SEQ** or **PLAY** again to close its page; pressing the other button switches directly between them. Tapping a regular page-family button (such as **EDIT** or **ENV**) or **HOME** leaves the drum page immediately. **REC** is disabled in this live-only build.
 
+On the tested FM1, these pages open with a single press and remain stable while idle. Turning a K knob updates the affected pad row without blinking or clearing the entire screen (Stage 29C, `b9654ee`).
+
 - **OVR / OVERLAP** is the default: a repeated hit may overlap the previous hit, subject to the eight-voice limit.
 - **RST / RESTART** retriggers the selected pad instead of letting the previous hit continue.
 - Pads assigned to the same **G1–G4 choke group** can cut one another; **--** means no assigned group.
@@ -172,10 +174,10 @@ The Drums emulator does not load a sample bank or offer sample-kit playback. It 
 ## Status and safety
 
 - **Host regression:** `bash tests/run_live_drum_tests.sh` reports `ALL LIVE DRUM TESTS PASSED` (ten suites, including Stage 27B stress).
-- **Firmware package:** tested `felucca.bin` is **562,972 bytes** within the **584,336-byte** application slot (**21,364 bytes free**). Its `.fwsc` package is **610,113 bytes**, SHA-256 `1c7647ffbd8b5293418062eaf294cc2255573086e79185229c43a766c3ea9a43` (November 9, 2026 build; subsequent source changes require a new build and checksum).
-- **Update simulation:** OTA staging, CRC validation, allowed flash boundaries and direct Jiant Live → Drums installation passed host tests. This does **not** demonstrate physical-device success or guarantee recovery.
-- **Physical FM1 testing:** pending. User projects/sound banks/settings have been backed up externally. A verified physical recovery method is still needed.
-- **Installer publication:** the GitHub Pages workflow is configured to build the current Drums source into a dedicated site. Do not mistake a Pages link for a verified deployed or physical-tested release.
+- **Published Stage 29C firmware:** `felucca-v0.2-b9654ee.fwsc`, SHA-256 `685927239e620225666d8dba87e807fb5936c012e18aeec5ef9e4325b7dc317c` (downloaded from GitHub Pages on November 9, 2026). This identifies the tested published package; the older local `build/felucca.fwsc` checksum `1c7647ff...` belongs to a different build.
+- **Update simulation:** Stage 29C OTA staging, CRC validation, allowed flash boundaries and the Stage 29B → 29C loader update passed host tests. These checks do **not** guarantee recovery from a failed physical update.
+- **Physical FM1 testing (November 9, 2026):** dedicated web-installer installation and reboot succeeded; Jiant Live Drums started on the device. DRUM-LAB editing/sound was exercised, and SEQ/PLAY page entry and knob-driven display updates were confirmed working without the previous blinking after Stage 29C. Broader MIDI, sound, persistence, and long-duration reliability testing remain open.
+- **Safety:** user projects/sound banks/settings were backed up externally before installation. A fully verified physical recovery procedure is still needed. The dedicated GitHub Pages installer is deployed, but availability does not imply that every device or upgrade path is tested.
 
 For regression testing in the development environment:
 
