@@ -5,7 +5,7 @@
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 [![Status: experimental](https://img.shields.io/badge/device%20testing-pending-orange.svg)](#status-and-safety)
 
-![Earlier Jiant Live MIDI routing overview (historical illustration)](docs/jiant-live-overview.svg)
+![JIANT LIVE DRUMS: dual 12-pad engines, live SEQ and PLAY pages, and eight shared voices](docs/jiant-live-drums-overview.svg)
 
 **[Project homepage](https://mishamashinamm.github.io/jiant-live-drums/)** · **[Emulator](https://mishamashinamm.github.io/jiant-live-drums/emu/)** · **[Drums installer](https://mishamashinamm.github.io/jiant-live-drums/webapp/installer/)** · **[Drums editor](https://mishamashinamm.github.io/jiant-live-drums/webapp/editor/)** · **[Interactive manual (inherited)](https://mishamashinamm.github.io/jiant-live-drums/manual/)**
 
@@ -23,7 +23,8 @@ JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbra
 | MIDI routing | **1-4**, **1-6** (assigned-channel routing), or **SEL** (selected-track routing). TRACKS 4/6 still determines how many tracks are active. |
 | MIDI LEARN | **32 parameter destinations** rather than 10. One incoming CC can control several parameters on different tracks at once. |
 | DRUM-X | **12 independent sounds** over one chromatic octave, including extra B2, S2, O2 and T2 instances with the original editing controls. |
-| DRUM-LAB | **12 editable pads**, configurable choke groups, OVERLAP (default) / RESTART retrigger behavior, and eight kit-wide proportional controls for PITCH, SWEEP, BODY, SNAP, NOISE, TONE, DRIVE and WIRES (default 100%). |
+| DRUM-LAB | **12 independent synthesized pads** with selectable sound types, ten per-pad sound parameters, three LEVELS pages, and eight kit-wide proportional controls. |
+| Former SEQ and PLAY buttons | **SEQ** opens the editable **DRUM MIDI MAP**; **PLAY** opens **DRUM PERFORMANCE** (velocity response, choke and retrigger). Neither starts a sequencer or transport. |
 | Polyphony | **Eight shared voices** across all tracks and both drum engines. |
 | Display | Static **JIANT LIVE DRUMS** startup splash, default JIANT presentation, larger UI retained; decorative screen animations disabled. |
 | ABOUT | JIANT LIVE DRUMS v0.2 identification and purpose, while retaining original author and license credits. |
@@ -72,7 +73,49 @@ The original eight kit sounds remain. Four additional **independent instances** 
 | **O2** | OH (open hi-hat) | Same parameters and controls as OH; independent values |
 | **T2** | TM (tom) | Same parameters and controls as TM; independent values |
 
-The kit spans **12 consecutive MIDI notes** for chromatic playing; the browser emulator offers test pads for notes **36–47**. The original sound editing pages have not been redesigned.
+DRUM-X has 12 pads but **retains the original eight drum-note assignments** (for example kick 36, snare 38 and open hat 46) rather than replacing them with a chromatic map. The four additional default notes are B2=41, S2=40, O2=43 and T2=44. All 12 notes can be reassigned individually on the **SEQ / DRUM MIDI MAP** page. Its original per-sound editing pages have not been redesigned.
+
+### DRUM-LAB: 12 independently editable drum sounds
+
+DRUM-LAB is a **second drum synthesis engine**, separate from DRUM-X. Each track assigned DRUM-LAB has its own kit of 12 editable pads. The default note assignments are **MIDI 36–47** (C2 through B2); the notes can be changed per pad on the SEQ page. DRUM-LAB has kick, snare, clap, closed/open hat, tom, metallic and crash sound types, including a second tom variant. You can change a pad's sound type without changing the other pads.
+
+Open **EDIT** while a DRUM-LAB track is selected:
+
+| EDIT pages | Controls |
+| --- | --- |
+| **STRIKE** (page 1) | Kit-wide **PITCH, SWEEP, BODY, SNAP** |
+| **BODY** (page 2) | Kit-wide **NOISE, TONE, DRIVE, WIRES** |
+| **SOUND** (page 1) | K1 chooses the pad; K2–K4 edit its **PITCH, SWEEP, BODY** |
+| **SOUND 2** | K1 chooses the pad; K2–K4 edit its **SNAP, NOISE, TONE** |
+| **SOUND 3** | K1 chooses the pad; K2–K4 edit its **DRIVE, WIRES, WEIGHT** |
+| **SOUND 4** | K1 chooses the pad; K2 edits **METAL**, K3 changes its **TYPE**; K4 is unused |
+| **LEVELS, LEVELS 2, LEVELS 3** | Independent output levels for all 12 pads |
+
+The ten per-pad sound parameters have values **0–127**. The eight kit controls on STRIKE and BODY are a separate **0–100% multiplier layer**:
+
+- **100%** plays the pad's own saved parameter value unchanged.
+- **50%** halves its effective value *when played* (for example, pad PITCH 18 becomes 9).
+- **0%** makes the effective parameter value zero across all 12 pads.
+
+Changing a kit-wide percentage **does not overwrite individual pad settings**. All eight multipliers default to **100%** for new and migrated projects, are saved with the project, and can be assigned to incoming MIDI CCs through the existing **32-destination MIDI LEARN** mechanism. This makes them useful for shaping an entire kit live while retaining every pad's programmed sound.
+
+### Live drum buttons: SEQ and PLAY
+
+With the sequencer disabled, these buttons open two dedicated **per-track, per-pad** pages for **both DRUM-X and DRUM-LAB**. They do not trigger playback, recording, a pattern or a transport command.
+
+| Button / page | What the controls do |
+| --- | --- |
+| **SEQ → DRUM MIDI MAP** | **ALGO** chooses the track; **SELECT** chooses a pad; **OCT− / OCT+** jump between pads 1–6 and 7–12. **K1** edits that pad's incoming MIDI note (**0–127**), **K2** its pan (**L64–R64**, C=center), and **K3** its pitch offset (**−24 to +24 semitones**). K4 is unused. |
+| **PLAY → DRUM PERFORMANCE** | Same track, pad and six-pad-bank selection. **K1 CURVE** selects velocity curve **LIN, SOFT, HARD or FIX**; **K2 V>S** sets velocity-to-sound response (**0–127**); **K3 CH** assigns a choke group (**--**, G1–G4); **K4 RETR** chooses **OVR** (OVERLAP) or **RST** (RESTART). |
+
+Six pads are visible at a time, and the selected row is highlighted. Each page uses the full screen. Press **SEQ** or **PLAY** again to close its page; pressing the other button switches directly between them. Tapping a regular page-family button (such as **EDIT** or **ENV**) or **HOME** leaves the drum page immediately. **REC** is disabled in this live-only build.
+
+- **OVR / OVERLAP** is the default: a repeated hit may overlap the previous hit, subject to the eight-voice limit.
+- **RST / RESTART** retriggers the selected pad instead of letting the previous hit continue.
+- Pads assigned to the same **G1–G4 choke group** can cut one another; **--** means no assigned group.
+- These settings belong to the selected track and pad, so different kits and pads can use different note maps, curves, choke groups and retrigger policies.
+
+**Polyphony is eight voices total**, not eight per kit: simultaneous hits on several tracks or both drum engines compete for the same eight-voice pool. Stage 27B host stress tests passed for 12-pad and combined 24-pad bursts; a successful host test does not establish physical FM1 performance.
 
 ### Display and startup
 
