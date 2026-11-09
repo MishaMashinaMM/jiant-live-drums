@@ -2260,21 +2260,23 @@ async function installerPage() {
   ok(/iPhone y iPad/.test(status()) && els.get("tip").hidden === false, "installer page: an iPhone: told at once, with what to use");
 }
 
-/* (0.9.11) 404.html: old and mistyped links to the page they meant */
+/* Jiant Live Drums: missing and mistyped URLs stay on the Drums site. */
 function siteRedirects() {
   const html = readFileSync(join(HERE, "404.html"), "utf8");
   const src = html.slice(html.indexOf("/*REDIRECT-BEGIN*/"), html.indexOf("/*REDIRECT-END*/"));
   const go = vm.runInNewContext(src + "\njiantTarget");
   const cases = [
-    ["/JIANT/installer/", "/JIANT/webapp/installer/"], ["/JIANT/installer", "/JIANT/webapp/installer/"],
-    ["/JIANT/webapp/", "/JIANT/webapp/installer/"], ["/JIANT/webapp", "/JIANT/webapp/installer/"],
-    ["/JIANT/webapp/installer/:1:1", "/JIANT/webapp/installer/"], ["/JIANT/webapp/installer/index.html:302:15", "/JIANT/webapp/installer/"],
-    ["/JIANT/webapp/installer/)", "/JIANT/webapp/installer/"], ["/JIANT/webapp/installer/%20", "/JIANT/webapp/installer/"],
-    ["/JIANT/webapp/installer/foo/bar", "/JIANT/webapp/installer/"], ["/jiant/webapp/installer/", "/JIANT/webapp/installer/"],
-    ["/JIANT/instalador", "/JIANT/webapp/installer/"], ["/JIANT/editor", "/JIANT/webapp/editor/"], ["/JIANT/webapp/editor/x", "/JIANT/webapp/editor/"],
-    ["/JIANT/emulator", "/JIANT/emu/"], ["/JIANT/emu/index.html:1:1", "/JIANT/emu/"], ["/JIANT/preview/", "/JIANT/preview/webapp/installer/"],
-    ["/JIANT/preview/webapp/editor/z", "/JIANT/preview/webapp/editor/"], ["/JIANT/firmware/felucca-v0.6.40.fwsc", "/JIANT/webapp/installer/"],
-    ["/JIANT/nothing-here", "/JIANT/"], ["/JIANT/webapp/installer/", null], ["/JIANT/", null],
+    ["/jiant-live-drums/installer/", "/jiant-live-drums/webapp/installer/"],
+    ["/jiant-live-drums/installer", "/jiant-live-drums/webapp/installer/"],
+    ["/jiant-live-drums/webapp/", "/jiant-live-drums/webapp/installer/"],
+    ["/jiant-live-drums/webapp/installer/:1:1", "/jiant-live-drums/webapp/installer/"],
+    ["/jiant-live-drums/webapp/installer/foo", "/jiant-live-drums/webapp/installer/"],
+    ["/JIANT-LIVE-DRUMS/editor", "/jiant-live-drums/webapp/editor/"],
+    ["/jiant-live-drums/emulator", "/jiant-live-drums/emu/"],
+    ["/jiant-live-drums/manual/old", "/jiant-live-drums/manual/"],
+    ["/jiant-live-drums/firmware/felucca-v0.2.fwsc", "/jiant-live-drums/webapp/installer/"],
+    ["/jiant-live-drums/nothing-here", "/jiant-live-drums/"],
+    ["/jiant-live-drums/webapp/installer/", null], ["/jiant-live-drums/", null],
   ];
   const bad = cases.filter(([from, to]) => go(from) !== to);
   ok(!bad.length, `site: 404.html sends old links where they meant${bad.length ? " (" + bad.map(([f]) => f + " -> " + go(f)).join(", ") + ")" : ""}`);

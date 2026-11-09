@@ -6,7 +6,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JIANT LIVE — Installer</title>
+<title>JIANT LIVE DRUMS — Installer</title>
 <style>
   :root { --bg: #fff; --fg: #000; --dim: #777; }
   @media (prefers-color-scheme: dark) {
@@ -43,7 +43,7 @@
 <body class="jiant-installer">
 <main>
   <nav class="lang" id="lang" aria-label="Language"><button data-lang="es" lang="es">Español</button><button data-lang="en" lang="en">English</button><button data-lang="ja" lang="ja">日本語</button></nav>
-  <h1 class="jiant-wordmark"><a href="https://github.com/MishaMashinaMM/jiant-live" aria-label="JIANT LIVE home">JIANT<span class="fm"> LIVE</span></a><span class="jiant-tool">INSTALLER</span></h1>
+  <h1 class="jiant-wordmark"><a href="https://github.com/MishaMashinaMM/jiant-live-drums" aria-label="JIANT LIVE DRUMS home">JIANT<span class="fm"> LIVE DRUMS</span></a><span class="jiant-tool">INSTALLER</span></h1>
   <p data-t="intro"></p>
   <p data-t="warn"></p>
   <p data-t="samples" style="color:#ec6e50"></p>
@@ -94,12 +94,12 @@
     <a href="https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.md" target="_blank" rel="noopener" style="color:inherit">English</a> ·
     <a href="https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.es.md" target="_blank" rel="noopener" style="color:inherit">Español</a></p>
   
-  <p class="small">JIANT LIVE v0.2 modification: Misha Mashina. Original JIANT firmware: Juan Ignacio Antonucci (Juan Jiant).<br>
+  <p class="small">JIANT LIVE DRUMS v0.2 modification: Misha Mashina. Original JIANT firmware: Juan Ignacio Antonucci (Juan Jiant).<br>
     Credits: Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener" style="color:inherit">Hügelton Instruments</a>, with its CrispyZebra waveforms and Fukiai icons (MIT); the song system after SLOOP by isod89.<br>
     Font: Inter Tight (The Inter Project Authors, SIL OFL 1.1).<br>
     FM6 engine: msfa from Dexed (Google Inc., Pascal Gauthier, Apache-2.0). The package also holds three JieLi AC79 SDK files, uboot.boot, cfg_tool.bin and eq_cfg_hw.bin (JieLi Technology, Apache-2.0). <a href="../../firmware/LICENSING.md" style="color:inherit">Licences</a>: <a href="../../firmware/LICENSE" style="color:inherit">GPL-3.0</a>, <a href="../../firmware/LICENSES/Apache-2.0.txt" style="color:inherit">Apache-2.0</a>, <a href="../../firmware/LICENSES/" style="color:inherit">all</a>.<br>
     M-VAVE and FM-1 are trademarks of their respective owners.<br>
-    <span data-t="license"></span> <a href="https://github.com/MishaMashinaMM/jiant-live" target="_blank" rel="noopener" style="color:inherit">JIANT LIVE source</a> · <a href="https://github.com/juanjiant-bit/JIANT" target="_blank" rel="noopener" style="color:inherit">original JIANT</a></p>
+    <span data-t="license"></span> <a href="https://github.com/MishaMashinaMM/jiant-live-drums" target="_blank" rel="noopener" style="color:inherit">JIANT LIVE DRUMS source</a> · <a href="https://github.com/juanjiant-bit/JIANT" target="_blank" rel="noopener" style="color:inherit">original JIANT</a></p>
 </main>
 <script type="module">
 /*LIB*/
@@ -108,25 +108,25 @@ const TEXT = {
   ja: {
     intro: "FM-1 を USB で接続してください。（Chrome か Edge で使えます）",
     warn: "書き込み中は USB を抜かないでください。",
-    samples: "互換性の注意: JIANT LIVE v0.2 は Felucca のユーザーサンプル再生に対応していません。ファームウェアを切り替える前に元の WAV と完全バックアップを保存してください。",
-    dual: "JIANT LIVE v0.2: 6トラックのMIDI受信チャンネル、32件のMIDI LEARN（同じCCで複数パラメータを操作可能）、12音のDRUM-X、静止画面。Stage 15 はホストテストに合格しましたが、FM1実機では未検証です。",
+    samples: "互換性の注意: JIANT LIVE DRUMS v0.2 は Felucca のユーザーサンプル再生に対応していません。ファームウェアを切り替える前に元の WAV と完全バックアップを保存してください。",
+    dual: "JIANT LIVE DRUMS v0.2: DRUM-X と DRUM-LAB は各12パッド、共有8ボイス、チョークグループ4つ、キット全体の編集、6トラックのMIDI受信、32件のMIDI LEARNに対応します。ホストテストに合格しましたが、FM1実機では未検証です。",
     install: "インストール",
     firstTitle: "別のファームウェアから切り替える場合は、互換性を確認してください",
-    firstText: "別のカスタムファームウェアへ直接上書きするとFM1が起動しなくなる可能性があります。Felucca、Skiff、baudgirlなどの場合、下の手順で先に公式V15へ戻してください。インストーラーは公式V15または認識可能なJIANTのみ許可します。JIANT LIVEの実機動作は未検証です。",
+    firstText: "別のカスタムファームウェアへ直接上書きするとFM1が起動しなくなる可能性があります。JIANT LIVE から DRUMS への更新はホストシミュレーションで検証済みですが実機では未検証です。Felucca、Skiff、baudgirlなどの場合、先に公式V15へ戻してください。必ずバックアップと復旧方法を確保してください。",
     firstStock: "先に公式V15へ戻す",
     firstOk: "書き込み前にFM1のファームウェアを確認し、公式V15または認識可能なJIANTのみを許可します。バックアップと復旧方法を確保してください。",
     checking: "FM-1 のファームウェアを確認中…",
     oldstock: "この FM-1 には古い公式ファームウェアが入っています。書き込みませんでした。下のボタンで先に公式V15に更新してから（公式ファームウェアではバックアップは不要です）、もう一度インストールしてください。検出: ",
     officialConfirm: "この FM-1 は公式ファームウェアです。公式V15に更新します（このページでは公式ファームウェアの曲はバックアップできません）。続けますか？",
-    otherfw: "このFM1は公式V15でも認識可能なJIANTでもありません。書き込みは行われませんでした。JIANT LIVEの前に公式V15へ戻してください。検出: ",
-    editor: "元のJIANTウェブエディター（JIANT LIVE実機との互換性は未確認）",
+    otherfw: "このFM1は公式V15でも認識可能なJIANTでもありません。書き込みは行われませんでした。JIANT LIVE DRUMSの前に公式V15へ戻してください。検出: ",
+    editor: "JIANT LIVE DRUMS ウェブエディター",
     verLabel: "バージョン:", verOld: "以前のバージョンにも戻せます（最新が一番上）。新しい版で保存したプロジェクトは古い版で正しく開けないことがあります。先にエディタでバックアップしてください。", latest: "最新", manual: "マニュアル:",
     direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
     brick: "万一インストールに失敗して起動しなくなった場合は、復旧に Transporter が必要です:",
-    beta: "JIANT LIVE v0.2 は実験版です。FM1実機では未検証です。使用は自己責任でお願いします。不具合はJIANT LIVEのGitHubへ報告してください。",
+    beta: "JIANT LIVE DRUMS v0.2 は実験版です。FM1実機では未検証です。使用は自己責任でお願いします。不具合はJIANT LIVE DRUMSのGitHubへ報告してください。",
     back: "M-VAVEから公式FM-1 V15を取得し、未変更のFM-1.fwscを選んでください。ファイルはこのブラウザ内で検証し、サーバーへ送りません。",
     stockTitle: "公式V15に戻す", stockFile: "公式FM-1.fwsc", stockGo: "バックアップして公式V15へ戻す",
-    stockBackup: "現在の曲・保存曲・音色バンク・設定を先に保存します（ユーザーサンプルは含まれません）。全体バックアップ非対応版は、JIANT を更新してから行ってください。復元する場合は JIANT LIVE を再インストールし、互換エディタを使用してください（実機での復元は未検証です）。",
+    stockBackup: "現在の曲・保存曲・音色バンク・設定を先に保存します（ユーザーサンプルは含まれません）。全体バックアップ非対応版は、JIANT を更新してから行ってください。復元する場合は JIANT LIVE DRUMS を再インストールし、エディタを使用してください（実機での復元は未検証です）。",
     stockRecovery: "更新中断の再開：全体バックアップはすでにパソコンへ保存済み",
     stockValid: "公式V15を確認しました", stockConfirm: "全体バックアップファイルをパソコンに保存できましたか？ 続けると公式V15へ戻します。JIANT の曲は公式V15では開けません。",
     stockNeedBackup: "書き込みモードからはバックアップできません。保存済みバックアップがある場合だけ、更新中断の再開にチェックしてください。",
@@ -156,25 +156,25 @@ const TEXT = {
   en: {
     intro: "Connect the FM-1 by USB. (Works in Chrome or Edge.)",
     warn: "Do not unplug the USB cable while writing.",
-    samples: "Compatibility note: JIANT LIVE v0.2 does not provide Felucca user-sample playback. If changing from Felucca or another firmware, preserve your original WAV files and a complete backup before installation.",
-    dual: "JIANT LIVE v0.2 adds six MIDI RX assignments, 32 MIDI LEARN destinations with shared CC control, 12 DRUM-X sounds, and a static display. The exact Stage 15 build passed all host regression tests but has NOT yet been tested on a physical FM1.",
+    samples: "Compatibility note: JIANT LIVE DRUMS v0.2 does not provide Felucca user-sample playback. If changing from Felucca or another firmware, preserve your original WAV files and a complete backup before installation.",
+    dual: "JIANT LIVE DRUMS v0.2: DRUM-X and DRUM-LAB (12 pads each), eight shared voices, OVERLAP/RESTART, four choke groups, eight kit-wide DRUM-LAB controls, six MIDI RX channels and 32 MIDI LEARN destinations. The live-drum and upgrade-simulation tests passed; physical FM1 operation is unverified.",
     install: "Install",
     firstTitle: "Switching from another firmware? Check compatibility first",
-    firstText: "Installing directly over another custom firmware can prevent the FM1 from starting. If the device runs Felucca, Skiff, baudgirl, or other non-JIANT firmware, return to official V15 first using the recovery section below. The installer permits official V15 or recognized JIANT firmware; this Jiant Live build is still hardware-untested.",
+    firstText: "Installing over another custom firmware can prevent the FM1 from starting. Direct JIANT LIVE → JIANT LIVE DRUMS migration passed the host simulation, but has not been tested on hardware. Other custom firmwares should first return to official V15 using the section below. Do not proceed without a backup and a recovery plan.",
     firstStock: "Return to official V15 first",
     firstOk: "Before flashing, the installer identifies the connected FM1 and accepts only official V15 or recognized JIANT. Do not proceed without a saved backup and a recovery plan.",
     checking: "Checking the FM-1's firmware…",
     oldstock: "This FM-1 runs an older official firmware: nothing was written. Update it to official V15 first with the button below (no backup is needed from an official firmware), then press Install again. Found: ",
     officialConfirm: "This FM-1 runs official firmware: it is updated to official V15 (this page cannot back up an official firmware's songs). Continue?",
-    otherfw: "This FM1 is neither official V15 nor recognized JIANT. Nothing was written. Return to official V15 before attempting Jiant Live. Found: ",
-    editor: "Original JIANT web editor (compatibility with JIANT LIVE on hardware not yet verified)",
+    otherfw: "This FM1 is neither official V15 nor recognized JIANT. Nothing was written. Return to official V15 before attempting Jiant Live Drums. Found: ",
+    editor: "JIANT LIVE DRUMS web editor",
     verLabel: "Version:", verOld: "You can go back to an earlier version too (newest on top). Projects saved by a newer version may not open right in an older one: back them up with the editor first.", latest: "latest", manual: "Manual:",
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
     brick: "If an install fails and the FM-1 no longer starts, recovering it needs a Transporter:",
-    beta: "JIANT LIVE v0.2 is experimental and has NOT been tested on physical FM1 hardware. You install it at your own risk. Report Jiant Live issues to the Jiant Live GitHub repository.",
+    beta: "JIANT LIVE DRUMS v0.2 is experimental and has NOT been tested on physical FM1 hardware. You install it at your own risk. Report issues to the Jiant Live Drums GitHub repository.",
     back: "Get official FM-1 V15 from M-VAVE and select the unmodified FM-1.fwsc. The browser validates it locally; it is not sent to a server.",
     stockTitle: "Return to official V15", stockFile: "Official FM-1.fwsc", stockGo: "Back up and return to official V15",
-    stockBackup: "Current music, saved music, sound banks and settings are saved first (not user samples). Older firmware needs an update for complete backups. To restore an archive later, reinstall JIANT LIVE and use a compatible editor (restoration on physical hardware has not yet been verified).",
+    stockBackup: "Current music, saved music, sound banks and settings are saved first (not user samples). Older firmware needs an update for complete backups. To restore an archive later, reinstall JIANT LIVE DRUMS and use its editor (restoration on physical hardware is not yet verified).",
     stockRecovery: "Resume an interrupted update: I already saved a complete backup to this computer",
     stockValid: "Official V15 verified", stockConfirm: "Has the complete backup file been saved to this computer? Continue to return to official V15. Official V15 cannot open JIANT music.",
     stockNeedBackup: "An update loader cannot export a backup. Only select resume if you already saved a complete backup.",
@@ -234,7 +234,7 @@ Object.assign(TEXT.en, {
   stockModified: "The file has V15's size but not its contents (modified or damaged): download it again from M-VAVE. ",
   tipTitle: "What to do",
   reportTitle: "Log and report.",
-  reportWhy: "If it does not work, press COPY REPORT and include the log in an issue at the JIANT LIVE GitHub repository.",
+  reportWhy: "If it does not work, press COPY REPORT and include the log in an issue at the JIANT LIVE DRUMS GitHub repository.",
   copyReport: "COPY REPORT", copied: "Copied: paste it in your message.", copyFail: "Could not copy: select the text below and copy it.",
   editionSample: "SAMPLE (par13b): sample playback replaces ADD. Load samples in the web editor. Back up projects before switching editions; ADD sounds are not converted into samples.",
   editionAdd: "ADD (par10): additive synthesis, without SAMPLE. This earlier firmware has a different feature set. Back up projects before switching; sample audio is not included in project backups.",
@@ -300,7 +300,7 @@ Object.assign(TEXT.ja, {
   stockModified: "V15 と同じサイズですが内容が違います（変更または破損）。M-VAVE からもう一度ダウンロードしてください。",
   tipTitle: "対処方法",
   reportTitle: "ログとレポート。",
-  reportWhy: "うまくいかないときは「レポートをコピー」を押し、JIANT LIVE の GitHub リポジトリの Issue にログを貼り付けてください。",
+  reportWhy: "うまくいかないときは「レポートをコピー」を押し、JIANT LIVE DRUMS の GitHub リポジトリの Issue にログを貼り付けてください。",
   copyReport: "レポートをコピー", copied: "コピーしました。メッセージに貼り付けてください。", copyFail: "コピーできませんでした。下のテキストを選択してコピーしてください。",
   editionSample: "SAMPLE（par13b）: ADD の代わりにサンプル再生を搭載しています。サンプルはウェブエディタで読み込んでください。エディションを切り替える前にプロジェクトをバックアップしてください。ADD の音色はサンプルには変換されません。",
   editionAdd: "ADD（par10）: 加算合成を搭載し、SAMPLE は含まれていません。この旧バージョンのファームウェアは機能構成が異なります。切り替える前にプロジェクトをバックアップしてください。サンプルの音声データはプロジェクトのバックアップには含まれません。",
@@ -340,26 +340,26 @@ Object.assign(TEXT.ja, {
 TEXT.es = {
   intro: "Conectá el FM-1 por USB. (Funciona en Chrome o Edge en una computadora; en Android con Chrome puede funcionar. En iPhone/iPad no.)",
   warn: "No desconectes el cable USB mientras escribe.",
-  samples: "Compatibilidad: JIANT LIVE v0.2 no reproduce samples de usuario de Felucca. Antes de cambiar de firmware, conservá tus WAV originales y un backup completo.",
-  dual: "JIANT LIVE v0.2 incorpora seis canales MIDI RX, 32 destinos MIDI LEARN con CC compartidos, 12 sonidos DRUM-X y una pantalla estática. Stage 15 pasó las pruebas automáticas, pero todavía NO se probó en un FM1 físico.",
+  samples: "Compatibilidad: JIANT LIVE DRUMS v0.2 no reproduce samples de usuario de Felucca. Antes de cambiar de firmware, conservá tus WAV originales y un backup completo.",
+  dual: "JIANT LIVE DRUMS v0.2 incluye DRUM-X y DRUM-LAB con 12 pads cada uno, ocho voces compartidas, cuatro grupos de choke, controles globales del kit, seis canales MIDI RX y 32 destinos MIDI LEARN. Pasó las pruebas de simulación, pero todavía NO se probó en un FM1 físico.",
   install: "Instalar",
   firstTitle: "¿Venís de otro firmware? Primero comprobá la compatibilidad",
-  firstText: "Instalar directamente sobre otro firmware custom puede dejar el FM1 sin arrancar. Si tenés Felucca, Skiff, baudgirl u otro firmware distinto de JIANT, volvé primero al V15 oficial usando la sección de abajo. El instalador permite el V15 oficial o un JIANT reconocido; JIANT LIVE aún no se probó en hardware.",
+  firstText: "Instalar directamente sobre otro firmware custom puede dejar el FM1 sin arrancar. La migración de JIANT LIVE a DRUMS pasó la simulación, pero todavía no se probó en hardware. Desde Felucca, Skiff o baudgirl, volvé primero al V15 oficial. Conservá un backup y un método de recuperación.",
   firstStock: "Primero volver al V15 oficial",
   firstOk: "Antes de escribir, el instalador identifica el FM1 y solo permite el V15 oficial o un JIANT reconocido. Conservá un backup y un plan de recuperación.",
   checking: "Revisando el firmware del FM-1…",
   oldstock: "Este FM-1 tiene un firmware oficial más viejo: no se escribió nada. Primero actualizalo al V15 oficial con el botón de abajo (desde un firmware oficial no hace falta backup) y después apretá Instalar de nuevo. Encontrado: ",
   officialConfirm: "Este FM-1 tiene firmware oficial: se actualiza al V15 oficial (esta página no puede hacer backup de los temas de un firmware oficial). ¿Seguir? ",
-  otherfw: "Este FM1 no tiene el V15 oficial ni un JIANT reconocido: no se escribió nada. Volvé al V15 oficial antes de probar JIANT LIVE. Detectado: ",
-  editor: "Editor web de JIANT original (compatibilidad con JIANT LIVE en hardware aún no verificada)",
+  otherfw: "Este FM1 no tiene el V15 oficial ni un JIANT reconocido: no se escribió nada. Volvé al V15 oficial antes de probar JIANT LIVE DRUMS. Detectado: ",
+  editor: "Editor web de JIANT LIVE DRUMS",
   verLabel: "Versión:", verOld: "También podés volver a una versión anterior (la más nueva arriba). Un proyecto guardado por una versión más nueva puede no abrir bien en una anterior: hacé backup con el editor antes.", latest: "la última", manual: "Manual:",
   direct: "Conectá el cable USB directo a la computadora. No hace falta probe ni Transporter.",
   brick: "Si una instalación falla y el FM-1 ya no arranca, recuperarlo necesita un Transporter:",
-  beta: "JIANT LIVE v0.2 es experimental y todavía NO se probó en un FM1 físico. Instalalo bajo tu responsabilidad. Reportá los problemas en el repositorio GitHub de JIANT LIVE.",
+  beta: "JIANT LIVE DRUMS v0.2 es experimental y todavía NO se probó en un FM1 físico. Instalalo bajo tu responsabilidad. Reportá los problemas en el repositorio GitHub de JIANT LIVE DRUMS.",
   back: "Conseguí el FM-1 V15 oficial de M-VAVE y elegí el FM-1.fwsc sin modificar. El navegador lo verifica localmente; no se envía a ningún servidor.",
   stockWhere: "En la página de descargas de M-VAVE buscá el FM-1, bajá el firmware V15, descomprimilo y elegí el archivo FM-1.fwsc (699.956 bytes). Esta página no puede bajarlo por vos: el firmware oficial es de M-VAVE y no podemos redistribuirlo.",
   stockTitle: "Volver al V15 oficial", stockFile: "FM-1.fwsc oficial", stockGo: "Hacer backup y volver al V15 oficial",
-  stockBackup: "Primero se guardan la música actual, la música guardada, los bancos de sonido y la configuración (sin los samples de usuario). Un firmware viejo necesita actualizarse para hacer backups completos. Para restaurar un archivo después, reinstalá JIANT LIVE y usá un editor compatible (la restauración en el dispositivo físico todavía no está verificada).",
+  stockBackup: "Primero se guardan la música actual, la música guardada, los bancos de sonido y la configuración (sin los samples de usuario). Un firmware viejo necesita actualizarse para hacer backups completos. Para restaurar un archivo después, reinstalá JIANT LIVE DRUMS y usá su editor (la restauración en el dispositivo físico todavía no está verificada).",
   stockRecovery: "Retomar una actualización interrumpida: ya guardé un backup completo en esta computadora",
   stockValid: "V15 oficial verificado", stockConfirm: "¿Se guardó el archivo de backup completo en esta computadora? Seguí para volver al V15 oficial. El V15 oficial no puede abrir la música de JIANT.",
   stockNeedBackup: "Desde el modo de actualización no se puede exportar un backup. Marcá «retomar» solo si ya guardaste un backup completo.",
@@ -404,7 +404,7 @@ TEXT.es = {
   stockModified: "El archivo tiene el tamaño del V15 pero no su contenido (modificado o dañado): bajalo de nuevo de M-VAVE. ",
   tipTitle: "Qué hacer",
   reportTitle: "Registro e informe.",
-  reportWhy: "Si no funciona, apretá COPIAR INFORME e incluí el registro en un issue del repositorio GitHub de JIANT LIVE.",
+  reportWhy: "Si no funciona, apretá COPIAR INFORME e incluí el registro en un issue del repositorio GitHub de JIANT LIVE DRUMS.",
   copyReport: "COPIAR INFORME", copied: "Copiado: pegalo en tu mensaje.", copyFail: "No se pudo copiar: seleccioná el texto de abajo y copialo.",
   editionSample: "SAMPLE (par13b): reproduce samples en lugar de ADD. Cargalos desde el editor web. Hacé backup antes de cambiar de edición; los sonidos ADD no se convierten en samples.",
   editionAdd: "ADD (par10): síntesis aditiva, sin SAMPLE. Es una versión anterior con diferencias de funciones. Hacé backup antes de cambiar; el audio de samples no está incluido en los backups de proyectos.",
@@ -550,7 +550,7 @@ async function loadVersion(i) {
       if (epoch !== loadEpoch) return;
       if (productOf(pkg) !== productOfVersion(v)) { sayK("badpkg"); showTip("badpkg"); log(`package ${v.pkg}: ${productOf(pkg)}`); return; }
       image = logicalImage(pkg); product = productOfVersion(v);
-      say(`JIANT LIVE ${versionLabel(v)}`); showTip(null);
+      say(`JIANT LIVE DRUMS ${versionLabel(v)}`); showTip(null);
       $("go").disabled = writing;
       return;
     } catch (e) {

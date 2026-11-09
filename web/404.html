@@ -3,11 +3,11 @@
      (JIANT 0.9.11) GitHub Pages serves this for any path of the site that does not exist: an old or mistyped link
      (/JIANT/installer/, /JIANT/webapp/, /JIANT/editor, a link pasted with ":1:1" or a ")" stuck to it, a video
      description's link) goes to the page it meant. web/make_site.py and the site's workflow put it at the root. -->
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JIANT FM</title>
+<title>JIANT LIVE DRUMS</title>
 <style>
   :root { --bg: #fff; --fg: #000; --dim: #777; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #000; --fg: #fff; --dim: #888; } }
@@ -26,15 +26,14 @@ function jiantTarget(pathname) {
   const asked = p;
   const junk = /[\s"'<>()[\]{}.,;:!?*|]+$/;
   for (let k = 0; k < 3; k++) p = p.replace(junk, "").replace(/(:\d+)+$/, "");
-  const m = /^\/jiant(?:\/|$)(.*)$/i.exec(p);
+  const m = /^\/jiant-live-drums(?:\/|$)(.*)$/i.exec(p);
   const rest = (m ? m[1] : p.replace(/^\/+/, "")).toLowerCase();
-  const pre = /(^|\/)preview(\/|$)/.test(rest) ? "preview/" : "";
   let to = "";
-  if (/edit/.test(rest)) to = pre + "webapp/editor/";
+  if (/edit/.test(rest)) to = "webapp/editor/";
   else if (/emu|emulat|simul/.test(rest)) to = "emu/";
-  else if (/instal|updat|actualiz|flash|upgrad|webapp|firmware|fwsc|^preview/.test(rest)) to = pre + "webapp/installer/";
-  else if (/frecuen|frequen/.test(rest)) to = "frecuencia.html";
-  const target = "/JIANT/" + to;
+  else if (/instal|updat|actualiz|flash|upgrad|webapp|firmware|fwsc/.test(rest)) to = "webapp/installer/";
+  else if (/manual|docs/.test(rest)) to = "manual/";
+  const target = "/jiant-live-drums/" + to;
   const here = asked.replace(/\/index\.html$/i, "/").replace(/\/?$/, "/");
   return here === target.replace(/\/?$/, "/") ? null : target;   // the target itself missing: no loop
 }
@@ -45,15 +44,16 @@ if (to) location.replace(to + location.search + location.hash);
 </head>
 <body>
 <main>
-  <h1 style="font-size:24px;font-weight:600">JIANT FM</h1>
+  <h1 style="font-size:24px;font-weight:600">JIANT LIVE DRUMS</h1>
   <p>Esta página no existe; probá con: · This page does not exist; try:</p>
   <ul>
-    <li><a href="/JIANT/webapp/installer/">Instalador · Installer</a></li>
-    <li><a href="/JIANT/webapp/editor/">Editor</a></li>
-    <li><a href="/JIANT/emu/">Emulador · Emulator</a></li>
-    <li><a href="/JIANT/">Inicio · Home</a></li>
+    <li><a href="/jiant-live-drums/webapp/installer/">Installer</a></li>
+    <li><a href="/jiant-live-drums/webapp/editor/">Editor</a></li>
+    <li><a href="/jiant-live-drums/emu/">Emulator</a></li>
+    <li><a href="/jiant-live-drums/manual/">Manual</a></li>
+    <li><a href="/jiant-live-drums/">Home</a></li>
   </ul>
-  <p class="small"><a href="https://github.com/juanjiant-bit/JIANT">github.com/juanjiant-bit/JIANT</a></p>
+  <p class="small"><a href="https://github.com/MishaMashinaMM/jiant-live-drums">Jiant Live Drums source</a></p>
 </main>
 </body>
 </html>
