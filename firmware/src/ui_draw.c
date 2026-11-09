@@ -1724,15 +1724,16 @@ static void draw_columns(void)
 }
 
 
-/* Static Jiant Live power-on screen. Existing fonts only; no logo bitmap or animation. */
+/* Static Jiant Live Drums power-on screen. Existing fonts only; no animation. */
 #define SPL_HOLD 1700u
 static void draw_splash(void)
 {
     lcd_fill(0, 0, 240, 240, T_BG);
-    draw_text_box(0, 52, 240, &AF_L, "JIANT LIVE", T_TEXT, 1);
-    draw_text_box(0, 102, 240, &AF_M, "FM1 PERFORMANCE FIRMWARE", T_TEXT, 1);
+    draw_text_box(0, 42, 240, &AF_L, "JIANT LIVE", T_TEXT, 1);
+    draw_text_box(0, 82, 240, &AF_L, "DRUMS", T_THEME, 1);
+    draw_text_box(0, 122, 240, &AF_M, "FM1 DRUM PERFORMANCE", T_TEXT, 1);
     draw_text_box(0, 150, 240, &AF_X, "orig: Juan Jiant | mod: Misha Mashina", T_MID, 1);
-    draw_text_box(0, 184, 240, &AF_X, "v0.2", T_DIM, 1);
+    draw_text_box(0, 191, 240, &AF_X, "v0.2", T_DIM, 1);
     lcd_sync();
 }
 
