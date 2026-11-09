@@ -31,18 +31,9 @@ jobs:
           version: 6.0.11                # (the version the emulator is tested with)
       - name: the emulator
         run: |
-          FELUCCA_NO_SEQUENCER=1 sh web/emu/build.sh
-          # Use the current browser shell with this commit's firmware.
-          python3 - <<'PY'
-          from pathlib import Path
-          import re, shutil
-          target = Path("build/emu/index.html")
-          version = re.search(r'<small class="version">(.*?)</small>', target.read_text()).group(1)
-          shell = Path("web/emu/index.html").read_text().replace("@VERSION@", version).replace("@PREVIEW@", "")
-          target.write_text(shell)
-          shutil.copy("web/emu/sample-bank.js", "build/emu/sample-bank.js")
-          shutil.copy("web/emu/worklet.js", "build/emu/worklet.js")
-          PY
+          # build.sh already copies the current browser shell, substitutes
+          # version placeholders and installs its worklet/sample-bank assets.
+          EMU_PREVIEW=0 FELUCCA_NO_SEQUENCER=1 sh web/emu/build.sh
           node web/emu/sample-bank-test.mjs build/emu/felucca.wasm
       - name: Browser sampler audio
         timeout-minutes: 4
