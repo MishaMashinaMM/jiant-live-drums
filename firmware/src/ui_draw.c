@@ -2213,6 +2213,32 @@ static void draw_mixer_table(void)
 }
 
 #if FELUCCA_NO_SEQUENCER
+/* The two live drum screens are full-canvas tables, not animated pages.
+ * A full lcd_fill() on every frame is visibly blanked by the physical LCD
+ * and makes knob changes feel sluggish. Track their displayed values so
+ * external MIDI edits still refresh without forcing a continuous redraw. */
+static uint32_t drum_live_signature(uint32_t perf)
+{
+    uint32_t ti = song.sel, first = ui.drum_map_pad < 6u ? 0u : 6u;
+    const track_t *t = &trk[ti];
+    uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB;
+    uint32_t sig = 2166136261u;
+    sig = (sig ^ ti) * 16777619u;
+    sig = (sig ^ t->eng_req) * 16777619u;
+    sig = (sig ^ ui.drum_map_pad) * 16777619u;
+    if (lab) drumlab_kit_ensure(&trk[ti]);
+    if (drum || lab) for (uint32_t lane = first; lane < first + 6u; lane++) {
+        uint32_t note = drum ? (drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane])
+                             : (drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane);
+        sig = (sig ^ (lab ? drumlab_kit[ti][lane].kind : 0u)) * 16777619u;
+        sig = (sig ^ (perf ? drum_perf_curve[ti][lane] : note)) * 16777619u;
+        sig = (sig ^ (perf ? drum_perf_sound[ti][lane] : (uint8_t)drum_pad_pan[ti][lane])) * 16777619u;
+        sig = (sig ^ (perf ? drum_perf_choke[ti][lane] : (uint8_t)drum_pad_pitch[ti][lane])) * 16777619u;
+        if (perf) sig = (sig ^ drum_retrigger[ti][lane]) * 16777619u;
+    }
+    return sig;
+}
+
 /* Live-only SEQ screen. Six pads are visible at once; the list belongs to
  * the selected track, not to a shared kit or MIDI channel. */
 static void draw_drum_midi_map(void)
@@ -2323,6 +2349,10 @@ static void draw_drum_perf(void)
 
 static void ui_draw_body(uint32_t counting)
 {
+#if FELUCCA_NO_SEQUENCER
+    static uint32_t live_sig;
+    static uint8_t live_kind;
+#endif
     if (ui.hint_pg && ui.hint_pg != (ui.home ? 255u : ui.page + 1u)) {   /* (0.9.0) a layer's hint: its own page's only */
         ui.hint_pg = 0;
         ui.msg_t = 0;
@@ -2335,13 +2365,22 @@ static void ui_draw_body(uint32_t counting)
     }
 #if FELUCCA_NO_SEQUENCER
     if (ui.drum_perf_open) {
-        draw_drum_perf();
+        uint32_t sig = drum_live_signature(1u);
+        if (ui.force || live_kind != 2u || live_sig != sig)
+            draw_drum_perf();
+        live_kind = 2u;
+        live_sig = sig;
         return;
     }
     if (ui.drum_map_open) {
-        draw_drum_midi_map();
+        uint32_t sig = drum_live_signature(0u);
+        if (ui.force || live_kind != 1u || live_sig != sig)
+            draw_drum_midi_map();
+        live_kind = 1u;
+        live_sig = sig;
         return;
     }
+    live_kind = 0u;
 #endif
     if (ui.menu) {
         draw_menu();

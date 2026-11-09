@@ -141,6 +141,15 @@ int main(void)
     }
     press(B_PLAY);
     bad += check("Stage 25B: PLAY opens per-pad performance screen", ui.drum_perf_open && !ui.drum_map_open);
+    {
+        uint32_t drawn = host_big_fills;
+        for (uint32_t i = 0; i < 20u; i++) frame();
+        bad += check("Stage 29B: idle PLAY screen does not blank/repaint the LCD", host_big_fills == drawn);
+        turn(EN_K2, 1);
+        bad += check("Stage 29B: PLAY knob edit repaints once", host_big_fills == drawn + 1u);
+        drum_perf_sound[0][0] = 0u;
+        ui.force = 1u; frame();
+    }
     turn(EN_K1, 1); turn(EN_K2, 1); turn(EN_K3, 1); turn(EN_K4, 1);
     bad += check("Stage 25B: four knobs update selected drum pad only",
                  drum_perf_curve[0][0] == DPERF_SOFT && drum_perf_sound[0][0] == 1u &&
@@ -149,6 +158,15 @@ int main(void)
     press(B_SEQ);
     bad += check("Stage 25B: SEQ switches to MIDI map, closes PLAY",
                  ui.drum_map_open && !ui.drum_perf_open);
+    {
+        uint32_t drawn = host_big_fills;
+        for (uint32_t i = 0; i < 20u; i++) frame();
+        bad += check("Stage 29B: idle SEQ screen does not blank/repaint the LCD", host_big_fills == drawn);
+        turn(EN_K2, 1);
+        bad += check("Stage 29B: SEQ knob edit repaints once", host_big_fills == drawn + 1u);
+        drum_pad_pan[0][0] = 0;
+        ui.force = 1u; frame();
+    }
     press(B_PLAY);
     bad += check("Stage 25B: PLAY switches back to performance controls",
                  ui.drum_perf_open && !ui.drum_map_open);
