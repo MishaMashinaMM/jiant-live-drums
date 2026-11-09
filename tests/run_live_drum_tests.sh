@@ -8,7 +8,8 @@ cd "$(dirname "$0")/.."
 out=build/host/live_drums
 mkdir -p "$out"
 for test in drum_midi_map_test drumlab_ui_test drums_clock_test midi_rx_test \
-            drumlab_engine_test drumlab_stage24b_test project_test drumx_test; do
+            drumlab_engine_test drumlab_stage24b_test project_test drumx_test \
+            drum_stage27_test; do
     echo "== $test (FELUCCA_NO_SEQUENCER=1)"
     cc -O1 -w -DFELUCCA_NO_SEQUENCER=1 -Ibuild/gen -Ifirmware/src \
        -o "$out/$test" "tests/$test.c" -lm
