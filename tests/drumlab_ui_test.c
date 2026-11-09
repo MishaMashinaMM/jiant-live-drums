@@ -106,6 +106,39 @@ int main(void)
     bad += check("loading another DRUM-LAB kit resets its per-pad edits",
                  !drumlab_kit_dirty[0] && !drumlab_kit_ready[0]);
 #if FELUCCA_NO_SEQUENCER
+    {
+        const uint32_t play_bit = 1u << panel.btn[B_PLAY];
+        const uint32_t seq_bit = 1u << panel.btn[B_SEQ];
+        /* A physical press is held across repeated input scans. The UI must
+         * not clear the debounced state or retrigger the page toggle. */
+        fm1_in.buttons |= play_bit;
+        host_pressed |= play_bit;
+        frame();
+        bad += check("Stage 29A: PLAY held opens once and preserves physical key state",
+                     ui.drum_perf_open && (fm1_in.buttons & play_bit));
+        for (uint32_t i = 0; i < 12u; i++) frame();
+        bad += check("Stage 29A: PLAY stays open across held-button scans",
+                     ui.drum_perf_open && !ui.drum_map_open && (fm1_in.buttons & play_bit));
+        fm1_in.buttons &= ~play_bit;
+        frame();
+        bad += check("Stage 29A: PLAY release does not close the page", ui.drum_perf_open);
+        press(B_PLAY); /* second physical tap closes it */
+        bad += check("Stage 29A: another PLAY tap closes the page", !ui.drum_perf_open);
+
+        fm1_in.buttons |= seq_bit;
+        host_pressed |= seq_bit;
+        frame();
+        bad += check("Stage 29A: SEQ held opens once and preserves physical key state",
+                     ui.drum_map_open && (fm1_in.buttons & seq_bit));
+        for (uint32_t i = 0; i < 12u; i++) frame();
+        bad += check("Stage 29A: SEQ stays open across held-button scans",
+                     ui.drum_map_open && !ui.drum_perf_open && (fm1_in.buttons & seq_bit));
+        fm1_in.buttons &= ~seq_bit;
+        frame();
+        bad += check("Stage 29A: SEQ release does not close the page", ui.drum_map_open);
+        press(B_SEQ);
+        bad += check("Stage 29A: another SEQ tap closes the page", !ui.drum_map_open);
+    }
     press(B_PLAY);
     bad += check("Stage 25B: PLAY opens per-pad performance screen", ui.drum_perf_open && !ui.drum_map_open);
     turn(EN_K1, 1); turn(EN_K2, 1); turn(EN_K3, 1); turn(EN_K4, 1);

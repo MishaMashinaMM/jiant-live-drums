@@ -2166,7 +2166,10 @@ static void ui_input_frame(void)
             ui.force = 1u;
         }
         pressed &= ~disabled;
-        fm1_in.buttons &= ~disabled;
+        /* Only consume the UI press events. fm1_in.buttons is the debounced
+         * physical key state maintained by fm1__key(): clearing it while a
+         * button remains held manufactures another press on the next scan,
+         * repeatedly toggling the map/performance screen. */
     }
     if (ui.drum_perf_open) {
         uint32_t ti = song.sel, lane = ui.drum_map_pad;
