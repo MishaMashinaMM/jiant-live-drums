@@ -145,8 +145,20 @@ int main(void)
         uint32_t drawn = host_big_fills;
         for (uint32_t i = 0; i < 20u; i++) frame();
         bad += check("Stage 29B: idle PLAY screen does not blank/repaint the LCD", host_big_fills == drawn);
+        uint64_t sent = ui_sent_px;
         turn(EN_K2, 1);
-        bad += check("Stage 29B: PLAY knob edit repaints once", host_big_fills == drawn + 1u);
+        bad += check("Stage 29C: PLAY knob edit repaints only its row",
+                     host_big_fills == drawn && ui_sent_px - sent == 240u * 23u);
+        sent = ui_sent_px;
+        drum_perf_sound[0][0]++;
+        frame();
+        bad += check("Stage 29C: external PLAY value change repaints only its row",
+                     host_big_fills == drawn && ui_sent_px - sent == 240u * 23u);
+        sent = ui_sent_px;
+        turn(EN_SELECT, 1);
+        bad += check("Stage 29C: PLAY pad selection repaints old and new rows",
+                     host_big_fills == drawn && ui_sent_px - sent == 2u * 240u * 23u);
+        turn(EN_SELECT, -1);
         drum_perf_sound[0][0] = 0u;
         ui.force = 1u; frame();
     }
@@ -162,8 +174,25 @@ int main(void)
         uint32_t drawn = host_big_fills;
         for (uint32_t i = 0; i < 20u; i++) frame();
         bad += check("Stage 29B: idle SEQ screen does not blank/repaint the LCD", host_big_fills == drawn);
+        uint64_t sent = ui_sent_px;
         turn(EN_K2, 1);
-        bad += check("Stage 29B: SEQ knob edit repaints once", host_big_fills == drawn + 1u);
+        bad += check("Stage 29C: SEQ knob edit repaints only its row",
+                     host_big_fills == drawn && ui_sent_px - sent == 240u * 23u);
+        sent = ui_sent_px;
+        drum_pad_pan[0][0]++;
+        frame();
+        bad += check("Stage 29C: external SEQ value change repaints only its row",
+                     host_big_fills == drawn && ui_sent_px - sent == 240u * 23u);
+        sent = ui_sent_px;
+        turn(EN_SELECT, 1);
+        bad += check("Stage 29C: SEQ pad selection repaints old and new rows",
+                     host_big_fills == drawn && ui_sent_px - sent == 2u * 240u * 23u);
+        turn(EN_SELECT, -1);
+        sent = host_big_fills;
+        for (uint32_t i = 0; i < 6u; i++) turn(EN_SELECT, 1);
+        bad += check("Stage 29C: switching to pads 7-12 redraws the full table",
+                     host_big_fills == sent + 1u && ui.drum_map_pad >= 6u);
+        for (uint32_t i = 0; i < 6u; i++) turn(EN_SELECT, -1);
         drum_pad_pan[0][0] = 0;
         ui.force = 1u; frame();
     }
