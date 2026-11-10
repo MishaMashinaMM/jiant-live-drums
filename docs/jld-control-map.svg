@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1060" height="470" viewBox="0 0 1060 470" role="img" aria-labelledby="title desc">
+  <title id="title">JIANT LIVE DRUMS physical control groups</title>
+  <desc id="desc">Schematic diagram grouping the labeled buttons and rotary controls. It is not a photograph or a scale drawing of the FM1 hardware.</desc>
+  <rect width="1060" height="470" rx="20" fill="#11151f"/>
+  <text x="32" y="40" fill="#fff" font-family="Arial,sans-serif" font-size="24" font-weight="bold">JIANT LIVE DRUMS v0.3 — CONTROL GROUPS</text>
+  <text x="32" y="65" fill="#b0bbcc" font-family="Arial,sans-serif" font-size="13">Schematic reference • labels and roles, not physical button positions</text>
+  <rect x="28" y="88" width="1004" height="125" rx="12" fill="#202937" stroke="#46586b"/>
+  <text x="45" y="115" fill="#8eadd1" font-family="Arial,sans-serif" font-weight="bold" font-size="15">SECTION BUTTONS</text>
+  <g font-family="Arial,sans-serif" font-size="15" font-weight="bold" text-anchor="middle">
+    <rect x="44" y="133" width="98" height="56" rx="9" fill="#325067"/><text x="93" y="166" fill="#fff">HOME</text>
+    <rect x="152" y="133" width="98" height="56" rx="9" fill="#365c52"/><text x="201" y="166" fill="#fff">EDIT</text>
+    <rect x="260" y="133" width="98" height="56" rx="9" fill="#365c52"/><text x="309" y="166" fill="#fff">ENV</text>
+    <rect x="368" y="133" width="98" height="56" rx="9" fill="#365c52"/><text x="417" y="166" fill="#fff">LFO</text>
+    <rect x="476" y="133" width="98" height="56" rx="9" fill="#365c52"/><text x="525" y="166" fill="#fff">FX</text>
+    <rect x="584" y="133" width="98" height="56" rx="9" fill="#365c52"/><text x="633" y="166" fill="#fff">SCL</text>
+    <rect x="692" y="133" width="98" height="56" rx="9" fill="#365c52"/><text x="741" y="166" fill="#fff">ARP</text>
+    <rect x="800" y="133" width="98" height="56" rx="9" fill="#365c52"/><text x="849" y="166" fill="#fff">GLO</text>
+    <rect x="908" y="133" width="98" height="56" rx="9" fill="#365c52"/><text x="957" y="166" fill="#fff">SAVE</text>
+  </g>
+  <rect x="28" y="230" width="630" height="102" rx="12" fill="#202937" stroke="#46586b"/>
+  <text x="45" y="255" fill="#fbb86c" font-family="Arial,sans-serif" font-size="15" font-weight="bold">JLD LIVE MIDI BUTTONS</text>
+  <g font-family="Arial,sans-serif" font-size="14" text-anchor="middle"><rect x="45" y="268" width="181" height="45" rx="8" fill="#805b39"/><text x="135" y="295" fill="#fff">SEQ • MIDI MAP</text><rect x="243" y="268" width="181" height="45" rx="8" fill="#805b39"/><text x="334" y="295" fill="#fff">PLAY • PERFORMANCE</text><rect x="441" y="268" width="198" height="45" rx="8" fill="#805b39"/><text x="540" y="295" fill="#fff">REC • CC MACROS</text></g>
+  <rect x="673" y="230" width="359" height="102" rx="12" fill="#202937" stroke="#46586b"/>
+  <text x="689" y="255" fill="#c7aadf" font-family="Arial,sans-serif" font-size="15" font-weight="bold">OCTAVE / CONTEXT ACTIONS</text>
+  <g font-family="Arial,sans-serif" font-size="16" font-weight="bold" text-anchor="middle"><rect x="690" y="268" width="152" height="45" rx="8" fill="#5c4978"/><text x="766" y="296" fill="#fff">OCT−</text><rect x="855" y="268" width="158" height="45" rx="8" fill="#5c4978"/><text x="934" y="296" fill="#fff">OCT+</text></g>
+  <rect x="28" y="347" width="1004" height="90" rx="12" fill="#202937" stroke="#46586b"/>
+  <text x="45" y="372" fill="#9ddde4" font-family="Arial,sans-serif" font-size="15" font-weight="bold">ROTARY ENCODERS</text>
+  <g font-family="Arial,sans-serif" font-size="15" font-weight="bold" text-anchor="middle">
+    <rect x="45" y="385" width="139" height="37" rx="18" fill="#24636d"/><text x="114" y="409" fill="#fff">SELECT</text>
+    <rect x="194" y="385" width="155" height="37" rx="18" fill="#24636d"/><text x="271" y="409" fill="#fff">ALGORITHM</text>
+    <rect x="359" y="385" width="135" height="37" rx="18" fill="#24636d"/><text x="426" y="409" fill="#fff">PRESETS</text>
+    <rect x="506" y="385" width="116" height="37" rx="18" fill="#395e6e"/><text x="564" y="409" fill="#fff">K1</text>
+    <rect x="630" y="385" width="116" height="37" rx="18" fill="#395e6e"/><text x="688" y="409" fill="#fff">K2</text>
+    <rect x="754" y="385" width="116" height="37" rx="18" fill="#395e6e"/><text x="812" y="409" fill="#fff">K3</text>
+    <rect x="878" y="385" width="133" height="37" rx="18" fill="#395e6e"/><text x="944" y="409" fill="#fff">K4</text>
+  </g>
+</svg>
