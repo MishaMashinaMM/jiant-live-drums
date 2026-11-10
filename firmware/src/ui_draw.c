@@ -2123,6 +2123,60 @@ static void ui_draw_page(uint32_t counting)
  * Columns: TRK (mute indicator), VOICE, MIDI RX, VOL, PAN (motion indicator).
  * Status line at y=198..221: ROUTE and global DJ FILTER.
  */
+/* REC: four project CC macros. The captured CC, channel and destination are
+ * intentionally read-only; the other fields are edited by the four knobs. */
+#if FELUCCA_NO_SEQUENCER
+static void draw_cc_macros(void)
+{
+    static const int16_t x[7] = {4, 27, 50, 112, 146, 194, 220};
+    static const char *const headings[7] = {"CC", "CH", "SRC", "TYP", "VAL", "REV", "ON"};
+    lcd_fill(0, 0, 240, 240, T_BG);
+    cv_begin(240, 40, T_BG);
+    cv_text(6, CAP_IN(M, 24), &AF_M, "MIDI CC MACROS", T_TEXT);
+    if (cm_delete) cv_text(6, 30 + CAP_IN(S, 10), &AF_S, "DELETE? OCT+ YES  OCT- NO", T_ACCENT);
+    else if (cm_wait == 1u) cv_text(6, 30 + CAP_IN(S, 10), &AF_S, "SEND CC FROM CONTROLLER", T_ACCENT);
+    else cv_text(6, 30 + CAP_IN(S, 10), &AF_S, "SELECT ROW / ALGO ON-OFF", T_ACCENT);
+    cv_blit(0, 0);
+    cv_begin(240, 16, T_BG);
+    for (uint32_t c = 0; c < 7u; c++) cv_text(x[c], CAP_IN(S, 14), &AF_S, headings[c], T_DIM);
+    cv_blit(0, 43);
+    for (uint32_t i = 0; i < CM_N; i++) {
+        char cc[8], ch[8], src[12], val[16];
+        const uint8_t *r = cm_rows[i];
+        uint32_t ti = r[1] >> 4, id = r[3], engine = r[2];
+        uint16_t ink = i == cm_pick ? T_THEME : T_TEXT;
+        cv_begin(240, 34, i == cm_pick && cm_count ? T_RAISE : T_BG);
+        if (i < cm_count) {
+            fmt_int(cc, r[0]); fmt_int(ch, (r[1] & 15u) + 1u);
+            src[0] = 'T'; src[1] = (char)('1' + ti); src[2] = ':';
+            if (ti < NTRK && id < P_COUNT && engine < NENGINES) {
+                const char *label = param_desc_of(engine, id)->label;
+                str_cpy(src + 3, label ? label : "?", 7);
+            } else str_cpy(src + 3, "?", 7);
+            fmt_int(val, r[5]);
+            str_cpy(val + str_len(val), "-", sizeof val - str_len(val));
+            fmt_int(val + str_len(val), r[6]);
+            cv_text(x[0], CAP_IN(S, 20), &AF_S, cc, ink);
+            cv_text(x[1], CAP_IN(S, 20), &AF_S, ch, ink);
+            cv_text(x[2], CAP_IN(S, 20), &AF_S, src, ink);
+            cv_text(x[3], CAP_IN(S, 20), &AF_S, r[4] & CM_TGL ? "TGL" : "RNG", ink);
+            cv_text(x[4], CAP_IN(S, 20), &AF_S, val, ink);
+            cv_text(x[5], CAP_IN(S, 20), &AF_S, r[4] & CM_REV ? "Y" : "N", ink);
+            cv_text(x[6], CAP_IN(S, 20), &AF_S,
+                    !(r[4] & CM_ON) ? "N" : ti < NTRK && eng_idx(trk[ti].eng_req) != engine ? "S" : "Y", ink);
+        } else if (!i && !cm_count) {
+            cv_text(6, CAP_IN(S, 20), &AF_S, "NO MACROS - OCT+ TO ADD", T_DIM);
+        }
+        cv_blit(0, 59 + (int32_t)i * 34);
+    }
+    cv_begin(240, 42, T_BG);
+    cv_text(6, CAP_IN(S, 14), &AF_S, "OCT+ ADD  OCT- DELETE", T_DIM);
+    cv_text(6, 20 + CAP_IN(S, 14), &AF_S, "K1 TYP K2 A K3 B K4 REV", T_TEXT);
+    cv_blit(0, 198);
+    ui.force = 0;
+}
+#endif
+
 static void draw_mixer_table(void)
 {
     cv_begin(240, 158, T_BG);
@@ -2363,6 +2417,10 @@ static void ui_draw_body(uint32_t counting)
         return;
     }
 #if FELUCCA_NO_SEQUENCER
+    if (cm_ui_open && !ui.menu) {
+        if (ui.force) draw_cc_macros();
+        return;
+    }
     if (ui.drum_perf_open || ui.drum_map_open) {
         uint8_t kind = ui.drum_perf_open ? 2u : 1u;
         uint8_t bank = ui.drum_map_pad < 6u ? 0u : 6u;

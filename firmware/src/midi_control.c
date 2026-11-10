@@ -294,6 +294,10 @@ static void midi_cc_set(track_t *t, uint32_t id, uint32_t value)
 #define CM_ON 4u
 static uint8_t cm_count;
 static uint8_t cm_rows[CM_N][CM_ROW_SIZE];
+/* REC editor state is deliberately transient; the rows alone are project data.
+ * Capture happens in the same MIDI receive path as normal CC handling. */
+static uint8_t cm_ui_open, cm_pick, cm_delete, cm_wait;
+static uint8_t cm_heard_cc, cm_heard_ch;
 #define ML_E0 120u
 typedef char ml_ids_fit[P_E0 < ML_E0 && P_COUNT - P_E0 <= 256u - ML_E0 && NTRK <= 8 ? 1 : -1];
 static uint8_t ml_table[3u * ML_N];          /* runtime mirror: first ten migrate from PER5, rest from PER6 */
@@ -385,6 +389,17 @@ static void midi_control(uint32_t ch, uint32_t cc, uint32_t value)
 {
     midi_channel_t *c = midi_channel(ch);
     uint32_t i, mask;
+#if FELUCCA_NO_SEQUENCER
+    if (cm_wait == 1u) {                              /* REC > ADD: capture CC and its actual incoming channel */
+        if (ml_free_cc(cc)) {
+            cm_heard_cc = (uint8_t)cc;
+            cm_heard_ch = (uint8_t)ch;
+            cm_wait = 2u;                              /* next: select track/page, turn parameter knob */
+            cm_ui_open = 0u;
+            return;
+        }
+    }
+#endif
     /* An armed legacy learner must still capture the incoming CC. Otherwise
      * enabled macros take priority over learned mappings of the same CC. */
     if (!ml.arm && cm_apply(ch, cc, value))
