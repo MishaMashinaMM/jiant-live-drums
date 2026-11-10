@@ -2250,7 +2250,7 @@ static void ui_input_frame(void)
             ui.force = 1u;
         } else if (up) {
             if (cm_count < CM_N) { cm_wait = 1u; ui.force = 1u; }
-            else ui_message("FOUR MACROS FULL");
+            else ui_message("32 MACROS FULL");
         }
         if (cm_settle) {
             int32_t moved = panel_enc(EN_ALGO);

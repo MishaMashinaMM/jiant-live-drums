@@ -287,7 +287,7 @@ static void midi_cc_set(track_t *t, uint32_t id, uint32_t value)
  * Seven bytes per row: CC, (track << 4 | incoming channel-1), engine,
  * parameter id, flags (type/reverse/enabled), endpoints A and B.
  * Kept with the project. REC editing is wired separately. */
-#define CM_N 4u
+#define CM_N 32u
 #define CM_ROW_SIZE 7u
 #define CM_TGL 1u
 #define CM_REV 2u

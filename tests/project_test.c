@@ -929,23 +929,33 @@ int main(void)
             ok = proj_pack(&saved, &with_rx) && proj_import(&restored, &saved, sizeof saved) && !restored.rx_on;
             bad += check("JLD: older project without RX block keeps global channels on load", ok);
         }
-        {   /* REC macro storage: a bounded independent table; legacy MIDI LEARN is untouched. */
+        {   /* REC macro storage: 4-row projects migrate, 32 rows round-trip unchanged. */
             static project_t m1, m2;
             static project_store_t wire;
+            uint32_t base_size;
             m1 = f;
-            m1.cm_count = 4u;
+            base_size = proj_packed_size(&m1);
             for (k = 0; k < CM_N; k++) {
                 uint8_t *r = m1.cm_rows[k];
                 r[0] = (uint8_t)(40u + k);                 /* CC */
-                r[1] = (uint8_t)((k << 4u) | k);         /* track, channel-1 */
-                r[2] = ENGI_DRUMLAB; r[3] = P_E0 + k;  /* engine, target */
+                r[1] = (uint8_t)(((k % NTRK) << 4u) | (k % 16u));
+                r[2] = ENGI_DRUMLAB; r[3] = P_E0 + (k % 8u);
                 r[4] = (uint8_t)(k & 7u);               /* type, reverse, enabled */
                 r[5] = (uint8_t)(10u + k); r[6] = (uint8_t)(80u + k);
             }
+            m1.cm_count = 4u;
             m1.sum = proj_sum(&m1);
             ok = proj_pack(&wire, &m1) && proj_import(&m2, &wire, sizeof wire) &&
+                 m2.cm_count == 4u && !memcmp(m1.cm_rows, m2.cm_rows, 4u * CM_ROW_SIZE);
+            bad += check("JLD: earlier four-macro projects import unchanged", ok);
+            m1.cm_count = CM_N;
+            m1.sum = proj_sum(&m1);
+            ok = proj_packed_size(&m1) == base_size + 3u + CM_N * CM_ROW_SIZE &&
+                 proj_pack(&wire, &m1) && proj_import(&m2, &wire, sizeof wire) &&
                  m2.cm_count == CM_N && !memcmp(m1.cm_rows, m2.cm_rows, sizeof m1.cm_rows);
-            bad += check("JLD: four CC macro rows round-trip in a project (28-byte table)", ok);
+            bad += check("JLD: 32 CC macro rows round-trip with bounded project storage", ok);
+            m1.cm_count = CM_N + 1u;
+            bad += check("JLD: oversize macro count cannot overflow project pack", !proj_pack(&wire, &m1));
             m1.cm_count = 0u; m1.sum = proj_sum(&m1);
             ok = proj_pack(&wire, &m1) && proj_import(&m2, &wire, sizeof wire) && !m2.cm_count;
             bad += check("JLD: older projects without CC macro block import empty", ok);

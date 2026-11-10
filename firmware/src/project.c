@@ -140,7 +140,7 @@ typedef struct {
     uint8_t rx_on;                               /* JLD: RX channels included in this project */
     uint8_t rx[6];                              /* one-based channels, 1..16 */
     uint8_t cm_count;                           /* optional REC CC macros, zero in older projects */
-    uint8_t cm_rows[CM_N][CM_ROW_SIZE];         /* four independent seven-byte assignments */
+    uint8_t cm_rows[CM_N][CM_ROW_SIZE];         /* 32 independent seven-byte assignments */
     int8_t pad_pan[NPART][12];                   /* Stage 22B: optional per-track drum pan */
     int8_t pad_pitch[NPART][12];                 /* Stage 22B: extra semitones, -24..+24 */
     uint8_t perf_curve[NPART][12], perf_sound[NPART][12];
@@ -1003,7 +1003,8 @@ static int proj_pack(project_store_t *out, const project_t *q)
                 s->comp >= CP_N || s->comp2 >= CP_N || CT_DIV(s) >= CT_NDIV || s->ctime > 127u) return 0;
         }
     }
-    if (!chain_valid(&q->chain) || !motion_valid(&q->motion) || P_COUNT > 127u || !dx_kit_ok(q->dx)) return 0;
+    if (!chain_valid(&q->chain) || !motion_valid(&q->motion) || P_COUNT > 127u || !dx_kit_ok(q->dx) ||
+        q->cm_count > CM_N) return 0;
     if (proj_packed_size(q) > PROJC_PFX_OFF) { proj_full = 1; return 0; }
     memset(out, 0, sizeof *out); memcpy(b, &magic, 4); memcpy(b + 4, &size, 4);
     memcpy(b + 8, q->g, G_NSTORE * 2u); b[62] = q->sel; b[63] = q->parts; b[64] = q->phys; b[66] = P_COUNT;
