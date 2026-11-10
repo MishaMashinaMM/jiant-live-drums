@@ -36,12 +36,20 @@ ex.web_keys(0);
 render(300);
 assert.ok(peak > 0.001, `physical key must produce audio (peak ${peak})`);
 
-// PLAY and SEQ have live edit pages, not transport functions.
-for (const button of [10, 9]) {
+// PLAY, SEQ and REC have live edit pages, not transport functions.
+for (const button of [10, 9, 11]) {
   ex.web_buttons(1 << button);
   render(80);
   ex.web_buttons(0);
   render(80);
   assert.equal(ex.web_playing(), 0, 'PLAY/SEQ must not start the sequencer');
 }
-console.log('PASS: live-only emulator boots, keybed sounds, SEQ/PLAY do not start transport');
+// REC: add a macro through the external CC/channel capture and turn an actual
+// track parameter knob to finish. Host UI tests check the table contents.
+ex.web_buttons(1 << 11); render(80); ex.web_buttons(0); render(80);
+ex.web_buttons(1 << 13); render(80); ex.web_buttons(0); render(80);
+assert.equal(ex.web_midi(0xB0, 40, 64), 1, 'CC capture must enqueue');
+render(80);
+ex.web_enc(3, 1); render(80); // K1 on the selected sound page
+assert.equal(ex.web_playing(), 0, 'REC macro capture must not start transport');
+console.log('PASS: live-only emulator boots, keybed sounds, REC CC capture, SEQ/PLAY transport disabled');
