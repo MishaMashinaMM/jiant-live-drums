@@ -233,7 +233,7 @@ static int32_t menu_document(int32_t y, int draw)
     if (draw) {
         cv_text(6, y + 2, &AF_M, "JIANT LIVE DRUMS", T_THEME);
         cv_text(6, y + 38, &AF_S, "FM1 DRUM PERFORMANCE FIRMWARE", T_TEXT);
-        cv_text(6, y + 58, &AF_M, "v0.2", T_THEME);
+        cv_text(6, y + 58, &AF_M, "v0.3", T_THEME);
         cv_text_r(232, y + 61, &AF_S, __DATE__, T_MID, T_BG);
         cv_text(6, y + 82, &AF_S, "orig: Juan Jiant", T_TEXT);
         cv_text(6, y + 100, &AF_S, "mod: Misha Mashina", T_TEXT);
@@ -243,7 +243,7 @@ static int32_t menu_document(int32_t y, int draw)
         cv_text(6, y + 174, &AF_S, "/JIANT", T_MID);
         draw_about_qr(158, y + 122);
     }
-    y = menu_text("JIANT LIVE DRUMS v0.2", y + 216, T_THEME, draw);
+    y = menu_text("JIANT LIVE DRUMS v0.3", y + 216, T_THEME, draw);
     y = menu_text("Based on Felucca / Jiant v0.9.18.", y, T_TEXT, draw);
     y = menu_text("Live drum performance firmware with two independent 12-pad engines: DRUM-X and DRUM-LAB.", y, T_TEXT, draw);
     y = menu_text("Per-pad sound and performance controls, kit-wide DRUM-LAB shaping, MIDI note mapping and 32 MIDI CC Learn assignments. Sequencer disabled; animations removed.", y, T_TEXT, draw);
