@@ -76,5 +76,24 @@ int main(void)
     bad += check("Delete removes row 32 without affecting row 31",
                  cm_count == CM_N - 1u && cm_rows[CM_N - 1u][0] == 0u &&
                  cm_rows[CM_N - 2u][0] == (uint8_t)(40u + CM_N - 2u));
+    {
+        uint32_t fills, rows;
+        frame();                  /* REC is already drawn on the last page */
+        fills = host_big_fills;
+        rows = host_blit_rows;
+        turn(EN_K2, 1);
+        bad += check("REC endpoint edit does not clear the display", host_big_fills == fills);
+        bad += check("REC endpoint edit repaints one value cell only",
+                     host_blit_rows > rows && host_blit_rows - rows <= 34u);
+        rows = host_blit_rows;
+        turn(EN_K1, 1);
+        turn(EN_K3, -1);
+        turn(EN_K4, 1);
+        turn(EN_ALGO, -1);
+        bad += check("REC type, second endpoint, reverse and ON edits never clear the page",
+                     host_big_fills == fills);
+        bad += check("Each REC edit repaints at most its value cell",
+                     host_blit_rows > rows && host_blit_rows - rows <= 4u * 34u);
+    }
     return bad ? 1 : 0;
 }

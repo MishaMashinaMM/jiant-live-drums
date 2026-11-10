@@ -3,7 +3,7 @@
 name: MIDI macro preview
 on:
   push:
-    branches: [macro-control, macro-32]
+    branches: [macro-control, macro-32, rec-partial-redraw]
   workflow_dispatch:
 permissions:
   contents: read
