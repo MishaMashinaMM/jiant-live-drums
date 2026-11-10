@@ -69,7 +69,7 @@ jobs:
           JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
         run: |
           FELUCCA_NO_SEQUENCER=1 python3 tools/build.py
-          python3 web/make_site.py build/felucca.fwsc "v0.2-${GITHUB_SHA::7}" build/site
+          python3 web/make_site.py build/felucca.fwsc "v0.3-${GITHUB_SHA::7}" build/site
           printf '%s\n' "$GITHUB_SHA" > build/site/firmware/SOURCE_COMMIT
           (cd build/site/firmware && sha256sum felucca-*.fwsc > SHA256SUMS)
           cp -r build/site/webapp build/site/firmware build/emu/
