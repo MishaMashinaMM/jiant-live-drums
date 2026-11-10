@@ -9,7 +9,9 @@
 
 **[Project homepage](https://mishamashinamm.github.io/jiant-live-drums/)** · **[Emulator](https://mishamashinamm.github.io/jiant-live-drums/emu/)** · **[Drums installer](https://mishamashinamm.github.io/jiant-live-drums/webapp/installer/)** · **[Drums editor](https://mishamashinamm.github.io/jiant-live-drums/webapp/editor/)** · **[Interactive manual (inherited)](https://mishamashinamm.github.io/jiant-live-drums/manual/)**
 
-**[JLD v0.3 illustrated manual (draft)](docs/JLD_MANUAL_V0.3.md)** — source-derived controls, live MIDI workflows, drum engines, and annotated schematics. The separate interactive manual linked above is inherited from original JIANT and has not yet been fully adapted to Drums.\n\nThe links above are the GitHub Pages routes for this separate Drums repository. The repository includes the Drums-specific browser emulator, firmware installer, editor, and an inherited interactive manual. The inherited manual still describes some original sequencer behavior and is **not a fully updated Drums control reference**.
+**[JLD v0.3 illustrated manual (draft)](docs/JLD_MANUAL_V0.3.md)** — source-derived controls, live MIDI workflows, drum engines, and annotated schematics. The separate interactive manual linked above is inherited from original JIANT and has not yet been fully adapted to Drums.
+
+The links above are the GitHub Pages routes for this separate Drums repository. The repository includes the Drums-specific browser emulator, firmware installer, editor, and an inherited interactive manual. The inherited manual still describes some original sequencer behavior and is **not a fully updated Drums control reference**.
 
 JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbral drum sound module**. It extends DRUM-X, adds DRUM-LAB, expands MIDI routing and CC control, and keeps the eight-voice shared pool. The **sequencer is disabled** in this edition (`FELUCCA_NO_SEQUENCER=1`); its SEQ, PLAY, and REC buttons open dedicated live-MIDI pages. Original Jiant Live remains a separate project.
 
