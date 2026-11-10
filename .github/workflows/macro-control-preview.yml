@@ -71,7 +71,7 @@ jobs:
           (cd build && sha256sum felucca.fwsc > SHA256SUMS)
       - name: Prepare isolated local FM1 test installer
         run: |
-          python3 web/make_site.py build/felucca.fwsc "v0.2-${GITHUB_REF_NAME}-${GITHUB_SHA::7}-preview" build/device-test-site
+          python3 web/make_site.py build/felucca.fwsc "v0.3-${GITHUB_REF_NAME}-${GITHUB_SHA::7}-preview" build/device-test-site
           cp docs/macro-control-device-test.md build/device-test-site/READ-ME-FIRST.md
           cp build/SOURCE_COMMIT build/SHA256SUMS build/device-test-site/firmware/
           (cd build/device-test-site/firmware && sha256sum felucca-*.fwsc > PACKAGE-SHA256SUMS)
