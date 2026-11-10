@@ -5,7 +5,7 @@
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 [![Status: experimental](https://img.shields.io/badge/device%20tested-limited-yellow.svg)](#status-and-safety)
 
-![JIANT LIVE DRUMS: dual 12-pad engines, live SEQ and PLAY pages, and eight shared voices](docs/jiant-live-drums-overview.svg)
+![JIANT LIVE DRUMS: two 12-pad drum engines, SEQ MIDI mapping, PLAY performance controls, REC 32 MIDI CC macros, and eight shared voices](docs/jiant-live-drums-overview.svg)
 
 **[Project homepage](https://mishamashinamm.github.io/jiant-live-drums/)** · **[Emulator](https://mishamashinamm.github.io/jiant-live-drums/emu/)** · **[Drums installer](https://mishamashinamm.github.io/jiant-live-drums/webapp/installer/)** · **[Drums editor](https://mishamashinamm.github.io/jiant-live-drums/webapp/editor/)** · **[Interactive manual (inherited)](https://mishamashinamm.github.io/jiant-live-drums/manual/)**
 
