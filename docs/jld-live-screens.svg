@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1110" height="415" viewBox="0 0 1110 415" role="img" aria-labelledby="title desc">
+  <title id="title">JLD SEQ, PLAY and REC screen schematics</title>
+  <desc id="desc">Source-derived examples of the three live MIDI pages. These are annotated schematics, not emulator screenshots.</desc>
+  <rect width="1110" height="415" rx="15" fill="#11151f"/>
+  <text x="24" y="33" font-family="Arial,sans-serif" font-size="22" fill="#fff" font-weight="bold">JLD v0.3 — THREE DEDICATED LIVE SCREENS</text>
+  <text x="24" y="56" font-family="Arial,sans-serif" font-size="13" fill="#b9c3d1">Source-derived schematic examples • actual pad/macro values depend on the current project</text>
+  <g font-family="monospace">
+    <g transform="translate(26 74)">
+      <rect width="338" height="303" rx="13" fill="#07080c" stroke="#50545c" stroke-width="2"/>
+      <text x="14" y="32" fill="#f3f4f7" font-size="22" font-weight="bold">DRUM MIDI MAP</text>
+      <text x="14" y="52" fill="#e6a43c" font-size="15">T1 DRUM-X</text>
+      <text x="14" y="81" fill="#868992" font-size="14">PAD    NOTE    PAN    PITCH</text>
+      <rect x="9" y="91" width="320" height="32" fill="#271c2e"/>
+      <g fill="#e2d1ec" font-size="16"><text x="14" y="113">BD     36      C      +0</text><text x="14" y="148">SD     38      C      +0</text><text x="14" y="183">CP     39      C      +0</text><text x="14" y="218">CH     42      C      +0</text></g>
+      <text x="14" y="265" fill="#989ba4" font-size="14">ALGO TRACK  SELECT PAD</text>
+      <text x="14" y="285" fill="#eceef2" font-size="14">K1 NOTE K2 PAN K3 PIT</text>
+    </g>
+    <g transform="translate(386 74)">
+      <rect width="338" height="303" rx="13" fill="#07080c" stroke="#50545c" stroke-width="2"/>
+      <text x="14" y="32" fill="#f3f4f7" font-size="21" font-weight="bold">DRUM PERFORMANCE</text>
+      <text x="14" y="52" fill="#e6a43c" font-size="15">T1 DRUM-X</text>
+      <text x="14" y="81" fill="#868992" font-size="14">PAD  CURVE   V&gt;S   CH  RETR</text>
+      <rect x="9" y="91" width="320" height="32" fill="#271c2e"/>
+      <g fill="#e2d1ec" font-size="15"><text x="14" y="113">BD   LIN     64    --   OVR</text><text x="14" y="148">SD   LIN     64    --   OVR</text><text x="14" y="183">CP   LIN     64    --   OVR</text><text x="14" y="218">CH   LIN     64    G1   RST</text></g>
+      <text x="14" y="265" fill="#989ba4" font-size="14">ALGO TRACK SELECT PAD</text>
+      <text x="14" y="285" fill="#eceef2" font-size="14">K1 CUR K2 V&gt;S K3 CH K4 RET</text>
+    </g>
+    <g transform="translate(746 74)">
+      <rect width="338" height="303" rx="13" fill="#07080c" stroke="#50545c" stroke-width="2"/>
+      <text x="14" y="32" fill="#f3f4f7" font-size="21" font-weight="bold">MIDI CC MACROS</text>
+      <text x="14" y="52" fill="#e6a43c" font-size="15">SELECT ROW / ALGO ON-OFF</text>
+      <text x="14" y="81" fill="#868992" font-size="13">CC CH SRC       TYP VAL   REV ON</text>
+      <rect x="9" y="91" width="320" height="32" fill="#271c2e"/>
+      <g fill="#e2d1ec" font-size="13"><text x="14" y="113">40 1  T1:MORPH  RNG 10-80 N   Y</text><text x="14" y="148">40 1  T1:PITCH  TGL 0-100 N   N</text><text x="14" y="183">72 2  T2:BODY   RNG 0-127 Y   Y</text></g>
+      <text x="14" y="265" fill="#989ba4" font-size="14">OCT+ ADD  OCT- DELETE</text>
+      <text x="14" y="285" fill="#eceef2" font-size="14">K1 TYP K2 A K3 B K4 REV</text>
+    </g>
+  </g>
+</svg>
