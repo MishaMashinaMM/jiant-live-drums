@@ -60,7 +60,11 @@ jobs:
       - name: Build experimental FM1 firmware and verify flash/RAM layout
         env:
           FELUCCA_NO_SEQUENCER: '1'
-        run: python3 tools/build.py | tee firmware-build.log
+          AC79_SDK: /home/runner/fw-AC79_AIoT_SDK
+          JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
+        run: |
+          set -o pipefail
+          python3 tools/build.py | tee firmware-build.log
       - name: Record source and checksum
         run: |
           printf '%s\n' "$GITHUB_SHA" > build/SOURCE_COMMIT
