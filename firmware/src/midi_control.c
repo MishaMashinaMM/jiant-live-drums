@@ -283,6 +283,14 @@ static void midi_cc_set(track_t *t, uint32_t id, uint32_t value)
 #define ML_N 32u
 #define ML_OLD_N 10u
 #define FELUCCA_MIDI_LEARN 1
+/* JLD REC MIDI macros: separate from the legacy 32-entry MIDI LEARN table.
+ * Seven bytes per row: CC, (track << 4 | incoming channel-1), engine,
+ * parameter id, flags (type/reverse/enabled), endpoints A and B.
+ * Kept with the project; no CC behavior changes until REC UI is wired. */
+#define CM_N 4u
+#define CM_ROW_SIZE 7u
+static uint8_t cm_count;
+static uint8_t cm_rows[CM_N][CM_ROW_SIZE];
 #define ML_E0 120u
 typedef char ml_ids_fit[P_E0 < ML_E0 && P_COUNT - P_E0 <= 256u - ML_E0 && NTRK <= 8 ? 1 : -1];
 static uint8_t ml_table[3u * ML_N];          /* runtime mirror: first ten migrate from PER5, rest from PER6 */
