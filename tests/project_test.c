@@ -914,6 +914,21 @@ int main(void)
         ok &= MOTION_TRK(&g.motion.event[0]) == 5u && MOTION_STEP(&g.motion.event[0]) == 9u && MOTION_VAL(&g.motion.event[0]) == 33 &&
               MOTION_TRK(&g.motion.event[1]) == 4u && MOTION_VAL(&g.motion.event[1]) == -20;
         bad += check("FUNC: six tracks round trip (steps, ratchet, chance, patches, T5 / T6 motion, name, globals)", ok);
+        {   /* JLD: six RX channels follow the project, but old projects have no RX block. */
+            static project_t with_rx, restored;
+            static project_store_t saved;
+            with_rx = f;
+            with_rx.rx_on = 1u;
+            for (k = 0; k < 6u; k++) with_rx.rx[k] = (uint8_t)(16u - k);
+            with_rx.sum = proj_sum(&with_rx);
+            ok = proj_pack(&saved, &with_rx) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.rx_on && !memcmp(restored.rx, with_rx.rx, sizeof with_rx.rx);
+            bad += check("JLD: per-project RX channels 16..11 round-trip in a six-track project", ok);
+            with_rx.rx_on = 0u;
+            with_rx.sum = proj_sum(&with_rx);
+            ok = proj_pack(&saved, &with_rx) && proj_import(&restored, &saved, sizeof saved) && !restored.rx_on;
+            bad += check("JLD: older project without RX block keeps global channels on load", ok);
+        }
         {   /* Stage 20B: a sparse, optional DRUM-LAB patch bank round-trips without touching DRUM-X. */
             static project_t lab, restored;
             static project_store_t saved;

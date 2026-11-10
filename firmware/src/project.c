@@ -137,6 +137,8 @@ typedef struct {
     uint8_t lab_note[NPART][12];                /* independent note number for each pad */
     uint8_t dx_note_on[NPART];                   /* Stage 22: optional DRUM-X MIDI map */
     uint8_t dx_note[NPART][12];
+    uint8_t rx_on;                               /* JLD: RX channels included in this project */
+    uint8_t rx[6];                              /* one-based channels, 1..16 */
     int8_t pad_pan[NPART][12];                   /* Stage 22B: optional per-track drum pan */
     int8_t pad_pitch[NPART][12];                 /* Stage 22B: extra semitones, -24..+24 */
     uint8_t perf_curve[NPART][12], perf_sound[NPART][12];
@@ -890,6 +892,7 @@ static uint32_t proj_perf_mask(const project_t *q, uint32_t t)
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
+    if (q->rx_on) n += 8u;                       /* 'R' 'X' and six MIDI channels */
     if (proj_djf_events(&q->motion))                    /* (0.9.1) the DJ FILTER's records: their block's head */
         n += 3u;
     if (proj_mf_tracks(q))                              /* (0.9.1) MICRO's 64ths: their block */
@@ -1258,6 +1261,10 @@ static int proj_pack(project_store_t *out, const project_t *q)
                 b[pos++] = 0;
             }
         }
+    }
+    if (q->rx_on) {                                     /* this fork: per-project GLO > MIXER receive channels */
+        b[pos++] = 'R'; b[pos++] = 'X';
+        for (i = 0; i < 6u; i++) b[pos++] = q->rx[i];
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1685,6 +1692,14 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             }
         }
     }
+    if (pos + 2u <= room && b[pos] == 'R' && b[pos + 1u] == 'X') {
+        if (pos + 8u > room) return 0;
+        for (i = 0; i < 6u; i++)
+            if (b[pos + 2u + i] < 1u || b[pos + 2u + i] > 16u) return 0;
+        memcpy(q->rx, b + pos + 2u, 6u);
+        q->rx_on = 1u;
+        pos += 8u;
+    }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);
@@ -1958,6 +1973,8 @@ static void project_capture(project_t *p)
         memcpy(p->t[i].step, trk[i].step, sizeof trk[i].step);
         fm6_pack(fm6_patch[i], p->fm6[i]);
     }
+    p->rx_on = 1u;
+    for (i = 0; i < 6u; i++) p->rx[i] = (uint8_t)midi_rx_channel(i);
     p->motion = motion;
     memcpy(p->dx, dx_kit, sizeof p->dx);
     memcpy(p->dx12, dx_kit12, sizeof p->dx12);
@@ -2233,6 +2250,8 @@ static int project_restore_runtime(const project_t *input)
     fm1_irq_off();                                      /* the audio ISR must not see half a project */
     seq_stop();
     transport_req = 0;
+    /* Legacy projects have no RX block: leave the existing global channels alone. */
+    if (p->rx_on) memcpy(midi_rx, p->rx, sizeof p->rx);
     chain.ended = 0;                                    /* (a song stopped by this load: the load wins, song_poll keeps out) */
     memcpy(dx_kit, dx_kit_ok(p->dx) ? p->dx : DX_KIT_DEF, sizeof dx_kit);   /* (the section's DRUM-X kit) */
     memcpy(dx_kit12, p->dx12, sizeof dx_kit12);
@@ -2892,6 +2911,10 @@ static uint32_t as_mix(uint32_t h, const void *p, uint32_t n)   /* FNV-1a, conti
 static uint32_t autosave_sig(void)
 {
     uint32_t h = 2166136261u, i, j;
+    for (i = 0; i < 6u; i++) {
+        uint8_t rx = (uint8_t)midi_rx_channel(i);
+        h = as_mix(h, &rx, sizeof rx);
+    }
     for (i = 0; i < NTRK; i++) {
         const track_t *t = &trk[i];
         for (j = 0; j < P_COUNT; j++) {

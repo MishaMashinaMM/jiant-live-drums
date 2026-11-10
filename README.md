@@ -44,7 +44,7 @@ Each track has an independently saved RX channel. The default assignments are T1
 
 **Example:** assign both T1 and T2 to channel 1, choose ROUTE=1-6 with TRACKS=6, and play channel 1 from a keyboard. Both tracks receive the notes. Duplicate RX channels are intentional. Switching routing, assignments or active track count releases owned notes to avoid stuck notes.
 
-The six RX settings are **global** (not individual project or sound settings), persist across restart and survive changing projects or presets.
+On the experimental `macro-control` branch, the six RX settings are **saved with each project**. Loading a newly saved project restores its RX channels; older project files without RX data retain the current channel assignments. The original global settings remain available as the fallback for older projects. The published `main` firmware still uses global RX settings.
 
 ### MIDI LEARN: 32 destinations and shared CC
 
