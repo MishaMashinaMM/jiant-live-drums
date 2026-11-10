@@ -77,6 +77,19 @@ int main(void)
     send_rx(0xB0, 40, 120, 1); assert(trk[2].p[P_LEVEL] == 77);
     puts("RX: four CC macros, range/toggle/reverse, bypass, engine suspension and legacy MIDI Learn passed");
 
+    /* Exercise the complete 32-row runtime scan; the final matching row must
+     * still execute, including when all entries share one incoming CC. */
+    memset(ml_table, 0, sizeof ml_table);
+    cm_count = CM_N;
+    for (uint32_t i = 0; i < CM_N; i++) {
+        uint8_t *r = cm_rows[i];
+        r[0] = 43u; r[1] = 0u; r[2] = trk[0].eng_req; r[3] = P_LEVEL;
+        r[4] = CM_ON; r[5] = (uint8_t)i; r[6] = (uint8_t)i;
+    }
+    send_rx(0xB0, 43, 90, 1);
+    assert(trk[0].p[P_LEVEL] == CM_N - 1u);
+    puts("RX: 32 matching macros processed in row order");
+
     reset_rx();
     for (uint32_t ch = 1; ch <= 16; ch++) {
         midi_rx[0] = midi_rx[1] = (uint8_t)ch;
