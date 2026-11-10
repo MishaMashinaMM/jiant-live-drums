@@ -1,4 +1,4 @@
-# JIANT LIVE DRUMS v0.2
+# JIANT LIVE DRUMS v0.3
 
 **Performance-focused firmware for the M-VAVE FM1**, modified by **Misha Mashina** from **JIANT by Juan Jiant** (based on Felucca).
 
@@ -13,11 +13,11 @@ The links above are the GitHub Pages routes for this separate Drums repository. 
 
 JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbral drum sound module**. It extends DRUM-X, adds DRUM-LAB, expands MIDI routing and CC control, and keeps the eight-voice shared pool. The **sequencer is disabled** in this edition (`FELUCCA_NO_SEQUENCER=1`); its SEQ, PLAY, and REC buttons open dedicated live-MIDI pages. Original Jiant Live remains a separate project.
 
-> **Current status:** experimental, **not an official Juan Jiant release**. Dedicated live-drum host tests and update-package simulations pass. **A physical FM1 has successfully installed and booted Jiant Live Drums via the dedicated web installer**, including the 32-macro firmware build. The REC macro screen's partial-redraw fix was also flashed and **verified on physical hardware**: editing macro values now updates the affected cells without full-screen flicker. The 32-macro REC paging and project save/load were verified in the emulator; the earlier four-macro build was also checked on the device for DRUM-LAB sound/editing, SEQ/PLAY navigation, LEDs, and external-MIDI CC macro control. This is **limited device testing**, not a complete hardware qualification. Back up your data and prepare a recovery method before installing. Do not use the original JIANT web installer to install Drums.
+> **Current status:** v0.3 milestone; experimental, **not an official Juan Jiant release**. Dedicated live-drum host tests and update-package simulations pass. **A physical FM1 has successfully installed and booted Jiant Live Drums via the dedicated web installer**, including the 32-macro firmware build. The REC macro screen's partial-redraw fix was also flashed and **verified on physical hardware**: editing macro values now updates the affected cells without full-screen flicker. The 32-macro REC paging and project save/load were verified in the emulator; the earlier four-macro build was also checked on the device for DRUM-LAB sound/editing, SEQ/PLAY navigation, LEDs, and external-MIDI CC macro control. This is **limited device testing**, not a complete hardware qualification. Back up your data and prepare a recovery method before installing. Do not use the original JIANT web installer to install Drums.
 
 ## What's different from JIANT / Jiant Live
 
-| Feature | JIANT LIVE DRUMS v0.2 |
+| Feature | JIANT LIVE DRUMS v0.3 |
 | --- | --- |
 | MIDI input per track | Independent **RX channel 1–16** for each of six tracks. Two or more tracks may share a channel and sound together. |
 | MIDI routing | **1-4**, **1-6** (assigned-channel routing), or **SEL** (selected-track routing). TRACKS 4/6 still determines how many tracks are active. |
@@ -29,7 +29,7 @@ JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbra
 | Repurposed SEQ, PLAY and REC buttons | **SEQ** opens **DRUM MIDI MAP**, **PLAY** opens **DRUM PERFORMANCE**, and **REC** opens **MIDI CC MACROS**. The three buttons illuminate with their active live pages; none starts the removed sequencer/transport. |
 | Polyphony | **Eight shared voices** across all tracks and both drum engines. |
 | Display | Static **JIANT LIVE DRUMS** startup splash, default JIANT presentation, larger UI retained; decorative screen animations disabled. |
-| ABOUT | JIANT LIVE DRUMS v0.2 identification and purpose, while retaining original author and license credits. |
+| ABOUT | JIANT LIVE DRUMS v0.3 identification and purpose, while retaining original author and license credits. |
 | Browser emulator | Can load an existing JIANT **backup JSON** into an isolated session to audition saved sounds/projects without changing the physical FM1. |
 | Sequencer / sound engines | **Sequencer disabled** for live use; the inherited melodic engines and effects remain. |
 
@@ -133,7 +133,7 @@ On the tested FM1, these pages open with a single press and remain stable while 
 
 ### Display and startup
 
-The startup screen uses a black background with **JIANT LIVE DRUMS**, author attribution and **v0.2**. Decorative display animations and the startup LED sweep are disabled; informative UI and sound feedback remain.
+The startup screen uses a black background with **JIANT LIVE DRUMS**, author attribution and **v0.3**. Decorative display animations and the startup LED sweep are disabled; informative UI and sound feedback remain.
 
 ## Try JIANT LIVE DRUMS on your computer
 
