@@ -52,6 +52,8 @@ On the experimental `macro-control` branch, the six RX settings are **saved with
 
 After a new assignment, REC briefly ignores residual encoder detents until the knobs settle. This prevents the knob movement used to select the destination from also changing the new macro's default RNG type or endpoints.
 
+**Physical testing (`macro-control` only):** the experimental GitHub Actions workflow produces a separate `jld-macro-control-local-installer-*` ZIP with its exact firmware package, checksums, local installer/editor, and [device-test checklist](docs/macro-control-device-test.md). Serve this extracted ZIP from `localhost` before flashing. The normal public GitHub Pages installer remains tied to `main` and is **not** the macro-control installer.
+
 ### MIDI LEARN: 32 destinations and shared CC
 
 1. Open **MENU → MIDI → LEARN** and switch it **ON**.
