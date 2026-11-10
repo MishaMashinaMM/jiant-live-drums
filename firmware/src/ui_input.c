@@ -355,13 +355,22 @@ static void ui_leds(void)
     }
     if (!ui.layer || FAM_BTN[fam] != layer_btn())
         led_put(nl, panel.btn[FAM_BTN[fam]], 1);
+#if FELUCCA_NO_SEQUENCER
+    /* The transport keys now open live MIDI editors. Light the active editor's
+     * key and leave the others available at the normal idle LED brightness. */
+    led_put(nl, panel.btn[B_SEQ], ui.drum_map_open != 0u);
+    led_put(nl, panel.btn[B_PLAY], ui.drum_perf_open != 0u);
+    led_put(nl, panel.btn[B_REC], cm_ui_open != 0u);
+#endif
     if ((k = arp_led()) != 2u && (!ui.layer || layer_btn() != B_ARP))
         led_put(nl, panel.btn[B_ARP], FAM_BTN[fam] == B_ARP ? !k : (int)k);   /* (on ARP's page: dark flashes) */
     if (!ui.layer && (perf_latched || perf_m[0] || perf_m[1] || perf_m[2] || perf_m[3]))
         led_put(nl, panel.btn[B_FX], 1);                /* FX LATCH: lit while an effect or a macro is on (0.9.14) */
     if (ui.layer)                                       /* the layer's button breathes while its map is up */
         led_put(nb, panel.btn[layer_btn()], 1);
+#if !FELUCCA_NO_SEQUENCER
     led_put(nl, panel.btn[B_REC], song.rec != 0u && ui.layer != LAYER_REC);   /* (its layer: it breathes) */
+#endif
     k = oct_leds();
     led_put(nl, panel.btn[B_OCTDN], (int)(k & 1u));
     led_put(nl, panel.btn[B_OCTUP], (int)((k >> 1) & 1u));
@@ -412,20 +421,6 @@ static void ui_leds(void)
     }
     for (c = 0; c < FM1_NCOL; c++)
         fm1_led[c] = nl[c];
-#if FELUCCA_NO_SEQUENCER
-    /* The removed transport buttons should not appear available in any LED mode. */
-    {
-        static const uint8_t OFF_BTN[] = {B_SEQ, B_REC, B_PLAY};
-        for (k = 0; k < sizeof OFF_BTN / sizeof OFF_BTN[0]; k++) {
-            uint32_t pos = panel.btn[OFF_BTN[k]];
-            led_clear(fm1_led, pos);
-            led_clear(fm1_led_dim, pos);
-            led_clear(fm1_led_mid, pos);
-            led_clear(fm1_led_hi, pos);
-            led_clear(fm1_led_breath, pos);
-        }
-    }
-#endif
 }
 
 /* ---------------------------------------------------------- input --- */
