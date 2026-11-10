@@ -2126,6 +2126,63 @@ static void ui_draw_page(uint32_t counting)
 /* REC: scrollable project CC macros, four visible at a time. Captured CC,
  * channel and destination are read-only; the four knobs edit the other fields. */
 #if FELUCCA_NO_SEQUENCER
+static void draw_cc_macro_cell(uint32_t i, uint32_t row, uint32_t col)
+{
+    static const int16_t x[8] = {4, 27, 50, 112, 146, 194, 220, 240};
+    const uint8_t *r = cm_rows[i];
+    uint32_t ti = r[1] >> 4, id = r[3], engine = r[2];
+    uint16_t bg = i == cm_pick && cm_count ? T_RAISE : T_BG;
+    uint16_t ink = i == cm_pick ? T_THEME : T_TEXT;
+    char b[16];
+    const char *value = b;
+    b[0] = 0;
+    cv_begin(x[col + 1u] - x[col], 34, bg);
+    if (i < cm_count) {
+        switch (col) {
+        case 0u: fmt_int(b, r[0]); break;
+        case 1u: fmt_int(b, (r[1] & 15u) + 1u); break;
+        case 2u:
+            b[0] = 'T'; b[1] = (char)('1' + ti); b[2] = ':'; b[3] = 0;
+            if (ti < NTRK && id < P_COUNT && engine < NENGINES) {
+                const char *label = param_desc_of(engine, id)->label;
+                str_cpy(b + 3, label ? label : "?", 7);
+            } else str_cpy(b + 3, "?", 7);
+            break;
+        case 3u: value = r[4] & CM_TGL ? "TGL" : "RNG"; break;
+        case 4u:
+            fmt_int(b, r[5]);
+            str_cpy(b + str_len(b), "-", sizeof b - str_len(b));
+            fmt_int(b + str_len(b), r[6]);
+            break;
+        case 5u: value = r[4] & CM_REV ? "Y" : "N"; break;
+        default:
+            value = !(r[4] & CM_ON) ? "N" :
+                ti < NTRK && eng_idx(trk[ti].eng_req) != engine ? "S" : "Y";
+            break;
+        }
+        cv_text(0, CAP_IN(S, 20), &AF_S, value, ink);
+    }
+    cv_blit(x[col], 59 + (int32_t)row * 34);
+}
+
+static void draw_cc_macro_row(uint32_t i, uint32_t row)
+{
+    for (uint32_t col = 0; col < 7u; col++) draw_cc_macro_cell(i, row, col);
+}
+
+static void draw_cc_macro_position(void)
+{
+    cv_begin(48, 20, T_BG);
+    if (cm_count > 4u) {
+        char location[16];
+        fmt_int(location, cm_pick + 1u);
+        str_cpy(location + str_len(location), "/", sizeof location - str_len(location));
+        fmt_int(location + str_len(location), cm_count);
+        cv_text(0, CAP_IN(S, 14), &AF_S, location, T_ACCENT);
+    }
+    cv_blit(192, 198);
+}
+
 static void draw_cc_macros(void)
 {
     static const int16_t x[7] = {4, 27, 50, 112, 146, 194, 220};
@@ -2141,47 +2198,17 @@ static void draw_cc_macros(void)
     cv_begin(240, 16, T_BG);
     for (uint32_t c = 0; c < 7u; c++) cv_text(x[c], CAP_IN(S, 14), &AF_S, headings[c], T_DIM);
     cv_blit(0, 43);
-    for (uint32_t row = 0; row < 4u; row++) {
-        uint32_t i = first + row;
-        char cc[8], ch[8], src[12], val[16];
-        const uint8_t *r = cm_rows[i];
-        uint32_t ti = r[1] >> 4, id = r[3], engine = r[2];
-        uint16_t ink = i == cm_pick ? T_THEME : T_TEXT;
-        cv_begin(240, 34, i == cm_pick && cm_count ? T_RAISE : T_BG);
-        if (i < cm_count) {
-            fmt_int(cc, r[0]); fmt_int(ch, (r[1] & 15u) + 1u);
-            src[0] = 'T'; src[1] = (char)('1' + ti); src[2] = ':';
-            if (ti < NTRK && id < P_COUNT && engine < NENGINES) {
-                const char *label = param_desc_of(engine, id)->label;
-                str_cpy(src + 3, label ? label : "?", 7);
-            } else str_cpy(src + 3, "?", 7);
-            fmt_int(val, r[5]);
-            str_cpy(val + str_len(val), "-", sizeof val - str_len(val));
-            fmt_int(val + str_len(val), r[6]);
-            cv_text(x[0], CAP_IN(S, 20), &AF_S, cc, ink);
-            cv_text(x[1], CAP_IN(S, 20), &AF_S, ch, ink);
-            cv_text(x[2], CAP_IN(S, 20), &AF_S, src, ink);
-            cv_text(x[3], CAP_IN(S, 20), &AF_S, r[4] & CM_TGL ? "TGL" : "RNG", ink);
-            cv_text(x[4], CAP_IN(S, 20), &AF_S, val, ink);
-            cv_text(x[5], CAP_IN(S, 20), &AF_S, r[4] & CM_REV ? "Y" : "N", ink);
-            cv_text(x[6], CAP_IN(S, 20), &AF_S,
-                    !(r[4] & CM_ON) ? "N" : ti < NTRK && eng_idx(trk[ti].eng_req) != engine ? "S" : "Y", ink);
-        } else if (!i && !cm_count) {
-            cv_text(6, CAP_IN(S, 20), &AF_S, "NO MACROS - OCT+ TO ADD", T_DIM);
-        }
-        cv_blit(0, 59 + (int32_t)row * 34);
+    for (uint32_t row = 0; row < 4u; row++) draw_cc_macro_row(first + row, row);
+    if (!cm_count) {
+        cv_begin(240, 34, T_BG);
+        cv_text(6, CAP_IN(S, 20), &AF_S, "NO MACROS - OCT+ TO ADD", T_DIM);
+        cv_blit(0, 59);
     }
     cv_begin(240, 42, T_BG);
     cv_text(6, CAP_IN(S, 14), &AF_S, "OCT+ ADD  OCT- DELETE", T_DIM);
-    if (cm_count > 4u) {
-        char location[16];
-        fmt_int(location, cm_pick + 1u);
-        str_cpy(location + str_len(location), "/", sizeof location - str_len(location));
-        fmt_int(location + str_len(location), cm_count);
-        cv_text(192, CAP_IN(S, 14), &AF_S, location, T_ACCENT);
-    }
     cv_text(6, 20 + CAP_IN(S, 14), &AF_S, "K1 TYP K2 A K3 B K4 REV", T_TEXT);
     cv_blit(0, 198);
+    draw_cc_macro_position();
     ui.force = 0;
 }
 #endif
@@ -2414,6 +2441,8 @@ static void ui_draw_body(uint32_t counting)
 #if FELUCCA_NO_SEQUENCER
     static uint32_t live_rows[6];
     static uint8_t live_kind, live_track, live_bank;
+    static uint8_t cc_old[4][CM_ROW_SIZE], cc_status[4];
+    static uint8_t cc_open, cc_pick_old, cc_count_old, cc_delete_old, cc_wait_old, cc_first_old;
 #endif
     if (ui.hint_pg && ui.hint_pg != (ui.home ? 255u : ui.page + 1u)) {   /* (0.9.0) a layer's hint: its own page's only */
         ui.hint_pg = 0;
@@ -2427,9 +2456,46 @@ static void ui_draw_body(uint32_t counting)
     }
 #if FELUCCA_NO_SEQUENCER
     if (cm_ui_open && !ui.menu) {
-        if (ui.force) draw_cc_macros();
+        uint32_t first = (cm_pick / 4u) * 4u, changed = 0u;
+        uint32_t masks[4] = {0u};
+        int full = !cc_open || first != cc_first_old || cm_count != cc_count_old ||
+                   cm_delete != cc_delete_old || cm_wait != cc_wait_old;
+        for (uint32_t row = 0; row < 4u; row++) {
+            uint32_t i = first + row;
+            const uint8_t *r = cm_rows[i], *old = cc_old[row];
+            uint32_t ti = r[1] >> 4;
+            uint8_t status = !(r[4] & CM_ON) ? 0u :
+                ti < NTRK && eng_idx(trk[ti].eng_req) != r[2] ? 2u : 1u;
+            if (r[0] != old[0]) masks[row] |= 1u << 0;
+            if (r[1] != old[1]) masks[row] |= (1u << 1) | (1u << 2);
+            if (r[2] != old[2] || r[3] != old[3]) masks[row] |= 1u << 2;
+            if ((r[4] ^ old[4]) & CM_TGL) masks[row] |= 1u << 3;
+            if (r[5] != old[5] || r[6] != old[6]) masks[row] |= 1u << 4;
+            if ((r[4] ^ old[4]) & CM_REV) masks[row] |= 1u << 5;
+            if (status != cc_status[row]) masks[row] |= 1u << 6;
+            if (cc_open && cm_pick != cc_pick_old &&
+                (i == cm_pick || i == cc_pick_old)) masks[row] = 0x7fu;
+            changed |= masks[row];
+            memcpy(cc_old[row], r, CM_ROW_SIZE);
+            cc_status[row] = status;
+        }
+        if (full || (ui.force && !changed && cm_pick == cc_pick_old)) draw_cc_macros();
+        else {
+            for (uint32_t row = 0; row < 4u; row++)
+                for (uint32_t col = 0; col < 7u; col++)
+                    if (masks[row] & (1u << col)) draw_cc_macro_cell(first + row, row, col);
+            if (cm_pick != cc_pick_old) draw_cc_macro_position();
+            ui.force = 0;
+        }
+        cc_open = 1u;
+        cc_first_old = (uint8_t)first;
+        cc_pick_old = cm_pick;
+        cc_count_old = cm_count;
+        cc_delete_old = cm_delete;
+        cc_wait_old = cm_wait;
         return;
     }
+    cc_open = 0u;
     if (ui.drum_perf_open || ui.drum_map_open) {
         uint8_t kind = ui.drum_perf_open ? 2u : 1u;
         uint8_t bank = ui.drum_map_pad < 6u ? 0u : 6u;
