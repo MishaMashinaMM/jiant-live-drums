@@ -1879,7 +1879,7 @@ static void draw(int s)
     }
     if (s == S_SPLASH) {                          /* static Jiant Live power-on screen */
         static const char WANT[] =
-            "JIANT LIVE|FM1 PERFORMANCE FIRMWARE|orig: Juan Jiant | mod: Misha Mashina|v0.2";
+            "JIANT LIVE|FM1 PERFORMANCE FIRMWARE|orig: Juan Jiant | mod: Misha Mashina|v0.3";
         splash_seen[0] = 0;
         in_splash = 1;
         draw_splash();
@@ -1900,7 +1900,7 @@ static void draw(int s)
             nfind++;
         } else {
             static uint8_t said;
-            if (!said++) printf("ui_render: static JIANT LIVE v0.2 splash text and visible ink ok\n");
+            if (!said++) printf("ui_render: static JIANT LIVE v0.3 splash text and visible ink ok\n");
         }
         return;
     }
