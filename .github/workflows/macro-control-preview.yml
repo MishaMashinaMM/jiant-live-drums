@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Branch-only experimental artifacts. Never deploy GitHub Pages or update main.
+name: macro-control preview
+on:
+  push:
+    branches: [macro-control]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install Pillow==12.3.0 numpy==2.3.5 fonttools==4.61.1
+      - run: python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()"
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.11
+      - name: Build and smoke-test live emulator
+        run: |
+          FELUCCA_NO_SEQUENCER=1 sh web/emu/build.sh
+          node web/emu/live-drums-wasm-test.mjs build/emu/felucca.wasm
+      - name: Run live-drum regressions
+        run: bash tests/run_live_drum_tests.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jld-macro-control-emulator-${{ github.sha }}
+          path: build/emu/
+          if-no-files-found: error
+  firmware:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install Pillow==12.3.0 numpy==2.3.5 fonttools==4.61.1
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.jieli
+            ~/fw-AC79_AIoT_SDK/cpu/wl82/tools
+          key: jieli-ac79-v1.2.1
+      - name: Fetch JieLi reference toolchain and SDK files
+        run: |
+          retry() { for d in 0 5 15 30 60; do sleep "$d"; "$@" && return 0; done; return 1; }
+          T="$HOME/fw-AC79_AIoT_SDK/cpu/wl82/tools"
+          [ -e "$HOME/.jieli/toolchain" ] || retry sh tools/get_toolchain.sh "$HOME/.jieli"
+          if [ ! -s "$T/uboot.boot" ] || [ ! -s "$T/cfg_tool.bin" ] || [ ! -s "$T/cfg/eq_cfg_hw.bin" ]; then
+            git clone --filter=blob:none --no-checkout https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
+            cd "$HOME/fw-AC79_AIoT_SDK"
+            git sparse-checkout set --no-cone /cpu/wl82/tools/uboot.boot /cpu/wl82/tools/cfg_tool.bin /cpu/wl82/tools/cfg/eq_cfg_hw.bin
+            retry git checkout d179b4484759423312073f5fbb232501aa491047
+          fi
+          test -s "$T/uboot.boot" && test -s "$T/cfg_tool.bin" && test -s "$T/cfg/eq_cfg_hw.bin"
+      - name: Build experimental FM1 firmware and verify flash/RAM layout
+        env:
+          FELUCCA_NO_SEQUENCER: '1'
+          AC79_SDK: /home/runner/fw-AC79_AIoT_SDK
+          JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
+        run: |
+          set -o pipefail
+          python3 tools/build.py | tee firmware-build.log
+      - name: Record source and checksum
+        run: |
+          printf '%s\n' "$GITHUB_SHA" > build/SOURCE_COMMIT
+          (cd build && sha256sum felucca.fwsc > SHA256SUMS)
+      - name: Prepare isolated local FM1 test installer
+        run: |
+          python3 web/make_site.py build/felucca.fwsc "v0.2-macro-${GITHUB_SHA::7}-preview" build/device-test-site
+          cp docs/macro-control-device-test.md build/device-test-site/READ-ME-FIRST.md
+          cp build/SOURCE_COMMIT build/SHA256SUMS build/device-test-site/firmware/
+          (cd build/device-test-site/firmware && sha256sum felucca-*.fwsc > PACKAGE-SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jld-macro-control-firmware-${{ github.sha }}
+          path: |
+            build/felucca.fwsc
+            build/felucca.bin
+            build/SHA256SUMS
+            build/SOURCE_COMMIT
+            firmware-build.log
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jld-macro-control-local-installer-${{ github.sha }}
+          path: build/device-test-site/
+          if-no-files-found: error

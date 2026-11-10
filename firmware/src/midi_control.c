@@ -283,6 +283,21 @@ static void midi_cc_set(track_t *t, uint32_t id, uint32_t value)
 #define ML_N 32u
 #define ML_OLD_N 10u
 #define FELUCCA_MIDI_LEARN 1
+/* JLD REC MIDI macros: separate from the legacy 32-entry MIDI LEARN table.
+ * Seven bytes per row: CC, (track << 4 | incoming channel-1), engine,
+ * parameter id, flags (type/reverse/enabled), endpoints A and B.
+ * Kept with the project. REC editing is wired separately. */
+#define CM_N 4u
+#define CM_ROW_SIZE 7u
+#define CM_TGL 1u
+#define CM_REV 2u
+#define CM_ON 4u
+static uint8_t cm_count;
+static uint8_t cm_rows[CM_N][CM_ROW_SIZE];
+/* REC editor state is deliberately transient; the rows alone are project data.
+ * Capture happens in the same MIDI receive path as normal CC handling. */
+static uint8_t cm_ui_open, cm_pick, cm_delete, cm_wait;
+static uint8_t cm_heard_cc, cm_heard_ch;
 #define ML_E0 120u
 typedef char ml_ids_fit[P_E0 < ML_E0 && P_COUNT - P_E0 <= 256u - ML_E0 && NTRK <= 8 ? 1 : -1];
 static uint8_t ml_table[3u * ML_N];          /* runtime mirror: first ten migrate from PER5, rest from PER6 */
@@ -325,6 +340,34 @@ static int __attribute__((noinline)) midi_learned(uint32_t cc, uint32_t value)
     return hit;
 }
 
+/* A saved macro is bound to the engine present at capture time. Incompatible
+ * track presets suspend the assignment without clearing its saved ON flag. */
+static int __attribute__((noinline)) cm_apply(uint32_t ch, uint32_t cc, uint32_t value)
+{
+    uint32_t i, hit = 0;
+    for (i = 0; i < cm_count && i < CM_N; i++) {
+        const uint8_t *r = cm_rows[i];
+        uint32_t ti = r[1] >> 4, eng = r[2], id = r[3];
+        const param_desc_t *d;
+        uint32_t a, b, out;
+        if (r[0] != cc || (r[1] & 15u) != ch || !(r[4] & CM_ON) ||
+            ti >= NTRK || eng >= NENGINES || id >= P_COUNT ||
+            r[4] > (CM_TGL | CM_REV | CM_ON) || r[5] > 127u || r[6] > 127u ||
+            eng_idx(trk[ti].eng_req) != eng)
+            continue;
+        d = track_desc(&trk[ti], id);
+        if (!d || !d->label || d->label[0] == '-' || d->max <= d->min)
+            continue;
+        a = r[4] & CM_REV ? r[6] : r[5];
+        b = r[4] & CM_REV ? r[5] : r[6];
+        out = r[4] & CM_TGL ? (value < 64u ? a : b) :
+              (a * (127u - value) + b * value + 63u) / 127u;
+        midi_cc_set(&trk[ti], id, out);
+        hit = 1;
+    }
+    return hit;
+}
+
 static void __attribute__((noinline)) midi_cc_map(track_t *t, uint32_t cc, uint32_t value)
 {
     uint32_t i, id = 0xFFFFu, e;
@@ -346,6 +389,21 @@ static void midi_control(uint32_t ch, uint32_t cc, uint32_t value)
 {
     midi_channel_t *c = midi_channel(ch);
     uint32_t i, mask;
+#if FELUCCA_NO_SEQUENCER
+    if (cm_wait == 1u) {                              /* REC > ADD: capture CC and its actual incoming channel */
+        if (ml_free_cc(cc)) {
+            cm_heard_cc = (uint8_t)cc;
+            cm_heard_ch = (uint8_t)ch;
+            cm_wait = 2u;                              /* next: select track/page, turn parameter knob */
+            cm_ui_open = 0u;
+            return;
+        }
+    }
+#endif
+    /* An armed legacy learner must still capture the incoming CC. Otherwise
+     * enabled macros take priority over learned mappings of the same CC. */
+    if (!ml.arm && cm_apply(ch, cc, value))
+        return;
     if (midi_learned(cc, value))                   /* (0.9.12) MIDI LEARN's (a learned CC is the user's) */
         return;
     switch (cc) {

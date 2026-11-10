@@ -355,13 +355,22 @@ static void ui_leds(void)
     }
     if (!ui.layer || FAM_BTN[fam] != layer_btn())
         led_put(nl, panel.btn[FAM_BTN[fam]], 1);
+#if FELUCCA_NO_SEQUENCER
+    /* The transport keys now open live MIDI editors. Light the active editor's
+     * key and leave the others available at the normal idle LED brightness. */
+    led_put(nl, panel.btn[B_SEQ], ui.drum_map_open != 0u);
+    led_put(nl, panel.btn[B_PLAY], ui.drum_perf_open != 0u);
+    led_put(nl, panel.btn[B_REC], cm_ui_open != 0u);
+#endif
     if ((k = arp_led()) != 2u && (!ui.layer || layer_btn() != B_ARP))
         led_put(nl, panel.btn[B_ARP], FAM_BTN[fam] == B_ARP ? !k : (int)k);   /* (on ARP's page: dark flashes) */
     if (!ui.layer && (perf_latched || perf_m[0] || perf_m[1] || perf_m[2] || perf_m[3]))
         led_put(nl, panel.btn[B_FX], 1);                /* FX LATCH: lit while an effect or a macro is on (0.9.14) */
     if (ui.layer)                                       /* the layer's button breathes while its map is up */
         led_put(nb, panel.btn[layer_btn()], 1);
+#if !FELUCCA_NO_SEQUENCER
     led_put(nl, panel.btn[B_REC], song.rec != 0u && ui.layer != LAYER_REC);   /* (its layer: it breathes) */
+#endif
     k = oct_leds();
     led_put(nl, panel.btn[B_OCTDN], (int)(k & 1u));
     led_put(nl, panel.btn[B_OCTUP], (int)((k >> 1) & 1u));
@@ -412,20 +421,6 @@ static void ui_leds(void)
     }
     for (c = 0; c < FM1_NCOL; c++)
         fm1_led[c] = nl[c];
-#if FELUCCA_NO_SEQUENCER
-    /* The removed transport buttons should not appear available in any LED mode. */
-    {
-        static const uint8_t OFF_BTN[] = {B_SEQ, B_REC, B_PLAY};
-        for (k = 0; k < sizeof OFF_BTN / sizeof OFF_BTN[0]; k++) {
-            uint32_t pos = panel.btn[OFF_BTN[k]];
-            led_clear(fm1_led, pos);
-            led_clear(fm1_led_dim, pos);
-            led_clear(fm1_led_mid, pos);
-            led_clear(fm1_led_hi, pos);
-            led_clear(fm1_led_breath, pos);
-        }
-    }
-#endif
 }
 
 /* ---------------------------------------------------------- input --- */
@@ -478,10 +473,48 @@ static void lfo_view_put(track_t *t, int mode, int32_t v)
 }
 
 /* a knob turned parameter id of track t: recorded (AUTOMATION), and picked by MIDI LEARN (0.9.12, midi_learn.c) */
+/* The destination-capture detents must not also edit the new REC macro. Wait
+ * until ALL editing encoders have been still for a short interval. */
+static uint8_t cm_settle;
+static uint32_t cm_settle_ms;
+static void cm_knob_cap(track_t *t, uint32_t id)
+{
+#if FELUCCA_NO_SEQUENCER
+    const param_desc_t *d;
+    uint32_t ti = trk_index(t), eng = eng_idx(t->eng_req);
+    uint8_t *r;
+    if (cm_wait != 2u || cm_count >= CM_N || ti >= NTRK || id >= P_COUNT)
+        return;
+    d = track_desc(t, id);
+    if (!d || !d->label || d->label[0] == '-' || d->max <= d->min)
+        return;
+    fm1_irq_off();
+    r = cm_rows[cm_count];
+    r[0] = cm_heard_cc;
+    r[1] = (uint8_t)((ti << 4) | cm_heard_ch);
+    r[2] = (uint8_t)eng;
+    r[3] = (uint8_t)id;
+    r[4] = CM_ON;                                      /* default: range 0..127, not reversed, ON */
+    r[5] = 0;
+    r[6] = 127;
+    cm_pick = cm_count++;
+    cm_wait = 0;
+    cm_ui_open = 1;
+    cm_delete = 0;
+    cm_settle = 1u;
+    cm_settle_ms = fm1_ms;
+    fm1_irq_on();
+    ui.force = 1u;
+    ui_message("MACRO ADDED");
+#else
+    (void)t; (void)id;
+#endif
+}
 static void knob_cap(track_t *t, uint32_t id)
 {
     motion_capture(t, id, t->p[id]);
-    ml_knob(t, id);
+    cm_knob_cap(t, id);
+    if (!cm_ui_open) ml_knob(t, id);
 }
 
 /* MIXER page: KNOB 1 LEVEL, 2 PAN, 3 REV send of the selected track (the track itself is ALGORITHM's, on every page),
@@ -1291,7 +1324,8 @@ static void edit_param(uint32_t slot, int32_t steps)
             (int32_t)drumlab_global[ti][field] + accel(EN_K1 + slot, steps, 100), 0, 100);
         fm1_irq_on();
         ui.force = 1u;
-        ml_knob(TSEL, P_E0 + field);
+        cm_knob_cap(TSEL, P_E0 + field);
+        if (!cm_ui_open) ml_knob(TSEL, P_E0 + field);
         return;
     }
     if (pg->graph == GR_MOD && slot == 0u) {             /* MOD: KNOB 1 the slot, 2..4 its SRC DST AMT */
@@ -2139,9 +2173,11 @@ static void ui_input_frame(void)
     if (scr_input(pressed, notes))                      /* MENU > SCREEN OFF: dark, or the wake gesture: swallowed */
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
 #if FELUCCA_NO_SEQUENCER
-    /* Stage 22B: the freed SEQ button opens the live drum MIDI map. The
-     * transport remains disabled, with no sequencer layers or combinations. */
+    /* Freed REC/SEQ/PLAY buttons open three independent live editors. REC
+     * captures CC first; after capture normal sound pages remain accessible
+     * until a parameter knob establishes the immutable destination. */
     {
+        static uint8_t cm_wait_last;
         /* These are ordinary tap-opened pages. A different family button
          * leaves them and continues through the usual navigation below. */
         uint32_t navigation = 0u;
@@ -2151,6 +2187,10 @@ static void ui_input_frame(void)
         if (pressed & navigation) {
             ui.drum_map_open = 0u;
             ui.drum_perf_open = 0u;
+            if (pressed & ~(1u << panel.btn[B_REC])) {
+                cm_ui_open = 0u;
+                if (cm_wait == 1u) cm_wait = 0u;
+            }
             ui.force = 1u;
         }
         uint32_t disabled = (1u << panel.btn[B_SEQ]) | (1u << panel.btn[B_REC]) |
@@ -2158,11 +2198,28 @@ static void ui_input_frame(void)
         if ((pressed & (1u << panel.btn[B_SEQ])) && !ui.menu && !dlg_on() && !name_on()) {
             ui.drum_map_open ^= 1u;
             if (ui.drum_map_open) ui.drum_perf_open = 0;
+            cm_ui_open = 0;
+            if (cm_wait == 1u) cm_wait = 0u;
             ui.force = 1u;
         }
         if ((pressed & (1u << panel.btn[B_PLAY])) && !ui.menu && !dlg_on() && !name_on()) {
             ui.drum_perf_open ^= 1u;
             if (ui.drum_perf_open) ui.drum_map_open = 0;
+            cm_ui_open = 0;
+            if (cm_wait == 1u) cm_wait = 0u;
+            ui.force = 1u;
+        }
+        if ((pressed & (1u << panel.btn[B_REC])) && !ui.menu && !dlg_on() && !name_on()) {
+            if (cm_wait == 2u) cm_wait = 0u;          /* REC cancels an unfinished destination capture */
+            cm_ui_open ^= 1u;
+            cm_delete = 0;
+            if (!cm_ui_open && cm_wait == 1u) cm_wait = 0u;
+            ui.drum_map_open = ui.drum_perf_open = 0u;
+            ui.force = 1u;
+        }
+        if (cm_wait != cm_wait_last) {
+            if (cm_wait == 2u) ui_say("CC CAPTURED", "TURN A PARAMETER KNOB");
+            cm_wait_last = cm_wait;
             ui.force = 1u;
         }
         pressed &= ~disabled;
@@ -2170,6 +2227,64 @@ static void ui_input_frame(void)
          * physical key state maintained by fm1__key(): clearing it while a
          * button remains held manufactures another press on the next scan,
          * repeatedly toggling the map/performance screen. */
+    }
+    if (cm_ui_open && !ui.menu) {
+        uint32_t up = (pressed & (1u << panel.btn[B_OCTUP])) != 0u;
+        uint32_t down = (pressed & (1u << panel.btn[B_OCTDN])) != 0u;
+        if (cm_pick >= cm_count) cm_pick = cm_count ? cm_count - 1u : 0u;
+        if (cm_delete) {
+            if (up && cm_count) {
+                fm1_irq_off();
+                for (uint32_t i = cm_pick; i + 1u < cm_count; i++)
+                    for (uint32_t j = 0; j < CM_ROW_SIZE; j++) cm_rows[i][j] = cm_rows[i + 1u][j];
+                cm_count--;
+                for (uint32_t j = 0; j < CM_ROW_SIZE; j++) cm_rows[cm_count][j] = 0;
+                fm1_irq_on();
+                cm_delete = 0u;
+                ui.force = 1u;
+            } else if (down) { cm_delete = 0u; ui.force = 1u; }
+        } else if (cm_wait == 1u) {
+            if (down) { cm_wait = 0u; ui.force = 1u; }
+        } else if (down && cm_count) {
+            cm_delete = 1u;
+            ui.force = 1u;
+        } else if (up) {
+            if (cm_count < CM_N) { cm_wait = 1u; ui.force = 1u; }
+            else ui_message("FOUR MACROS FULL");
+        }
+        if (cm_settle) {
+            int32_t moved = panel_enc(EN_ALGO);
+            for (uint32_t j = 0; j < 4u; j++) moved |= panel_enc(EN_K1 + j);
+            if (moved) cm_settle_ms = fm1_ms;
+            if (fm1_ms - cm_settle_ms >= 160u) cm_settle = 0u;
+            panel_enc(EN_SELECT);
+            panel_enc(EN_PRESET);
+            return;
+        }
+        if ((s = panel_enc(EN_SELECT)) != 0 && !cm_delete && cm_wait != 1u && cm_count) {
+            cm_pick = (uint8_t)clamp((int32_t)cm_pick + (s > 0 ? 1 : -1), 0, (int32_t)cm_count - 1);
+            ui.force = 1u;
+        }
+        if (cm_count && !cm_delete && cm_wait != 1u) {
+            uint8_t *r = cm_rows[cm_pick];
+            int32_t a = panel_enc(EN_ALGO), k1 = panel_enc(EN_K1);
+            int32_t k2 = panel_enc(EN_K2), k3 = panel_enc(EN_K3), k4 = panel_enc(EN_K4);
+            if (a || k1 || k2 || k3 || k4) {
+                fm1_irq_off();
+                if (a) r[4] = (uint8_t)((r[4] & ~CM_ON) | (a > 0 ? CM_ON : 0u));
+                if (k1) r[4] = (uint8_t)((r[4] & ~CM_TGL) | (k1 > 0 ? CM_TGL : 0u));
+                if (k2) r[5] = (uint8_t)clamp((int32_t)r[5] + accel(EN_K2, k2, 127), 0, 127);
+                if (k3) r[6] = (uint8_t)clamp((int32_t)r[6] + accel(EN_K3, k3, 127), 0, 127);
+                if (k4) r[4] = (uint8_t)((r[4] & ~CM_REV) | (k4 > 0 ? CM_REV : 0u));
+                fm1_irq_on();
+                ui.force = 1u;
+            }
+        } else {
+            panel_enc(EN_ALGO);
+            for (uint32_t j = 0; j < 4u; j++) panel_enc(EN_K1 + j);
+        }
+        panel_enc(EN_PRESET);
+        return;
     }
     if (ui.drum_perf_open) {
         uint32_t ti = song.sel, lane = ui.drum_map_pad;

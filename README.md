@@ -11,9 +11,9 @@
 
 The links above are the GitHub Pages routes for this separate Drums repository. The repository includes the Drums-specific browser emulator, firmware installer, editor, and an inherited interactive manual. The inherited manual still describes some original sequencer behavior and is **not a fully updated Drums control reference**.
 
-JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbral drum sound module**. It extends DRUM-X, adds DRUM-LAB, expands MIDI routing and CC control, and keeps the eight-voice shared pool. The **sequencer is disabled** in this edition (`FELUCCA_NO_SEQUENCER=1`); original Jiant Live remains a separate project.
+JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbral drum sound module**. It extends DRUM-X, adds DRUM-LAB, expands MIDI routing and CC control, and keeps the eight-voice shared pool. The **sequencer is disabled** in this edition (`FELUCCA_NO_SEQUENCER=1`); its SEQ, PLAY, and REC buttons open dedicated live-MIDI pages. Original Jiant Live remains a separate project.
 
-> **Current status:** experimental, **not an official Juan Jiant release**. Ten dedicated live-drum host test suites and update-package simulations pass. **A physical FM1 has successfully installed and booted Jiant Live Drums via the dedicated web installer.** DRUM-LAB editing and sound output, plus the SEQ/PLAY page controls and flicker-free knob updates (Stage 29C), have been checked on that device. This is **limited device testing**, not a complete hardware qualification. Back up your data and prepare a recovery method before installing. Do not use the original JIANT web installer to install Drums.
+> **Current status:** experimental, **not an official Juan Jiant release**. Dedicated live-drum host tests and update-package simulations pass. **A physical FM1 has successfully installed and booted Jiant Live Drums via the dedicated web installer**, including the v0.2 macro-control update. DRUM-LAB sound and editing, SEQ/PLAY navigation, all three SEQ/PLAY/REC button LEDs, and external-MIDI CC macro control have been checked on that device. This is **limited device testing**, not a complete hardware qualification. Back up your data and prepare a recovery method before installing. Do not use the original JIANT web installer to install Drums.
 
 ## What's different from JIANT / Jiant Live
 
@@ -21,10 +21,12 @@ JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbra
 | --- | --- |
 | MIDI input per track | Independent **RX channel 1–16** for each of six tracks. Two or more tracks may share a channel and sound together. |
 | MIDI routing | **1-4**, **1-6** (assigned-channel routing), or **SEL** (selected-track routing). TRACKS 4/6 still determines how many tracks are active. |
-| MIDI LEARN | **32 parameter destinations** rather than 10. One incoming CC can control several parameters on different tracks at once. |
+| MIDI LEARN | **32 parameter destinations** rather than 10. One incoming CC can control several parameters on different tracks at once; MIDI Learn remains available alongside macros. |
+| Project MIDI macros | Up to **four** per project, with captured MIDI CC/channel and track-engine-parameter destination; RNG/TGL behavior, editable 0–127 endpoints, reverse, and independent ON/OFF. |
+| Project receive channels | The six **GLO → MIXER** RX channel assignments are saved and loaded with each project (legacy projects retain existing channels). |
 | DRUM-X | **12 independent sounds** over one chromatic octave, including extra B2, S2, O2 and T2 instances with the original editing controls. |
 | DRUM-LAB | **12 independent synthesized pads** with selectable sound types, ten per-pad sound parameters, three LEVELS pages, and eight kit-wide proportional controls. |
-| Former SEQ and PLAY buttons | **SEQ** opens the editable **DRUM MIDI MAP**; **PLAY** opens **DRUM PERFORMANCE** (velocity response, choke and retrigger). Neither starts a sequencer or transport. |
+| Repurposed SEQ, PLAY and REC buttons | **SEQ** opens **DRUM MIDI MAP**, **PLAY** opens **DRUM PERFORMANCE**, and **REC** opens **MIDI CC MACROS**. The three buttons illuminate with their active live pages; none starts the removed sequencer/transport. |
 | Polyphony | **Eight shared voices** across all tracks and both drum engines. |
 | Display | Static **JIANT LIVE DRUMS** startup splash, default JIANT presentation, larger UI retained; decorative screen animations disabled. |
 | ABOUT | JIANT LIVE DRUMS v0.2 identification and purpose, while retaining original author and license credits. |
@@ -44,7 +46,15 @@ Each track has an independently saved RX channel. The default assignments are T1
 
 **Example:** assign both T1 and T2 to channel 1, choose ROUTE=1-6 with TRACKS=6, and play channel 1 from a keyboard. Both tracks receive the notes. Duplicate RX channels are intentional. Switching routing, assignments or active track count releases owned notes to avoid stuck notes.
 
-The six RX settings are **global** (not individual project or sound settings), persist across restart and survive changing projects or presets.
+The six RX settings are **saved with each project**. Loading a newly saved project restores its RX channels; older project files without RX data retain the current channel assignments. The original global settings remain available as the fallback for older projects.
+
+**Project MIDI CC macros:** each project holds up to **four** CC macro assignments (28 bytes for four entries, plus a three-byte serialized header). Active macros respond to incoming CC messages: linear range or two-value toggle, with optional reverse and independent bypass. Each row targets a saved track/engine/parameter, automatically suspending when the track uses another engine without losing its enabled setting. Multiple rows may share a CC and channel. The original 32-destination MIDI Learn remains available (active macros take priority on a matching CC).
+
+**REC macro editor (live build):** tap **REC** to view the macro table. Press **OCT+** to add: send a CC from your external controller (its incoming channel is captured automatically), then navigate to the desired track and sound page and turn the target parameter's knob. The macro is added with **RNG 0–127, REV OFF, ON** and the REC table reopens. **SELECT** chooses an existing row; **ALGORITHM** turns it ON/OFF; **K1** chooses RNG/TGL, **K2/K3** set the two endpoints, and **K4** toggles reverse. Turn ALGORITHM/K1/K4 clockwise for ON/TGL/REV and counterclockwise for OFF/RNG/no reverse. To delete, select a row, press **OCT−**, then **OCT+** to confirm or **OCT−** to cancel. REC cancels an unfinished assignment. The captured **CC/CH/SRC** are intentionally read-only; delete and recreate a row to change them. The ON column shows **Y** for active, **N** for disabled, and **S** when an enabled assignment is temporarily suspended by an incompatible engine. The assignment is stored with its project when saved. The original JIANT M1–M4 sound-engine macros are unchanged; the existing 32-destination MIDI Learn remains independently available.
+
+After a new assignment, REC briefly ignores residual encoder detents until the knobs settle. This prevents the knob movement used to select the destination from also changing the new macro's default RNG type or endpoints.
+
+**Hardware testing:** the isolated `macro-control` preview installer was successfully used on an FM1 for the new REC page, external MIDI CC macros, and SEQ/PLAY/REC LEDs. The separate preview workflow and [device-test checklist](docs/macro-control-device-test.md) remain available for future experimental builds. Once the updated `main` GitHub Pages workflow completes, the normal public installer will carry these features.
 
 ### MIDI LEARN: 32 destinations and shared CC
 
@@ -108,9 +118,9 @@ With the sequencer disabled, these buttons open two dedicated **per-track, per-p
 | **SEQ → DRUM MIDI MAP** | **ALGO** chooses the track; **SELECT** chooses a pad; **OCT− / OCT+** jump between pads 1–6 and 7–12. **K1** edits that pad's incoming MIDI note (**0–127**), **K2** its pan (**L64–R64**, C=center), and **K3** its pitch offset (**−24 to +24 semitones**). K4 is unused. |
 | **PLAY → DRUM PERFORMANCE** | Same track, pad and six-pad-bank selection. **K1 CURVE** selects velocity curve **LIN, SOFT, HARD or FIX**; **K2 V>S** sets velocity-to-sound response (**0–127**); **K3 CH** assigns a choke group (**--**, G1–G4); **K4 RETR** chooses **OVR** (OVERLAP) or **RST** (RESTART). |
 
-Six pads are visible at a time, and the selected row is highlighted. Each page uses the full screen. Press **SEQ** or **PLAY** again to close its page; pressing the other button switches directly between them. Tapping a regular page-family button (such as **EDIT** or **ENV**) or **HOME** leaves the drum page immediately. **REC** is disabled in this live-only build.
+Six pads are visible at a time, and the selected row is highlighted. Each page uses the full screen. Press **SEQ** or **PLAY** again to close its page; pressing the other button switches directly between them. Tapping a regular page-family button (such as **EDIT** or **ENV**) or **HOME** leaves the drum page immediately. **REC** opens the project-based MIDI CC MACROS page, as described above.
 
-On the tested FM1, these pages open with a single press and remain stable while idle. Turning a K knob updates the affected pad row without blinking or clearing the entire screen (Stage 29C, `b9654ee`).
+On the tested FM1, these pages open with a single press and remain stable while idle. The SEQ, PLAY and REC LEDs illuminate when their live pages are active. Turning a K knob updates the affected pad row without blinking or clearing the entire screen (Stage 29C, `b9654ee`).
 
 - **OVR / OVERLAP** is the default: a repeated hit may overlap the previous hit, subject to the eight-voice limit.
 - **RST / RESTART** retriggers the selected pad instead of letting the previous hit continue.
@@ -173,10 +183,10 @@ The Drums emulator does not load a sample bank or offer sample-kit playback. It 
 
 ## Status and safety
 
-- **Host regression:** `bash tests/run_live_drum_tests.sh` reports `ALL LIVE DRUM TESTS PASSED` (ten suites, including Stage 27B stress).
+- **Host regression:** the live-drum host regression suite covers drum engines, MIDI routing, project serialization, macro control, and Stage 27B stress. The `macro-control` emulator and firmware build jobs passed on November 10, 2026.
 - **Published Stage 29C firmware:** `felucca-v0.2-b9654ee.fwsc`, SHA-256 `685927239e620225666d8dba87e807fb5936c012e18aeec5ef9e4325b7dc317c` (downloaded from GitHub Pages on November 9, 2026). This identifies the tested published package; the older local `build/felucca.fwsc` checksum `1c7647ff...` belongs to a different build.
 - **Update simulation:** Stage 29C OTA staging, CRC validation, allowed flash boundaries and the Stage 29B → 29C loader update passed host tests. These checks do **not** guarantee recovery from a failed physical update.
-- **Physical FM1 testing (November 9, 2026):** dedicated web-installer installation and reboot succeeded; Jiant Live Drums started on the device. DRUM-LAB editing/sound was exercised, and SEQ/PLAY page entry and knob-driven display updates were confirmed working without the previous blinking after Stage 29C. Broader MIDI, sound, persistence, and long-duration reliability testing remain open.
+- **Physical FM1 testing (November 9–10, 2026):** dedicated installer flashes and reboots succeeded, including the v0.2 macro-control build. DRUM-LAB editing/sound, SEQ/PLAY pages, knob-driven display updates, SEQ/PLAY/REC LEDs and external-controller MIDI CC macros were confirmed on the device. Macro save/load, reverse/toggle/range controls, engine-compatibility suspension, and per-project RX channel persistence were tested in the emulator. Broader physical persistence, MIDI combinations and long-duration reliability testing remain open.
 - **Safety:** user projects/sound banks/settings were backed up externally before installation. A fully verified physical recovery procedure is still needed. The dedicated GitHub Pages installer is deployed, but availability does not imply that every device or upgrade path is tested.
 
 For regression testing in the development environment:

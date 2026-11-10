@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #ifndef JIANT_MIDI_RX_H
 #define JIANT_MIDI_RX_H
-/* Global receive-only setup. Never part of a sound or project. One-based channels. */
+/* Current receive-only setup. New projects save it; older projects without an RX
+ * block keep the global fallback from settings. One-based channels. */
 static uint8_t midi_rx[6] = {1, 2, 3, 4, 5, 6};
 static uint32_t midi_rx_channel(uint32_t track)
 {
