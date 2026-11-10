@@ -46,7 +46,7 @@ Each track has an independently saved RX channel. The default assignments are T1
 
 On the experimental `macro-control` branch, the six RX settings are **saved with each project**. Loading a newly saved project restores its RX channels; older project files without RX data retain the current channel assignments. The original global settings remain available as the fallback for older projects. The published `main` firmware still uses global RX settings.
 
-**Experimental CC macro development (`macro-control` branch):** the project format now reserves a compact table for up to **four** CC macro assignments (28 bytes for four entries, plus a three-byte serialized header). Existing projects load with an empty table, and the original 32-destination MIDI Learn system remains unchanged. This is storage groundwork only: REC editing and macro CC processing are **not implemented yet**.
+**Experimental CC macro development (`macro-control` branch):** each project can hold up to **four** CC macro assignments (28 bytes for four entries, plus a three-byte serialized header). Active macros now respond to incoming CC messages: linear range or two-value toggle, with optional reverse and independent bypass. Each row targets a saved track/engine/parameter, and is automatically suspended when that track uses another engine without losing its enabled setting. Multiple rows may share a CC and channel. The original 32-destination MIDI Learn remains available (active macros take priority on a matching CC). **The REC screen for creating and editing macro rows is still under development.**
 
 ### MIDI LEARN: 32 destinations and shared CC
 

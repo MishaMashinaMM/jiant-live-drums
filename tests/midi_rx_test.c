@@ -12,6 +12,7 @@ static void reset_rx(void)
     memset(midi_owners, 0, sizeof midi_owners); memset(kb_on, 0, sizeof kb_on);
     memset(dxo_n, 0, sizeof dxo_n);
     memset(ml_table, 0, sizeof ml_table);
+    cm_count = 0; memset(cm_rows, 0, sizeof cm_rows);
     host_tracks_init();
     for (uint32_t i = 0; i < NTRK; i++) {
         midi_rx[i] = (uint8_t)(i + 1u);
@@ -37,6 +38,45 @@ static int gate_rx(uint32_t t, uint32_t note)
 }
 int main(void)
 {
+    reset_rx();
+    /* Four project macro rows: two destinations share CC40/channel 1.
+     * A third one exercises reverse, the fourth starts bypassed. */
+    cm_count = 4;
+    cm_rows[0][0] = 40; cm_rows[0][1] = 0; cm_rows[0][2] = trk[0].eng_req;
+    cm_rows[0][3] = P_LEVEL; cm_rows[0][4] = CM_ON; cm_rows[0][5] = 10; cm_rows[0][6] = 80;
+    cm_rows[1][0] = 40; cm_rows[1][1] = 0x10; cm_rows[1][2] = trk[1].eng_req;
+    cm_rows[1][3] = P_LEVEL; cm_rows[1][4] = CM_ON | CM_TGL;
+    cm_rows[1][5] = 0; cm_rows[1][6] = 100;
+    cm_rows[2][0] = 41; cm_rows[2][1] = 0; cm_rows[2][2] = trk[0].eng_req;
+    cm_rows[2][3] = P_LEVEL; cm_rows[2][4] = CM_ON | CM_REV;
+    cm_rows[2][5] = 20; cm_rows[2][6] = 110;
+    cm_rows[3][0] = 42; cm_rows[3][1] = 0; cm_rows[3][2] = trk[0].eng_req;
+    cm_rows[3][3] = P_LEVEL; cm_rows[3][4] = 0;
+    cm_rows[3][5] = 5; cm_rows[3][6] = 120;
+    send_rx(0xB0, 40, 0, 1);
+    assert(trk[0].p[P_LEVEL] == 10 && trk[1].p[P_LEVEL] == 0);
+    send_rx(0xB0, 40, 63, 2);
+    assert(trk[0].p[P_LEVEL] == 45 && trk[1].p[P_LEVEL] == 0);
+    send_rx(0xB0, 40, 64, 1);
+    assert(trk[1].p[P_LEVEL] == 100);
+    send_rx(0xB0, 40, 127, 1);
+    assert(trk[0].p[P_LEVEL] == 80 && trk[1].p[P_LEVEL] == 100);
+    send_rx(0xB1, 40, 0, 2);
+    assert(trk[0].p[P_LEVEL] == 80 && trk[1].p[P_LEVEL] == 100);
+    send_rx(0xB0, 41, 0, 1); assert(trk[0].p[P_LEVEL] == 110);
+    send_rx(0xB0, 41, 127, 1); assert(trk[0].p[P_LEVEL] == 20);
+    send_rx(0xB0, 42, 127, 1); assert(trk[0].p[P_LEVEL] == 20);
+    trk[0].eng_req = ENGI_DRUM; send_rx(0xB0, 41, 0, 1);
+    assert(trk[0].p[P_LEVEL] == 20 && (cm_rows[2][4] & CM_ON));
+    trk[0].eng_req = cm_rows[2][2]; send_rx(0xB0, 41, 0, 2);
+    assert(trk[0].p[P_LEVEL] == 110);
+    /* An inactive macro does not hide MIDI LEARN; active macros take priority. */
+    ml_table[0] = 0x80u | 42u; ml_table[1] = 2; ml_table[2] = P_LEVEL + 1u;
+    send_rx(0xB0, 42, 77, 1); assert(trk[2].p[P_LEVEL] == 77);
+    ml_table[3] = 0x80u | 40u; ml_table[4] = 2; ml_table[5] = P_LEVEL + 1u;
+    send_rx(0xB0, 40, 120, 1); assert(trk[2].p[P_LEVEL] == 77);
+    puts("RX: four CC macros, range/toggle/reverse, bypass, engine suspension and legacy MIDI Learn passed");
+
     reset_rx();
     for (uint32_t ch = 1; ch <= 16; ch++) {
         midi_rx[0] = midi_rx[1] = (uint8_t)ch;
