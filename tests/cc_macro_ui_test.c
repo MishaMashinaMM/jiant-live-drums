@@ -22,6 +22,12 @@ int main(void)
                  cm_rows[0][1] == 0x12u && cm_rows[0][2] == trk[1].eng_req &&
                  cm_rows[0][3] == P_LEVEL && cm_rows[0][4] == CM_ON &&
                  cm_rows[0][5] == 0u && cm_rows[0][6] == 127u);
+    /* The same encoder may deliver more detents just after capture. They
+     * belong to choosing a parameter, never to editing the new macro. */
+    turn(EN_K1, 1); turn(EN_K2, 1); turn(EN_K4, 1);
+    bad += check("Residual capture detents cannot change RNG, endpoints or REV",
+                 cm_rows[0][4] == CM_ON && cm_rows[0][5] == 0u && cm_rows[0][6] == 127u);
+    frames(240);
     turn(EN_K1, 1); turn(EN_K2, 3); turn(EN_K3, -4); turn(EN_K4, 1);
     bad += check("K1-K4 edit type, A/B endpoints and reverse",
                  (cm_rows[0][4] & (CM_ON | CM_TGL | CM_REV)) == (CM_ON | CM_TGL | CM_REV) &&
@@ -44,6 +50,13 @@ int main(void)
     turn(EN_K1, 1);
     bad += check("Turning a real sound-page knob finishes CC capture and returns to REC",
                  cm_count == 1u && cm_rows[0][0] == 43u && cm_rows[0][1] == 0u &&
-                 cm_rows[0][3] < P_COUNT && cm_ui_open && !cm_wait);
+                 cm_rows[0][3] < P_COUNT && cm_ui_open && !cm_wait && cm_rows[0][4] == CM_ON);
+    turn(EN_K1, 1); turn(EN_K2, 1);
+    bad += check("Real K1/K2 clockwise capture cannot accidentally start TGL",
+                 cm_rows[0][4] == CM_ON && cm_rows[0][5] == 0u && cm_rows[0][6] == 127u);
+    frames(240);
+    turn(EN_K1, 1);
+    bad += check("K1 edits TGL normally once the capture gesture has settled",
+                 (cm_rows[0][4] & CM_TGL) != 0u);
     return bad ? 1 : 0;
 }

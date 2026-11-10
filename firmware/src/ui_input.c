@@ -478,6 +478,10 @@ static void lfo_view_put(track_t *t, int mode, int32_t v)
 }
 
 /* a knob turned parameter id of track t: recorded (AUTOMATION), and picked by MIDI LEARN (0.9.12, midi_learn.c) */
+/* The destination-capture detents must not also edit the new REC macro. Wait
+ * until ALL editing encoders have been still for a short interval. */
+static uint8_t cm_settle;
+static uint32_t cm_settle_ms;
 static void cm_knob_cap(track_t *t, uint32_t id)
 {
 #if FELUCCA_NO_SEQUENCER
@@ -502,6 +506,8 @@ static void cm_knob_cap(track_t *t, uint32_t id)
     cm_wait = 0;
     cm_ui_open = 1;
     cm_delete = 0;
+    cm_settle = 1u;
+    cm_settle_ms = fm1_ms;
     fm1_irq_on();
     ui.force = 1u;
     ui_message("MACRO ADDED");
@@ -2250,6 +2256,15 @@ static void ui_input_frame(void)
         } else if (up) {
             if (cm_count < CM_N) { cm_wait = 1u; ui.force = 1u; }
             else ui_message("FOUR MACROS FULL");
+        }
+        if (cm_settle) {
+            int32_t moved = panel_enc(EN_ALGO);
+            for (uint32_t j = 0; j < 4u; j++) moved |= panel_enc(EN_K1 + j);
+            if (moved) cm_settle_ms = fm1_ms;
+            if (fm1_ms - cm_settle_ms >= 160u) cm_settle = 0u;
+            panel_enc(EN_SELECT);
+            panel_enc(EN_PRESET);
+            return;
         }
         if ((s = panel_enc(EN_SELECT)) != 0 && !cm_delete && cm_wait != 1u && cm_count) {
             cm_pick = (uint8_t)clamp((int32_t)cm_pick + (s > 0 ? 1 : -1), 0, (int32_t)cm_count - 1);

@@ -50,6 +50,8 @@ On the experimental `macro-control` branch, the six RX settings are **saved with
 
 **REC macro editor (live build):** tap **REC** to view the macro table. Press **OCT+** to add: send a CC from your external controller (its incoming channel is captured automatically), then navigate to the desired track and sound page and turn the target parameter's knob. The macro is added with **RNG 0–127, REV OFF, ON** and the REC table reopens. **SELECT** chooses an existing row; **ALGORITHM** turns it ON/OFF; **K1** chooses RNG/TGL, **K2/K3** set the two endpoints, and **K4** toggles reverse. Turn ALGORITHM/K1/K4 clockwise for ON/TGL/REV and counterclockwise for OFF/RNG/no reverse. To delete, select a row, press **OCT−**, then **OCT+** to confirm or **OCT−** to cancel. REC cancels an unfinished assignment. The captured **CC/CH/SRC** are intentionally read-only; delete and recreate a row to change them. The ON column shows **Y** for active, **N** for disabled, and **S** when an enabled assignment is temporarily suspended by an incompatible engine. The assignment is stored with its project when saved. Other branches and the original JIANT MIDI Learn are unchanged.
 
+After a new assignment, REC briefly ignores residual encoder detents until the knobs settle. This prevents the knob movement used to select the destination from also changing the new macro's default RNG type or endpoints.
+
 ### MIDI LEARN: 32 destinations and shared CC
 
 1. Open **MENU → MIDI → LEARN** and switch it **ON**.
