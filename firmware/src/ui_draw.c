@@ -2123,13 +2123,14 @@ static void ui_draw_page(uint32_t counting)
  * Columns: TRK (mute indicator), VOICE, MIDI RX, VOL, PAN (motion indicator).
  * Status line at y=198..221: ROUTE and global DJ FILTER.
  */
-/* REC: four project CC macros. The captured CC, channel and destination are
- * intentionally read-only; the other fields are edited by the four knobs. */
+/* REC: scrollable project CC macros, four visible at a time. Captured CC,
+ * channel and destination are read-only; the four knobs edit the other fields. */
 #if FELUCCA_NO_SEQUENCER
 static void draw_cc_macros(void)
 {
     static const int16_t x[7] = {4, 27, 50, 112, 146, 194, 220};
     static const char *const headings[7] = {"CC", "CH", "SRC", "TYP", "VAL", "REV", "ON"};
+    uint32_t first = (cm_pick / 4u) * 4u;
     lcd_fill(0, 0, 240, 240, T_BG);
     cv_begin(240, 40, T_BG);
     cv_text(6, CAP_IN(M, 24), &AF_M, "MIDI CC MACROS", T_TEXT);
@@ -2140,7 +2141,8 @@ static void draw_cc_macros(void)
     cv_begin(240, 16, T_BG);
     for (uint32_t c = 0; c < 7u; c++) cv_text(x[c], CAP_IN(S, 14), &AF_S, headings[c], T_DIM);
     cv_blit(0, 43);
-    for (uint32_t i = 0; i < CM_N; i++) {
+    for (uint32_t row = 0; row < 4u; row++) {
+        uint32_t i = first + row;
         char cc[8], ch[8], src[12], val[16];
         const uint8_t *r = cm_rows[i];
         uint32_t ti = r[1] >> 4, id = r[3], engine = r[2];
@@ -2167,10 +2169,17 @@ static void draw_cc_macros(void)
         } else if (!i && !cm_count) {
             cv_text(6, CAP_IN(S, 20), &AF_S, "NO MACROS - OCT+ TO ADD", T_DIM);
         }
-        cv_blit(0, 59 + (int32_t)i * 34);
+        cv_blit(0, 59 + (int32_t)row * 34);
     }
     cv_begin(240, 42, T_BG);
     cv_text(6, CAP_IN(S, 14), &AF_S, "OCT+ ADD  OCT- DELETE", T_DIM);
+    if (cm_count > 4u) {
+        char location[16];
+        fmt_int(location, cm_pick + 1u);
+        str_cpy(location + str_len(location), "/", sizeof location - str_len(location));
+        fmt_int(location + str_len(location), cm_count);
+        cv_text(192, CAP_IN(S, 14), &AF_S, location, T_ACCENT);
+    }
     cv_text(6, 20 + CAP_IN(S, 14), &AF_S, "K1 TYP K2 A K3 B K4 REV", T_TEXT);
     cv_blit(0, 198);
     ui.force = 0;

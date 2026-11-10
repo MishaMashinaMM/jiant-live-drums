@@ -58,5 +58,23 @@ int main(void)
     turn(EN_K1, 1);
     bad += check("K1 edits TGL normally once the capture gesture has settled",
                  (cm_rows[0][4] & CM_TGL) != 0u);
+    /* REC must still select, edit and delete a macro on the last page. */
+    cm_count = CM_N; cm_pick = 0;
+    for (uint32_t i = 1; i < CM_N; i++) {
+        cm_rows[i][0] = (uint8_t)(40u + i);
+        cm_rows[i][1] = 0u;
+        cm_rows[i][2] = trk[0].eng_req;
+        cm_rows[i][3] = P_LEVEL;
+        cm_rows[i][4] = CM_ON;
+        cm_rows[i][5] = 0u; cm_rows[i][6] = 127u;
+        turn(EN_SELECT, 1);
+    }
+    bad += check("SELECT navigates all 32 rows, including the last REC page", cm_pick == CM_N - 1u);
+    turn(EN_K2, 7);
+    bad += check("The last macro remains independently editable", cm_rows[CM_N - 1u][5] == 7u);
+    press(B_OCTDN); press(B_OCTUP);
+    bad += check("Delete removes row 32 without affecting row 31",
+                 cm_count == CM_N - 1u && cm_rows[CM_N - 1u][0] == 0u &&
+                 cm_rows[CM_N - 2u][0] == (uint8_t)(40u + CM_N - 2u));
     return bad ? 1 : 0;
 }

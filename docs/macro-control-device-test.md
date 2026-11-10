@@ -1,6 +1,6 @@
 # Jiant Live Drums: experimental macro-control device test
 
-This installer is built from the `macro-control` branch, **not** the published
+This installer is built from an experimental MIDI-macro branch, **not** the published
 `main` firmware. It is intended for a single FM1 test, not a public release.
 The installer bundles the exact `.fwsc` produced by its GitHub Actions run.
 
@@ -39,7 +39,7 @@ The installer bundles the exact `.fwsc` produced by its GitHub Actions run.
    **Install**. Keep the USB connection and power uninterrupted.
 2. After the installer reports success, unplug/reboot as instructed. Verify
    that JLD boots and audio still works before changing any saved projects.
-3. Check REC macro creation, CC control, ON/OFF, four-row limit and delete
+3. Check REC macro creation, CC control, ON/OFF, scrolling to all 32 rows and delete
    confirmation with a connected external MIDI controller.
 4. Save a test project with nondefault GLO > MIXER MIDI RX channels and two
    different REC macros; reboot and reload to check persistence.

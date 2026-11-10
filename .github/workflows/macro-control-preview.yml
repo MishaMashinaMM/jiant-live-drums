@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Branch-only experimental artifacts. Never deploy GitHub Pages or update main.
-name: macro-control preview
+name: MIDI macro preview
 on:
   push:
-    branches: [macro-control]
+    branches: [macro-control, macro-32]
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
         run: bash tests/run_live_drum_tests.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: jld-macro-control-emulator-${{ github.sha }}
+          name: jld-${{ github.ref_name }}-emulator-${{ github.sha }}
           path: build/emu/
           if-no-files-found: error
   firmware:
@@ -71,13 +71,13 @@ jobs:
           (cd build && sha256sum felucca.fwsc > SHA256SUMS)
       - name: Prepare isolated local FM1 test installer
         run: |
-          python3 web/make_site.py build/felucca.fwsc "v0.2-macro-${GITHUB_SHA::7}-preview" build/device-test-site
+          python3 web/make_site.py build/felucca.fwsc "v0.2-${GITHUB_REF_NAME}-${GITHUB_SHA::7}-preview" build/device-test-site
           cp docs/macro-control-device-test.md build/device-test-site/READ-ME-FIRST.md
           cp build/SOURCE_COMMIT build/SHA256SUMS build/device-test-site/firmware/
           (cd build/device-test-site/firmware && sha256sum felucca-*.fwsc > PACKAGE-SHA256SUMS)
       - uses: actions/upload-artifact@v4
         with:
-          name: jld-macro-control-firmware-${{ github.sha }}
+          name: jld-${{ github.ref_name }}-firmware-${{ github.sha }}
           path: |
             build/felucca.fwsc
             build/felucca.bin
@@ -87,6 +87,6 @@ jobs:
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: jld-macro-control-local-installer-${{ github.sha }}
+          name: jld-${{ github.ref_name }}-local-installer-${{ github.sha }}
           path: build/device-test-site/
           if-no-files-found: error
