@@ -7,6 +7,13 @@
  * at the full rate while TIME fits, at half or a quarter of it for times up to twice / four times as long (dly_lo):
  * the longest at full rate (DLY_LEN - DLY_EDGE) / FS, the longest of all four times that */
 #include "prof.c"                         /* (0.9.14) MENU > ABOUT > PROFILE's measurements */
+#include "track_eq_dsp.c"                /* JLD: pre-send, per-track fixed-point EQ */
+/* Targets live in params.c with the GLO > EQ controls. Zero is flat and
+ * existing project audio stays unchanged until an EQ gain is edited. */
+static eq_dsp_t track_eq_state[NPART];
+/* Core 0 and core 1 render different tracks, but can run simultaneously.
+ * Never put these scratch buses on the small audio-ISR stack or share them. */
+static int32_t track_eq_work[2][EQ_STREAMS][CTL];
 #define CHO_LEN 2048u
 static union {
     int16_t s[DLY_LEN];
@@ -1970,6 +1977,15 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             ol = c1 ? c1_mix.sl : sl_l;
             or_ = c1 ? c1_mix.sr : sl_r;
         }
+        /* Tick once per track, not once per stream: all five streams receive
+         * identical coefficients and a knob move slews one dB per block. */
+        eq_dsp_t *eq = &track_eq_state[ti];
+        eq_dsp_tick(eq, track_eq_gain[ti], track_eq_on[ti]);
+        uint32_t eq_active = eq->gain[0] || eq->gain[1] || eq->gain[2];
+        int32_t (*eb)[CTL] = track_eq_work[c1];
+        if (eq_active)
+            for (uint32_t k = 0; k < EQ_STREAMS; k++)
+                for (uint32_t j = 0; j < n; j++) eb[k][j] = 0;
         xmax = 0x7FFFFFFF / ((xmax > r ? xmax : r) | 1);   /* sends: loud chords at a high LEVEL */
         int32_t pre[CTL];
         if (fx_stems)                                   /* (0.7.1) the part's stem: what it adds to the mix */
@@ -1991,8 +2007,9 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
         int32_t lq0 = lq, gl0 = gl, gr0 = gr;           /* (0.7.5: uin_mix, the same ramps) */
         if (dx_xon && (ENGINES[t->engine] == &ENG_DRUM || ENGINES[t->engine] == &ENG_DRUMLAB))
         {
-            int32_t *const sx[3] = {sc, sd, sr};
-            drum_mix(ol, or_, n, lq, dl, gl, dgl, gr, dgr, pm0, pm1, sx);
+            int32_t *const sx[3] = {eq_active ? eb[2] : sc, eq_active ? eb[3] : sd, eq_active ? eb[4] : sr};
+            drum_mix(eq_active ? eb[0] : ol, eq_active ? eb[1] : or_,
+                     n, lq, dl, gl, dgl, gr, dgr, pm0, pm1, sx);
         }
         for (i = 0; i < n; i++, lq += dl, gl += dgl, gr += dgr) {
             int32_t x = ((b[i] >> 2) * (lq >> 8)) >> 10, a = x < 0 ? -x : x;   /* pre-shift: 8 loud voices */
@@ -2000,13 +2017,23 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             if (a > pk)
                 pk = a;
             if (c)
-                sc[i] += mulq15(xs, c);
+                (eq_active ? eb[2] : sc)[i] += mulq15(xs, c);
             if (d)
-                sd[i] += mulq15(xs, d);
+                (eq_active ? eb[3] : sd)[i] += mulq15(xs, d);
             if (r)
-                sr[i] += mulq15(xs, r);
-            ol[i] += (x * gl) >> 12;
-            or_[i] += (x * gr) >> 12;
+                (eq_active ? eb[4] : sr)[i] += mulq15(xs, r);
+            (eq_active ? eb[0] : ol)[i] += (x * gl) >> 12;
+            (eq_active ? eb[1] : or_)[i] += (x * gr) >> 12;
+        }
+        if (eq_active) {
+            /* DRUM-X/DRUM-LAB's IMAGE and per-pad SENDs have already been
+             * accumulated into these same isolated track buses. EQ now
+             * precedes every global effect bus, not only the mono part_buf. */
+            int32_t *const dest[EQ_STREAMS] = {ol, or_, sc, sd, sr};
+            for (uint32_t k = 0; k < EQ_STREAMS; k++) {
+                eq_dsp_process(eq, k, eb[k], n);
+                for (uint32_t j = 0; j < n; j++) dest[k][j] += eb[k][j];
+            }
         }
         uint32_t st = ti;                               /* (0.8.0) the stem the last of the mix goes to */
         if (uin && !t->p[P_MUTE] && !((trk_hush >> ti) & 1u)) {   /* (0.7.5) the host's audio, in its stem too */

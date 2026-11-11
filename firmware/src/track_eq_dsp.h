@@ -1,0 +1,16 @@
+/* GPL-3.0-only: standalone JLD per-track, three-band audio EQ. */
+#ifndef JLD_TRACK_EQ_DSP_H
+#define JLD_TRACK_EQ_DSP_H
+#include <stdint.h>
+#define EQ_BANDS 3u
+#define EQ_STREAMS 5u /* stereo dry + chorus, delay, reverb sends */
+typedef struct { int32_t x1, x2, y1, y2; } eq_hist_t;
+typedef struct {
+    eq_hist_t hist[EQ_STREAMS][EQ_BANDS];
+    int8_t gain[EQ_BANDS];
+    uint8_t on;
+} eq_dsp_t;
+void eq_dsp_init(eq_dsp_t *s);
+void eq_dsp_tick(eq_dsp_t *s, const int8_t gain[EQ_BANDS], uint8_t on);
+void eq_dsp_process(eq_dsp_t *s, unsigned stream, int32_t *buf, unsigned n);
+#endif

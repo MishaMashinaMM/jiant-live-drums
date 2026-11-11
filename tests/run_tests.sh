@@ -161,6 +161,11 @@ run() {
     fi
 }
 
+$CC -O2 -o "$OUT/track_eq_test" tests/track_eq_test.c firmware/src/track_eq_dsp.c -lm
+run "three-band track EQ: flat passthrough, 50/700/10000 Hz gains, stable processing" "$OUT/track_eq_test"
+$CC -O2 -o "$OUT/track_eq_bench" tests/track_eq_bench.c firmware/src/track_eq_dsp.c -lm
+run "three-band EQ: host-only throughput (not target CPU budget)" "$OUT/track_eq_bench"
+
 $CC -o "$OUT/storage_test" tests/storage_test.c
 run "flash storage (A/B, torn writes)" "$OUT/storage_test"
 
@@ -290,6 +295,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "settings: PER1..PER4 migration, palette ids and preference preservation" "$OUT/settings_test"
     $CC -O1 -w -o "$OUT/cpu_safe_test" tests/cpu_safe_test.c
     run "CPU safety (0.9.12): crash code, the crash record, 1 CORE after a crash, MENU > SYSTEM > CPU / CPU CLOCK" "$OUT/cpu_safe_test"
+    $CC -O2 -w -DUI_TEST_EQ_ONLY -Ibuild/gen -Ifirmware/src -o "$OUT/track_eq_ui_test" tests/ui_test.c -lm
+    run "EQ: GLO controls, six independent tracks, optional per-project save/load and legacy flat defaults" "$OUT/track_eq_ui_test"
     $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/ui_test" tests/ui_test.c -lm
     run "UI: sounds keep steps, undo, recording, MIDI overflow, pending saves, panel recovery, drum grid, song chain, fixed JIANT colors" "$OUT/ui_test"
     FV=$(sed -n 's/^#define FELUCCA_VERSION "\([^"]*\)".*/\1/p' firmware/src/felucca.c)   # (the splash, ABOUT: the real version)

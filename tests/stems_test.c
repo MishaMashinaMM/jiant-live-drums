@@ -34,6 +34,11 @@ static void song_from(uint32_t seed, uint32_t load)
 {
     uint32_t k;
     ui_power_on();
+    for (k = 0; k < NPART; k++) {
+        eq_dsp_init(&track_eq_state[k]);
+        track_eq_gain[k][0] = track_eq_gain[k][1] = track_eq_gain[k][2] = 0;
+        track_eq_on[k] = 1;
+    }
     ui_rec_prefs |= PREF_SIX >> 8;
     ui_load = (uint8_t)load;
     rp_apply();                                          /* TRACKS 6, LOAD */
@@ -167,6 +172,36 @@ int main(void)
                  gave);
         st_check(s, !bad && sums && gave > 0);
         (void)t0;
+    }
+    {   /* JLD track EQ must process each part's dry L/R and all FX sends
+         * before they join the buses: six active tracks, two-core emulation,
+         * independent gain settings, no bleed between stem outputs. */
+        uint32_t snd, gave, sums, bad, t;
+        song_from(42, LOAD_FULL);
+        for (t = 0; t < NPART; t++) {
+            eq_dsp_init(&track_eq_state[t]);
+            track_eq_gain[t][0] = (int8_t)(t & 1u ? -15 : 15);
+            track_eq_gain[t][1] = (int8_t)(t & 1u ? 10 : -10);
+            track_eq_gain[t][2] = (int8_t)(t & 1u ? -12 : 12);
+            track_eq_on[t] = 1u;
+        }
+        bad = take(nb, 1, 0, &snd, &gave, &sums);
+        st_check("track EQ active on six tracks: stems null to solo renders; stem+FX sum equals master", !bad && sums && snd >= 4u);
+    }
+    {   /* The two JLD drum engines have independent stereo image/send paths.
+         * Exercise both with nonflat EQ, not just generated melodic tracks. */
+        uint32_t snd, gave, sums, bad;
+        song_from(42, LOAD_FULL);
+        host_preset(&trk[0], ENGI_DRUM, 0);
+        host_preset(&trk[1], ENGI_DRUMLAB, 0);
+        trk_note_on(&trk[0], 36u, 120u);
+        trk_note_on(&trk[1], 60u, 120u);
+        eq_dsp_init(&track_eq_state[0]);
+        eq_dsp_init(&track_eq_state[1]);
+        track_eq_gain[0][0] = 15; track_eq_gain[0][1] = -10;
+        track_eq_gain[1][1] = 15; track_eq_gain[1][2] = -12;
+        bad = take(nb, 1, 0, &snd, &gave, &sums);
+        st_check("DRUM-X and DRUM-LAB with pre-send EQ: independent stems and FX sum", !bad && sums && snd >= 3u);
     }
     {   /* an empty track: exact zeros */
         size_t sz = sizeof(int32_t) * NCH * CTL * 2000u;

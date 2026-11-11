@@ -1332,6 +1332,18 @@ static void edit_param(uint32_t slot, int32_t steps)
         mod_ui_slot = (uint8_t)clamp((int32_t)mod_ui_slot + (steps > 0 ? 1 : -1), 0, 3);
         return;
     }
+    if (str_eq(pg->title, "EQ")) {
+        uint32_t ti = song.sel % NPART;
+        int32_t delta = accel(EN_K1 + slot, steps, slot == 3u ? 0 : 30);
+        fm1_irq_off();
+        if (slot < 3u)
+            track_eq_gain[ti][slot] = (int8_t)clamp((int32_t)track_eq_gain[ti][slot] + delta, -15, 15);
+        else
+            track_eq_on[ti] = (uint8_t)clamp((int32_t)track_eq_on[ti] + (steps > 0 ? 1 : -1), 0, 1);
+        fm1_irq_on();
+        ui.force = 1u;
+        return;
+    }
     d = page_desc(pg, slot, &vp);
     if (!d || !vp || d->max == d->min)
         return;

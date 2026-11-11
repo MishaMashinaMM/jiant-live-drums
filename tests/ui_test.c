@@ -1635,6 +1635,102 @@ static void go_title(const char *title)
     ui.page = (uint8_t)i;
     page_entered();
 }
+static int test_track_eq_page(void)
+{
+    int ok = 1;
+    int16_t *value;
+    const param_desc_t *desc;
+    const page_t *page;
+    uint32_t i, band;
+    ui_power_on();
+    for (i = 0; i < NTRK; i++) {
+        track_eq_on[i] = 1;
+        for (band = 0; band < 3; band++) track_eq_gain[i][band] = 0;
+    }
+    go_title("EQ"); frame();
+    page = cur_page();
+    ok &= page->scope == SC_TRACK && page->fam == FAM_TRK;
+    for (i = 0; i < 3; i++) {
+        desc = page_desc(page, i, &value);
+        ok &= desc && desc->min == -15 && desc->max == 15 && *value == 0;
+    }
+    turn(EN_K1, 3); turn(EN_K2, -4); turn(EN_K3, 2);
+    ok &= track_eq_gain[0][0] == 3 && track_eq_gain[0][1] == -4 && track_eq_gain[0][2] == 2;
+    turn(EN_K4, -1);
+    ok &= track_eq_on[0] == 0;
+    turn(EN_ALGO, 1);
+    ok &= song.sel == 1;
+    for (i = 0; i < 3; i++) {
+        (void)page_desc(page, i, &value);
+        ok &= *value == 0;
+    }
+    turn(EN_K1, -15);
+    ok &= track_eq_gain[1][0] == -15 && track_eq_gain[0][0] == 3;
+    turn(EN_K4, -1);
+    ok &= track_eq_on[1] == 0 && track_eq_on[0] == 0;
+    turn(EN_K4, 1);
+    ok &= track_eq_on[1] == 1;
+    return check("GLO EQ: four knobs, signed gains, bypass, per-track isolation", ok);
+}
+static int test_track_eq_project(void)
+{
+    int ok = 1;
+    uint32_t t, b;
+    uint32_t flat_size;
+    ui_power_on();
+    for (t = 0; t < NPART; t++) {
+        track_eq_on[t] = 1u;
+        for (b = 0; b < 3u; b++) track_eq_gain[t][b] = 0;
+    }
+    project_capture(&proj_scratch);
+    ok &= !proj_eq_changed(&proj_scratch) && proj_pack(&proj_wire, &proj_scratch);
+    flat_size = proj_packed_size(&proj_scratch);
+    track_eq_gain[0][0] = 15;
+    track_eq_gain[5][2] = -15;
+    track_eq_on[3] = 0;
+    project_capture(&proj_scratch);
+    ok &= proj_eq_changed(&proj_scratch) && proj_packed_size(&proj_scratch) == flat_size + 21u &&
+          proj_pack(&proj_wire, &proj_scratch);
+    {
+        uint32_t eq_at = proj_packed_size(&proj_scratch) - 21u, hash;
+        uint8_t *bytes = proj_wire.raw;
+        ok &= bytes[eq_at] == 'E' && bytes[eq_at + 1u] == 'Q';
+        bytes[eq_at + 2u] = 16u; /* corrupt LOW while preserving the container checksum */
+        hash = proj_hash(bytes, PROJ_STORE_SIZE - 4u);
+        memcpy(bytes + PROJ_STORE_SIZE - 4u, &hash, 4u);
+        ok &= !proj_import(&proj_scratch, &proj_wire, sizeof proj_wire);
+    }
+    project_capture(&proj_scratch);
+    ok &= proj_pack(&proj_wire, &proj_scratch);
+    ok &= proj_import(&proj_scratch, &proj_wire, sizeof proj_wire);
+    ok &= proj_scratch.eq_gain[0][0] == 15 && proj_scratch.eq_gain[5][2] == -15 && !proj_scratch.eq_on[3];
+    ok &= !project_restore_runtime(&proj_scratch);
+    ok &= track_eq_gain[0][0] == 15 && track_eq_gain[5][2] == -15 && !track_eq_on[3];
+    for (t = 0; t < NPART; t++) {
+        track_eq_on[t] = 1u;
+        for (b = 0; b < 3u; b++) track_eq_gain[t][b] = 0;
+    }
+    project_capture(&proj_scratch);
+    ok &= proj_pack(&proj_wire, &proj_scratch);
+    track_eq_gain[0][0] = 12;
+    track_eq_on[0] = 0;
+    ok &= proj_import(&proj_scratch, &proj_wire, sizeof proj_wire);
+    ok &= !project_restore_runtime(&proj_scratch);
+    ok &= track_eq_gain[0][0] == 0 && track_eq_on[0] == 1;
+    proj_scratch.eq_gain[2][1] = 16;
+    ok &= !proj_pack(&proj_wire, &proj_scratch);
+    project_capture(&proj_scratch);
+    for (t = 0; t < NPART; t++)
+        for (b = 0; b < NSTEP; b++) {
+            step_t *s = &proj_scratch.t[t].step[b];
+            s->n = 4u; s->time = 0u; s->vel = 100u; s->comp = CP_ECHO;
+            for (uint32_t j = 0; j < 4u; j++) s->note[j] = (uint8_t)(60u + j);
+        }
+    ok &= proj_packed_size(&proj_scratch) > PROJC_PFX_OFF;
+    ok &= !proj_pack(&proj_wire, &proj_scratch) && proj_full;
+    ui_power_on();
+    return check("EQ project: 21-byte block, legacy defaults, corrupt data and full sections refused", ok);
+}
 static void tools_pick(uint32_t n)                /* (0.6.25) TOOLS: the n-th action picked (KNOB 1 down the list) */
 {
     uint32_t k;
@@ -12198,7 +12294,7 @@ static int test_lz_glo(void)
     ui_power_on(); frame();
     press(B_GLO); frame();
     ok = pd_on() && lz_fam() == LZ_GLO && pd_level() == 0u && str_eq(cur_page()->title, "MIXER") && lz_tab_lit(1) &&
-         lz_crumb_is("GLO \xB7 MIX \xB7 MIXER") && lz_count_is("3/6");
+         lz_crumb_is("GLO \xB7 MIX \xB7 MIXER") && lz_count_is("3/7");
     turn(EN_SELECT, 1); frame();
     ok &= str_eq(cur_page()->title, "SENDS") && lz_crumb_is("GLO \xB7 MIX \xB7 SENDS");
     v = TSEL->p[P_DLY];
@@ -12209,10 +12305,10 @@ static int test_lz_glo(void)
     frames(320); press(B_GLO); frame();
     ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM") && lz_tab_lit(3) && lz_crumb_is("GLO \xB7 SYSTEM \xB7 SYSTEM");
     frames(320); press(B_GLO); frame();
-    ok &= str_eq(cur_page()->title, "MANO") && lz_tab_lit(0) && lz_crumb_is("GLO \xB7 LIVE \xB7 MANO") && lz_count_is("1/6");
+    ok &= str_eq(cur_page()->title, "MANO") && lz_tab_lit(0) && lz_crumb_is("GLO \xB7 LIVE \xB7 MANO") && lz_count_is("1/7");
     frames(320); press(B_GLO); frame();
     ok &= pd_level() == 0u && str_eq(cur_page()->title, "MIXER");
-    turn(EN_SELECT, 3); frame();
+    turn(EN_SELECT, 4); frame();
     ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM");
     open_family(FAM_ENV); frame();
     press(B_GLO); frame();
@@ -13667,6 +13763,9 @@ int main(void)
 #ifdef UI_TEST_MIXER_ONLY
     return test_mixer_highlight() ? 1 : 0;
 #endif
+#ifdef UI_TEST_EQ_ONLY
+    return test_track_eq_page() + test_track_eq_project() ? 1 : 0;
+#endif
 #ifdef UI_TEST_DRUM_REPEATED_ONLY
     return test_drum_repeated_hits() ? 1 : 0;
 #endif
@@ -13693,6 +13792,8 @@ int main(void)
     bad += test_lz_mod();
     bad += test_lz_key();
     bad += test_lz_glo();
+    bad += test_track_eq_page();
+    bad += test_track_eq_project();
     bad += test_lz_layer();
     bad += test_lz_dialogs();
     bad += test_fx_live();

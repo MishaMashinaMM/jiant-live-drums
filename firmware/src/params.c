@@ -674,6 +674,7 @@ static const page_t PAGES[] = {
                                                          * value, LOOP (ui_input.c stage_knob) */
     {"SENDS", FAM_TRK, SC_TRACK, GR_TRK, {P_DIST, P_CHOR, P_DLY, P_REV}},   /* GLO > MIX: the track's sends (as FX > SENDS),
                                                          * the six tracks' as bars (ui_graph.c track_col6) */
+    {"EQ", FAM_TRK, SC_TRACK, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}}, /* GLO > MIX: selected track's 3-band EQ */
     /* (0.9.18) SEQ > BAR gone (0.9.2 .. 0.9.17: KNOB 1 the bar, KNOB 2 LEN): the bar is the roll's cursor / strip and
      * STEP's KNOB 1 walks all 64 steps, LEN is PATTERN's */
     {"MANO", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.9.11) GLO > LIVE: the keys a board of live
@@ -692,10 +693,26 @@ static const param_desc_t REV_AIR = PD("AIR", F_SEMI, -24, 24, 0);    /* (0.6.12
                                                                        * up airy (G_RPRE; fx.c rev_air) */
 static const param_desc_t AP_BEAT = PE("RATE", N_APDIV, 2);          /* (0.6.9) AUTO PAN's RATE on the tempo (SYNC BEAT) */
 static uint8_t sl_ui_step;       /* (JIANT 0.6.3) the SL PITCH page: the step KNOB 2 edits */
+static const param_desc_t EQ_DESC[4] = {
+    {"LOW", F_INT, -15, 15, 0, 0, "dB"},
+    {"MID", F_INT, -15, 15, 0, 0, "dB"},
+    {"HIGH", F_INT, -15, 15, 0, 0, "dB"},
+    PD("ON", F_ONOFF, 0, 1, 1)
+};
+/* The audio core reads these per-track targets; the EQ page edits them. */
+static int8_t track_eq_gain[NPART][3];
+static uint8_t track_eq_on[NPART] = {1, 1, 1, 1, 1, 1};
+static int16_t eq_ui_val[4];
 
 static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **valp)
 {
     uint32_t id = pg->id[slot];
+    if (str_eq(pg->title, "EQ") && slot < 4u) {
+        uint32_t ti = song.sel % NPART;
+        eq_ui_val[slot] = (int16_t)(slot < 3u ? track_eq_gain[ti][slot] : track_eq_on[ti]);
+        *valp = &eq_ui_val[slot];
+        return &EQ_DESC[slot];
+    }
     if (id == 0xFFu) {
         *valp = 0;
         return 0;

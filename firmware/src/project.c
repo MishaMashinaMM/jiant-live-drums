@@ -141,6 +141,8 @@ typedef struct {
     uint8_t rx[6];                              /* one-based channels, 1..16 */
     uint8_t cm_count;                           /* optional REC CC macros, zero in older projects */
     uint8_t cm_rows[CM_N][CM_ROW_SIZE];         /* 32 independent seven-byte assignments */
+    int8_t eq_gain[NPART][3];                   /* JLD: per-track 3-band EQ */
+    uint8_t eq_on[NPART];                       /* absent in older projects: all ON */
     int8_t pad_pan[NPART][12];                   /* Stage 22B: optional per-track drum pan */
     int8_t pad_pitch[NPART][12];                 /* Stage 22B: extra semitones, -24..+24 */
     uint8_t perf_curve[NPART][12], perf_sound[NPART][12];
@@ -676,6 +678,8 @@ static int proj_import(project_t *q, const void *b, int n)
         for (uint32_t t = 0; t < NPART; t++)
             for (uint32_t field = 0; field < 8u; field++)
                 q->lab_global[t][field] = 100u;
+    if (((const uint32_t *)b)[0] != PROJ_MAGIC)
+        for (uint32_t t = 0; t < NPART; t++) q->eq_on[t] = 1u;
     q->sum = proj_sum(q);
     return 1;
 }
@@ -784,6 +788,15 @@ static uint32_t proj_name_get(char *d, const uint8_t *s)   /* its length */
 #define PROJC_GX_OFF (PROJC_PFX_OFF + 37u)
 #define PROJC_PMAP ((P_COUNT + 7u) / 8u)
 static uint8_t proj_full;                               /* the last proj_pack failed for room (not for a value) */
+static int proj_eq_changed(const project_t *q)
+{
+    uint32_t t, band;
+    for (t = 0; t < NPART; t++) {
+        if (!q->eq_on[t]) return 1;
+        for (band = 0; band < 3u; band++) if (q->eq_gain[t][band]) return 1;
+    }
+    return 0;
+}
 static int proj_step_empty(const step_t *s)
 {
     return !s->n && s->time == ST_REST && !s->flags && !s->vel && !s->hit && !s->acc && !s->probability && !s->comp &&
@@ -896,6 +909,7 @@ static uint32_t proj_packed_size(const project_t *q)
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
     if (q->rx_on) n += 8u;                       /* 'R' 'X' and six MIDI channels */
     if (q->cm_count) n += 3u + q->cm_count * CM_ROW_SIZE;
+    if (proj_eq_changed(q)) n += 2u + sizeof q->eq_gain + 1u;
     if (proj_djf_events(&q->motion))                    /* (0.9.1) the DJ FILTER's records: their block's head */
         n += 3u;
     if (proj_mf_tracks(q))                              /* (0.9.1) MICRO's 64ths: their block */
@@ -1005,6 +1019,10 @@ static int proj_pack(project_store_t *out, const project_t *q)
     }
     if (!chain_valid(&q->chain) || !motion_valid(&q->motion) || P_COUNT > 127u || !dx_kit_ok(q->dx) ||
         q->cm_count > CM_N) return 0;
+    for (t = 0; t < NPART; t++) {
+        if (q->eq_on[t] > 1u) return 0;
+        for (i = 0; i < 3u; i++) if (q->eq_gain[t][i] < -15 || q->eq_gain[t][i] > 15) return 0;
+    }
     if (proj_packed_size(q) > PROJC_PFX_OFF) { proj_full = 1; return 0; }
     memset(out, 0, sizeof *out); memcpy(b, &magic, 4); memcpy(b + 4, &size, 4);
     memcpy(b + 8, q->g, G_NSTORE * 2u); b[62] = q->sel; b[63] = q->parts; b[64] = q->phys; b[66] = P_COUNT;
@@ -1274,6 +1292,14 @@ static int proj_pack(project_store_t *out, const project_t *q)
         b[pos++] = 'C'; b[pos++] = 'M'; b[pos++] = q->cm_count;
         memcpy(b + pos, q->cm_rows, q->cm_count * CM_ROW_SIZE);
         pos += q->cm_count * CM_ROW_SIZE;
+    }
+    if (proj_eq_changed(q)) {
+        uint8_t mask = 0;
+        b[pos++] = 'E'; b[pos++] = 'Q';
+        memcpy(b + pos, q->eq_gain, sizeof q->eq_gain);
+        pos += sizeof q->eq_gain;
+        for (t = 0; t < NPART; t++) mask |= (uint8_t)((q->eq_on[t] & 1u) << t);
+        b[pos++] = mask;
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1723,6 +1749,21 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         memcpy(q->cm_rows, b + pos, count * CM_ROW_SIZE);
         pos += count * CM_ROW_SIZE;
     }
+    for (t = 0; t < NPART; t++) q->eq_on[t] = 1u;
+    if (pos + 2u <= room && b[pos] == 'E' && b[pos + 1u] == 'Q') {
+        uint32_t mask;
+        if (pos + 2u + sizeof q->eq_gain + 1u > room) return 0;
+        pos += 2u;
+        memcpy(q->eq_gain, b + pos, sizeof q->eq_gain);
+        pos += sizeof q->eq_gain;
+        mask = b[pos++];
+        if (mask >> NPART) return 0;
+        for (t = 0; t < NPART; t++) {
+            q->eq_on[t] = (uint8_t)((mask >> t) & 1u);
+            for (i = 0; i < 3u; i++)
+                if (q->eq_gain[t][i] < -15 || q->eq_gain[t][i] > 15) return 0;
+        }
+    }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);
@@ -2000,6 +2041,8 @@ static void project_capture(project_t *p)
     for (i = 0; i < 6u; i++) p->rx[i] = (uint8_t)midi_rx_channel(i);
     p->cm_count = cm_count;
     memcpy(p->cm_rows, cm_rows, sizeof cm_rows);
+    memcpy(p->eq_gain, track_eq_gain, sizeof p->eq_gain);
+    memcpy(p->eq_on, track_eq_on, sizeof p->eq_on);
     p->motion = motion;
     memcpy(p->dx, dx_kit, sizeof p->dx);
     memcpy(p->dx12, dx_kit12, sizeof p->dx12);
@@ -2279,6 +2322,8 @@ static int project_restore_runtime(const project_t *input)
     if (p->rx_on) memcpy(midi_rx, p->rx, sizeof p->rx);
     cm_count = p->cm_count;
     memcpy(cm_rows, p->cm_rows, sizeof cm_rows);
+    memcpy(track_eq_gain, p->eq_gain, sizeof track_eq_gain);
+    memcpy(track_eq_on, p->eq_on, sizeof track_eq_on);
     chain.ended = 0;                                    /* (a song stopped by this load: the load wins, song_poll keeps out) */
     memcpy(dx_kit, dx_kit_ok(p->dx) ? p->dx : DX_KIT_DEF, sizeof dx_kit);   /* (the section's DRUM-X kit) */
     memcpy(dx_kit12, p->dx12, sizeof dx_kit12);
@@ -2944,6 +2989,8 @@ static uint32_t autosave_sig(void)
     }
     h = as_mix(h, &cm_count, sizeof cm_count);
     h = as_mix(h, cm_rows, sizeof cm_rows);
+    h = as_mix(h, track_eq_gain, sizeof track_eq_gain);
+    h = as_mix(h, track_eq_on, sizeof track_eq_on);
     for (i = 0; i < NTRK; i++) {
         const track_t *t = &trk[i];
         for (j = 0; j < P_COUNT; j++) {
