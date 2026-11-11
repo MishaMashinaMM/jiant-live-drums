@@ -9,6 +9,7 @@ typedef struct {
     eq_hist_t hist[EQ_STREAMS][EQ_BANDS];
     int8_t gain[EQ_BANDS];
     uint8_t on;
+    uint8_t was_active; /* one neutral processing block on bypass transition */
 } eq_dsp_t;
 void eq_dsp_init(eq_dsp_t *s);
 void eq_dsp_tick(eq_dsp_t *s, const int8_t gain[EQ_BANDS], uint8_t on);
