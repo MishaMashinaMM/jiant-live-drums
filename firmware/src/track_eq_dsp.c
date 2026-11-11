@@ -120,6 +120,7 @@ void eq_dsp_init(eq_dsp_t *s)
     }
     for (k = 0; k < EQ_BANDS; k++) s->gain[k] = 0;
     s->on = 1;
+    s->was_active = 0;
 }
 
 /* Call once per track block, never once per bus: do not accelerate smoothing
