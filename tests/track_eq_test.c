@@ -78,5 +78,24 @@ int main(void)
         eq_dsp_process(&s,0,a,BLK);
     }
     puts("PASS repeated processing and gain slew");
+    /* A gain transition from positive through zero to negative must preserve
+     * a neutral block so histories are refreshed before cut resumes. */
+    eq_dsp_init(&s);
+    gains[0] = 1; gains[1] = gains[2] = 0;
+    eq_dsp_tick(&s, gains, 1);
+    assert(s.gain[0] == 1);
+    s.was_active = 1; /* mirrors the mixer's active-block bookkeeping */
+    gains[0] = 0;
+    eq_dsp_tick(&s, gains, 1);
+    assert(s.gain[0] == 0 && s.was_active == 1);
+    for (i = 0; i < BLK; i++) a[i] = original[i];
+    eq_dsp_process(&s, 0, a, BLK);
+    assert(!memcmp(a, original, sizeof a));
+    assert(s.hist[0][0].x1 == original[BLK-1]);
+    assert(s.hist[0][0].y1 == original[BLK-1]);
+    gains[0] = -1;
+    eq_dsp_tick(&s, gains, 1);
+    assert(s.gain[0] == -1);
+    puts("PASS EQ zero-crossing unity history");
     return 0;
 }
