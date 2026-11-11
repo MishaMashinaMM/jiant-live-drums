@@ -9,6 +9,8 @@ set -e
 cd "$(dirname "$0")"
 export JIELI_TOOLCHAIN="${JIELI_TOOLCHAIN:-$HOME/.jieli/toolchain}"
 export AC79_SDK="${AC79_SDK:-$HOME/fw-AC79_AIoT_SDK}"
+# JIANT LIVE DRUMS: keep the live-only SEQ / PLAY / REC behavior by default.
+export FELUCCA_NO_SEQUENCER="${FELUCCA_NO_SEQUENCER:-1}"
 PY="${PYTHON:-python3}"
 
 "$PY" -c 'import PIL' 2>/dev/null || { echo "build.sh: $PY has no Pillow (pip3 install Pillow)"; exit 1; }
