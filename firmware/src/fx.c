@@ -1940,9 +1940,17 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
     }
     mod_begin(t);                                       /* the matrix's per-block values into t->p (mod.c) */
     int uin = uin_on && (uint32_t)(t - trk) + 1u == trk_live;   /* (0.7.5) USB IN+OUT: the host's audio comes in here */
+    /* Drain the shelf's decaying state after the last voice. Otherwise an
+     * early return truncates the tail and leaves stale IIR history for the
+     * next note, causing clicks at both note boundaries. 192 blocks (CTL=32)
+     * cover ~139 ms at FS; the wider shelf decays well within that window. */
+    uint32_t eq_tail = track_eq_on[(uint32_t)(t - trk)] &&
+        (track_eq_gain[(uint32_t)(t - trk)][0] ||
+         track_eq_gain[(uint32_t)(t - trk)][1] ||
+         track_eq_gain[(uint32_t)(t - trk)][2]);
     if (track_render(t, b, n))
-        t->tail = 16;                                   /* blocks of DIST state to run out after the last voice */
-    else if (!uin && (!t->tail || !t->p[P_DIST] || !--t->tail)) {
+        t->tail = eq_tail ? 192 : 16;
+    else if (!uin && (!t->tail || (!t->p[P_DIST] && !eq_tail) || !--t->tail)) {
         mp_seen[(uint32_t)(t - trk) % NTRK] = 0;       /* (silent: the next sound at its LEVEL and PAN) */
         if (MOD.on)
             mod_end(t);
