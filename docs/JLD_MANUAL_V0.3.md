@@ -75,8 +75,6 @@ Turn **SELECT** to change the MENU page; **ALGORITHM** changes its higher-level 
 
 ## 2. Tracks, GLO and MIDI routing
 
-![Mixer illustration from the inherited UI asset; labels/layout may differ from current v0.3](../web/manual/shots/mixer.png)
-
 In **GLO → MIXER**, choose per-track levels, stereo positioning, effects and the six **MIDI RX channels**. RX channels are in the range **1–16** and are allowed to repeat. Tracks 5 and 6 can retain assignments while inactive. The current project stores these settings when saved.
 
 Under **GLO → SYSTEM**, set **ROUTE**:
@@ -138,8 +136,6 @@ The ON column shows **Y** (active), **N** (disabled) or **S** (suspended because
 The older **MIDI Learn** feature remains available independently, with 32 global destination slots. Its assignments are stored as global settings, **not** as REC project macros.
 
 ## 4. DRUM-X
-
-![DRUM-X sound editor illustration from the inherited UI assets](../web/manual/shots/dx_sound2.png)
 
 DRUM-X provides **12 independently editable sounds**. The four additional pads B2, S2, O2 and T2 duplicate the sound-generation options of BD, SD, OH and TM respectively, but have their **own settings**. The original eight sounds and their MIDI note assignments remain available.
 
