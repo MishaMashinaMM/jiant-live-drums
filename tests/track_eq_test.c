@@ -53,12 +53,19 @@ int main(void)
     eq_dsp_process(&s,0,a,BLK);
     assert(!memcmp(a,original,sizeof a));
     puts("PASS flat EQ bit-exact");
-    check_close("LOW +15 at 10 Hz",run_freq(0,15,10),15,1.5);
-    check_close("LOW -15 at 10 Hz",run_freq(0,-15,10),-15,1.5);
+    /* Broader shelves keep the nominal 50/10000 Hz corner frequencies while
+     * also shaping musical bass and presence frequencies. */
+    check_close("LOW +15 at 50 Hz",run_freq(0,15,50),7.5,0.6);
+    check_close("LOW -15 at 50 Hz",run_freq(0,-15,50),-7.5,0.6);
+    check_close("LOW +15 at 100 Hz",run_freq(0,15,100),5.2,0.6);
+    check_close("LOW -15 at 100 Hz",run_freq(0,-15,100),-5.2,0.6);
+    check_close("LOW +15 at 200 Hz",run_freq(0,15,200),2.7,0.5);
     check_close("MID +15 at 700 Hz",run_freq(1,15,700),15,0.8);
     check_close("MID -15 at 700 Hz",run_freq(1,-15,700),-15,0.8);
-    check_close("HIGH +15 at 18 kHz",run_freq(2,15,18000),15,1.5);
-    check_close("HIGH -15 at 18 kHz",run_freq(2,-15,18000),-15,1.5);
+    check_close("HIGH +15 at 10 kHz",run_freq(2,15,10000),7.5,0.5);
+    check_close("HIGH -15 at 10 kHz",run_freq(2,-15,10000),-7.5,0.5);
+    check_close("HIGH +15 at 4 kHz",run_freq(2,15,4000),3.8,0.5);
+    check_close("HIGH -15 at 4 kHz",run_freq(2,-15,4000),-3.8,0.5);
     check_close("LOW rejects 1 kHz",run_freq(0,15,1000),0,0.3);
     check_close("HIGH rejects 100 Hz",run_freq(2,15,100),0,0.3);
     eq_dsp_init(&s);
