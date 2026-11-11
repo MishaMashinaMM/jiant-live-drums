@@ -1989,7 +1989,12 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
          * identical coefficients and a knob move slews one dB per block. */
         eq_dsp_t *eq = &track_eq_state[ti];
         eq_dsp_tick(eq, track_eq_gain[ti], track_eq_on[ti]);
-        uint32_t eq_active = eq->gain[0] || eq->gain[1] || eq->gain[2];
+        /* Process one last unity-gain block when EQ crosses zero. Otherwise
+         * the bypass skips history updates and the next negative gain resumes
+         * from stale low-shelf state, producing a sharp click. */
+        uint32_t eq_now = eq->gain[0] || eq->gain[1] || eq->gain[2];
+        uint32_t eq_active = eq_now || eq->was_active;
+        eq->was_active = !!eq_now;
         int32_t (*eb)[CTL] = track_eq_work[c1];
         if (eq_active)
             for (uint32_t k = 0; k < EQ_STREAMS; k++)
