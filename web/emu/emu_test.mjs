@@ -102,11 +102,17 @@ a.render(400);
 check(`a key sounds (peak ${a.peak.toFixed(3)}) and lights its LED`, a.peak > 0.01 && keyLit === 1);
 a.render(1500);
 a.peak = 0;
-a.ex.web_midi(0x90, 64, 100);                                  // Web MIDI: E4 on channel 1
+/* In JLD live-only mode, T1 initially hosts a mapped DRUM kit. A melodic
+ * E4 (64) is not assigned to any of its 12 lanes, so silence is correct.
+ * Test the actual selected kit's first lane instead; retain E4 for the
+ * upstream synth/sequencer configuration. */
+const drumLane0 = liveOnly ? a.ex.web_drum_pad_note?.(0) : 255;
+const midiTestNote = drumLane0 !== undefined && drumLane0 < 128 ? drumLane0 : 64;
+a.ex.web_midi(0x90, midiTestNote, 100);                  // Web MIDI: channel 1, playable initial note
 a.render(300);
-a.ex.web_midi(0x80, 64, 0);
+a.ex.web_midi(0x80, midiTestNote, 0);
 a.render(300);
-check(`a MIDI note in (USB-MIDI's queue) sounds (peak ${a.peak.toFixed(3)})`, a.peak > 0.01);
+check(`a MIDI note in (USB-MIDI's queue, note ${midiTestNote}) sounds (peak ${a.peak.toFixed(3)})`, a.peak > 0.01);
 const draws = a.ex.web_screen_draws();
 a.turn(EN.K1, 3);
 check("KNOB 1 redraws the screen", a.ex.web_screen_draws() > draws);
