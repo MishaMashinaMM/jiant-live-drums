@@ -57,9 +57,9 @@ int main(void)
      * also shaping musical bass and presence frequencies. */
     check_close("LOW +15 at 50 Hz",run_freq(0,15,50),7.5,0.6);
     check_close("LOW -15 at 50 Hz",run_freq(0,-15,50),-7.5,0.6);
-    check_close("LOW +15 at 100 Hz",run_freq(0,15,100),5.2,0.6);
-    check_close("LOW -15 at 100 Hz",run_freq(0,-15,100),-5.2,0.6);
-    check_close("LOW +15 at 200 Hz",run_freq(0,15,200),2.7,0.5);
+    check_close("LOW +15 at 100 Hz",run_freq(0,15,100),3.62,0.5);
+    check_close("LOW -15 at 100 Hz",run_freq(0,-15,100),-3.62,0.5);
+    check_close("LOW +15 at 200 Hz",run_freq(0,15,200),1.26,0.5);
     check_close("MID +15 at 700 Hz",run_freq(1,15,700),15,0.8);
     check_close("MID -15 at 700 Hz",run_freq(1,-15,700),-15,0.8);
     check_close("HIGH +15 at 10 kHz",run_freq(2,15,10000),7.5,0.5);
@@ -97,5 +97,20 @@ int main(void)
     eq_dsp_tick(&s, gains, 1);
     assert(s.gain[0] == -1);
     puts("PASS EQ zero-crossing unity history");
+    /* LOW impulse tail must be monotonic (single real pole), avoiding
+     * spurious ringing that can sound like a click at note boundaries. */
+    for (int db = -15; db <= 15; db += 30) {
+        eq_dsp_init(&s);
+        gains[0] = (int8_t)db;
+        for (i = 0; i < 20; i++) eq_dsp_tick(&s, gains, 1);
+        memset(a, 0, sizeof a);
+        a[0] = 1000000;
+        eq_dsp_process(&s, 0, a, BLK);
+        for (i = 2; i < BLK; i++) {
+            assert((a[i] > 0) == (a[1] > 0) || a[i] == 0);
+            assert(llabs((long long)a[i]) <= llabs((long long)a[i-1]) + 1);
+        }
+    }
+    puts("PASS LOW one-pole impulse decay");
     return 0;
 }
