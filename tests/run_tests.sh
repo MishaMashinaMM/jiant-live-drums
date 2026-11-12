@@ -3,8 +3,8 @@
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 # Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 # Host tests of the Felucca sources (no hardware). Run from the repo root after ./build.sh:
-#   tests/run_tests.sh                        # legacy sequencer-enabled emulator (default)
-#   FELUCCA_NO_SEQUENCER=1 tests/run_tests.sh # live-only emulator/native parity
+#   tests/run_tests.sh                        # live-only emulator/native parity (default)
+#   FELUCCA_NO_SEQUENCER=0 tests/run_tests.sh # legacy sequencer-enabled emulator
 # In either invocation, historical host tests retain their built-in configurations;
 # only the browser emulator and its native comparison use this environment switch.
 # Sequencer song-stems tests run in mode 0, where the sequencer exists.
@@ -437,7 +437,7 @@ elif ! command -v node >/dev/null 2>&1 || [ ! -f build/gen/felucca_tables.h ]; t
 else
     # Both browser and native comparison binaries must use the same firmware mode.
     # Other host tests above retain their own legacy/explicit compilation modes.
-    EMU_NO_SEQUENCER=${FELUCCA_NO_SEQUENCER:-0}
+    EMU_NO_SEQUENCER=${FELUCCA_NO_SEQUENCER:-1}
     case "$EMU_NO_SEQUENCER" in
         0|1) ;;
         *) echo "Invalid FELUCCA_NO_SEQUENCER=$EMU_NO_SEQUENCER (expected 0 or 1)"; exit 2 ;;
