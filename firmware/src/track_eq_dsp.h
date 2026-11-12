@@ -10,6 +10,9 @@ typedef struct {
     int8_t gain[EQ_BANDS];
     uint8_t on;
     uint8_t was_active; /* one neutral processing block on bypass transition */
+    /* LOW's fractional output feedback in Q28 (two previous outputs per bus).
+     * Retains low-frequency state without storing double-precision samples. */
+    int32_t low_frac[EQ_STREAMS][2];
 #if defined(EQ_DIAG_LOW_DOUBLE) && EQ_DIAG_LOW_DOUBLE
     /* Emulator-only high-precision LOW history: x1, x2, y1, y2 for each bus.
      * Normal hardware builds do not allocate this state. */
