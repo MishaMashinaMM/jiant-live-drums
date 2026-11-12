@@ -11,33 +11,6 @@
 static eq_dsp_t global_eq_state;
 static uint16_t global_eq_tail;         /* allow the low shelf's state to decay after the last note */
 
-/* Seven independent shared buses: dry stereo, three FX sends, and the SLICER's
- * stereo input. Do NOT EQ the wet returns: reverb/delay/chorus are downstream. */
-static void global_eq_block(uint32_t n)
-{
-    int8_t gain[EQ_BANDS];
-    uint32_t k, i, active, input = 0;
-    int32_t *const bus[EQ_STREAMS] = {mix_l, mix_r, send_c, send_d, send_r, sl_l, sl_r};
-    for (k = 0; k < EQ_BANDS; k++)
-        gain[k] = (int8_t)clamp(global_eq_gain[k], -15, 15);
-    eq_dsp_tick(&global_eq_state, gain, (uint8_t)global_eq_on);
-    active = global_eq_state.gain[0] || global_eq_state.gain[1] || global_eq_state.gain[2];
-    if (!active && !global_eq_state.was_active) {
-        global_eq_tail = 0;
-        return;
-    }
-    global_eq_state.was_active = (uint8_t)!!active;
-    for (k = 0; k < EQ_STREAMS; k++) {
-        for (i = 0; i < n; i++)
-            input |= (uint32_t)bus[k][i];
-        eq_dsp_process(&global_eq_state, k, bus[k], n);
-    }
-    if (input)
-        global_eq_tail = 192u;           /* roughly 139 ms at CTL=32 */
-    else if (global_eq_tail)
-        --global_eq_tail;
-}
-
 #define CHO_LEN 2048u
 static union {
     int16_t s[DLY_LEN];
@@ -1795,6 +1768,34 @@ static void events_block(uint32_t n);                    /* seq.c */
 static int32_t send_c[CTL], send_d[CTL], send_r[CTL];   /* (mix_l mix_r wet: above, clip_block) */
 /* (JIANT 0.6.71) what the second core's parts add, summed into the above after it is done (mix_block) */
 static struct { int32_t l[CTL], r[CTL], c[CTL], d[CTL], rv[CTL], sl[CTL], sr[CTL]; } c1_mix;
+/* Seven independent shared buses: dry stereo, three FX sends, and the SLICER's
+ * stereo input. Do NOT EQ the wet returns: reverb/delay/chorus are downstream. */
+static void global_eq_block(uint32_t n)
+{
+    int8_t gain[EQ_BANDS];
+    uint32_t k, i, active, input = 0;
+    int32_t *const bus[EQ_STREAMS] = {mix_l, mix_r, send_c, send_d, send_r, sl_l, sl_r};
+    for (k = 0; k < EQ_BANDS; k++)
+        gain[k] = (int8_t)clamp(global_eq_gain[k], -15, 15);
+    eq_dsp_tick(&global_eq_state, gain, (uint8_t)global_eq_on);
+    active = global_eq_state.gain[0] || global_eq_state.gain[1] || global_eq_state.gain[2];
+    if (!active && !global_eq_state.was_active) {
+        global_eq_tail = 0;
+        return;
+    }
+    global_eq_state.was_active = (uint8_t)!!active;
+    for (k = 0; k < EQ_STREAMS; k++) {
+        for (i = 0; i < n; i++)
+            input |= (uint32_t)bus[k][i];
+        eq_dsp_process(&global_eq_state, k, bus[k], n);
+    }
+    if (input)
+        global_eq_tail = 192u;           /* roughly 139 ms at CTL=32 */
+    else if (global_eq_tail)
+        --global_eq_tail;
+}
+
+
 /* (0.7.1) MENU > USB STEMS: USB audio as 8 channels, each part mono (its LEVEL, DIST and MUTE in, its PAN not: what it
  * adds to the dry mix, L + R halved) and the FX return in stereo (the DELAY, REVERB and CHORUS buses, the SLICER's
  * when it is on), all before the master (no leveler, limiter, clip or MASTER knob: the mix's own scale). The parts
