@@ -439,7 +439,7 @@ elif ! command -v node >/dev/null 2>&1 || [ ! -f build/gen/felucca_tables.h ]; t
     echo "== skip the browser emulator (needs node and build/gen)"
 else
     run "browser emulator: the firmware to WebAssembly (web/emu/build.sh -> build/emu)" sh web/emu/build.sh
-    cc -O2 -ffp-contract=off -w -Ibuild/gen -Ifirmware/src -o "$OUT/emu_native" web/emu/native_check.c -lm
+    cc -O2 -ffp-contract=off -w "-DFELUCCA_NO_SEQUENCER=${FELUCCA_NO_SEQUENCER:-1}" -Ibuild/gen -Ifirmware/src -o "$OUT/emu_native" web/emu/native_check.c -lm
     run "browser emulator: the same song from the native build" "$OUT/emu_native" "$OUT/emu_native.f32"
     run "browser emulator: boot, keys, MIDI, screen, LEDs, PLAY, a save kept across instances, = native, cost" \
         node web/emu/emu_test.mjs build/emu/felucca.wasm "$OUT/emu_native.f32"
