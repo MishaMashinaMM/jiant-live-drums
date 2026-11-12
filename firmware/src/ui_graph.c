@@ -1996,6 +1996,17 @@ static void draw_graph(void)
         }
     }
     cv_oy = 0;
+    /* GLO > MIX > EQ: fixed band-frequency captions below the knob cards.
+     * Draw over the existing panel (including the scope) so no other page
+     * or EQ control layout changes. The small SURF labels remain legible. */
+    if (!ui.home && str_eq(pg->title, "EQ")) {
+        static const char *const hz[3] = {"50 Hz", "700 Hz", "10 kHz"};
+        for (uint32_t band = 0; band < 3u; band++) {
+            int32_t x = CARD_X(band);
+            cv_rrect(x, 3, CARD_W, 15, 3, T_SURF, T_SURF);
+            cv_text_in(x, 4, CARD_W, &AF_X, hz[band], T_MID, T_SURF);
+        }
+    }
     if (toast_on())                                  /* (0.9.5) a toast: a small pill near the panel's foot, over the page,
                                                       * which goes on drawing and moving behind it (0.8.5 .. 0.9.4: the
                                                       * panel cleared, the message boxed alone in it) */
