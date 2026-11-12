@@ -3,7 +3,11 @@
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 # Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 # Host tests of the Felucca sources (no hardware). Run from the repo root after ./build.sh:
-#   tests/run_tests.sh
+#   tests/run_tests.sh                        # legacy sequencer-enabled emulator (default)
+#   FELUCCA_NO_SEQUENCER=1 tests/run_tests.sh # live-only emulator/native parity
+# In either invocation, historical host tests retain their built-in configurations;
+# only the browser emulator and its native comparison use this environment switch.
+# Sequencer song-stems tests run in mode 0, where the sequencer exists.
 #
 # Regression suite (tests/regress.c, tests/target_budget.py; details at the top of regress.c):
 #   golden renders  every engine x preset, the GM map on DRUM, voice modes, FX sends, a 4-track mix: one hash
