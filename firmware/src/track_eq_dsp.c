@@ -122,6 +122,8 @@ void eq_dsp_init(eq_dsp_t *s)
     for (k = 0; k < EQ_BANDS; k++) s->gain[k] = 0;
     s->on = 1;
     s->was_active = 0;
+    for (i = 0; i < EQ_STREAMS; i++)
+        s->low_frac[i][0] = s->low_frac[i][1] = 0;
 #if defined(EQ_DIAG_LOW_DOUBLE) && EQ_DIAG_LOW_DOUBLE
     for (i = 0; i < EQ_STREAMS; i++)
         for (j = 0; j < 4; j++)
@@ -161,7 +163,8 @@ void eq_dsp_process(eq_dsp_t *s, unsigned stream, int32_t *buf, unsigned n)
      * otherwise be a substantial waste on the FM-1's two CPU cores. */
     for (band = 0; band < EQ_BANDS; band++) {
         const eq_hist_t *h = &s->hist[stream][band];
-        if (h->x1 || h->x2 || h->y1 || h->y2) break;
+        if (h->x1 || h->x2 || h->y1 || h->y2 ||
+            (band == 0 && (s->low_frac[stream][0] || s->low_frac[stream][1]))) break;
     }
     if (band == EQ_BANDS) {
         for (i = 0; i < n && !buf[i]; i++) {}
@@ -183,6 +186,8 @@ void eq_dsp_process(eq_dsp_t *s, unsigned stream, int32_t *buf, unsigned n)
                 int32_t x = buf[i];
                 h->x2 = h->x1; h->x1 = x;
                 h->y2 = h->y1; h->y1 = x;
+                if (band == 0)
+                    s->low_frac[stream][0] = s->low_frac[stream][1] = 0;
 #if defined(EQ_DIAG_LOW_DOUBLE) && EQ_DIAG_LOW_DOUBLE
                 if (band == 0) {
                     double *q = s->low_hist[stream];
@@ -219,6 +224,38 @@ void eq_dsp_process(eq_dsp_t *s, unsigned stream, int32_t *buf, unsigned n)
             continue;
         }
 #endif
+        if (band == 0) {
+            /* LOW only: preserve the two previous output samples' fractional
+             * Q28 remainders in the feedback path. Without these remainders,
+             * the near-unity 50 Hz poles repeatedly truncate sub-LSB state,
+             * causing audible quantization transients at note boundaries.
+             *
+             * acc is in Q28. -a*frac has Q56 units, shifted to Q28 before
+             * summation. 64-bit products retain 28 fractional bits without
+             * floating point; MID and HIGH continue on the original path. */
+            int32_t *frac = s->low_frac[stream];
+            for (i = 0; i < n; i++) {
+                int32_t x = buf[i];
+                int64_t feedback = (int64_t)c->a1 * frac[0] +
+                                   (int64_t)c->a2 * frac[1];
+                int64_t acc = (int64_t)c->b0 * x +
+                              (int64_t)c->b1 * h->x1 +
+                              (int64_t)c->b2 * h->x2 -
+                              (int64_t)c->a1 * h->y1 -
+                              (int64_t)c->a2 * h->y2 -
+                              (feedback >> 28);
+                int64_t yi = acc >> 28;
+                int32_t y = eq_sat(yi);
+                int32_t rem = yi == (int64_t)y
+                                ? (int32_t)(acc - (yi << 28))
+                                : 0;
+                frac[1] = frac[0]; frac[0] = rem;
+                h->x2 = h->x1; h->x1 = x;
+                h->y2 = h->y1; h->y1 = y;
+                buf[i] = y;
+            }
+            continue;
+        }
         for (i = 0; i < n; i++) {
             int32_t x = buf[i];
             int64_t acc = (int64_t)c->b0 * x + (int64_t)c->b1 * h->x1 + (int64_t)c->b2 * h->x2
