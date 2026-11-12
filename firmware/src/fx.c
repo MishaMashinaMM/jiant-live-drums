@@ -2457,7 +2457,16 @@ static __attribute__((noinline)) int mix_hush(void)
         return 0;
     for (k = 0; k < NPART; k++) {
         const track_t *t = &trk[k];
-        if ((t->tail && t->p[P_DIST]) || t->xf_on || t->xin)   /* (tail: counted down only with DIST, mix_part) */
+        /* EQ's low-frequency IIR can still have audible output after all
+         * voices end. Keep mix_part running until its existing tail counter
+         * has drained; otherwise the silent shortcut freezes its histories
+         * and the next note resumes with stale samples (boundary clicks).
+         * Preserve the original DIST-only behavior for flat/off EQ. */
+        if ((t->tail && (t->p[P_DIST] ||
+                        (track_eq_on[k] &&
+                         (track_eq_gain[k][0] || track_eq_gain[k][1] ||
+                          track_eq_gain[k][2] || track_eq_state[k].was_active)))) ||
+            t->xf_on || t->xin)
             return 0;
         for (i = 0; i < NVOICE; i++)
             if (t->v[i].active)
