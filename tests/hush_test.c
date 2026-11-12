@@ -44,6 +44,19 @@ int main(void)
     mc_host = 1;
     for (k = 0; k < NTRK; k++) trk[k].p[P_REV] = 40;
     notes(&trk[4], 48);
+    /* Regression: the EQ tail must keep rendering through its last voice's
+     * release. With the hush optimization enabled, audio and the next note
+     * must match the build with FX_HUSH_OFF, including both cut and boost. */
+    track_eq_on[4] = 1;
+    track_eq_gain[4][0] = 12;
+    notes(&trk[4], 48);
+    blocks(1000);
+    track_eq_gain[4][0] = -12;
+    notes(&trk[4], 52);
+    blocks(1000);
+    track_eq_gain[4][0] = 0;
+    blocks(1000);
+    notes(&trk[4], 48);
     blocks(30000);                                       /* (~22 s: every tail out, the master at rest) */
     notes(&trk[5], 60);
     trk[4].p[P_LD_FLT] = 40;                             /* (its LFO on the filter: the LFO turns on through the silence) */
