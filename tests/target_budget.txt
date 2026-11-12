@@ -44,3 +44,7 @@ dly_lo 2949
 formant_word_render 338
 formant_block 122
 djf_block 200
+# JLD v0.3 EQ (target disassembly baseline, feature/track-eq; not hardware CPU cycle measurements)
+eq_dsp_process 2829
+eq_dsp_tick 17
+eq_dsp_init 28
