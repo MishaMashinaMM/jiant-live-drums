@@ -247,7 +247,7 @@ void eq_dsp_process(eq_dsp_t *s, unsigned stream, int32_t *buf, unsigned n)
                 int64_t yi = acc >> 28;
                 int32_t y = eq_sat(yi);
                 int32_t rem = yi == (int64_t)y
-                                ? (int32_t)(acc - (yi << 28))
+                                ? (int32_t)(acc - yi * INT64_C(268435456))
                                 : 0;
                 frac[1] = frac[0]; frac[0] = rem;
                 h->x2 = h->x1; h->x1 = x;
