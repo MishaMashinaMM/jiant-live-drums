@@ -122,6 +122,11 @@ void eq_dsp_init(eq_dsp_t *s)
     for (k = 0; k < EQ_BANDS; k++) s->gain[k] = 0;
     s->on = 1;
     s->was_active = 0;
+#if defined(EQ_DIAG_LOW_DOUBLE) && EQ_DIAG_LOW_DOUBLE
+    for (i = 0; i < EQ_STREAMS; i++)
+        for (j = 0; j < 4; j++)
+            s->low_hist[i][j] = 0.0;
+#endif
 }
 
 /* Call once per track block, never once per bus: do not accelerate smoothing
@@ -178,9 +183,42 @@ void eq_dsp_process(eq_dsp_t *s, unsigned stream, int32_t *buf, unsigned n)
                 int32_t x = buf[i];
                 h->x2 = h->x1; h->x1 = x;
                 h->y2 = h->y1; h->y1 = x;
+#if defined(EQ_DIAG_LOW_DOUBLE) && EQ_DIAG_LOW_DOUBLE
+                if (band == 0) {
+                    double *q = s->low_hist[stream];
+                    q[1] = q[0]; q[0] = (double)x;
+                    q[3] = q[2]; q[2] = (double)x;
+                }
+#endif
             }
             continue;
         }
+#if defined(EQ_DIAG_LOW_DOUBLE) && EQ_DIAG_LOW_DOUBLE
+        if (band == 0) {
+            /* Diagnostic only: same Q28 shelf coefficients and audio routing,
+             * but floating-point recursive state avoids per-sample integer
+             * truncation at the 50 Hz pole. Never use on the FM1 hardware:
+             * this is to isolate the crackle's numerical origin. */
+            const double scale = 1.0 / 268435456.0;
+            double *q = s->low_hist[stream];
+            for (i = 0; i < n; i++) {
+                int32_t x = buf[i];
+                double y = ((double)c->b0 * (double)x +
+                            (double)c->b1 * q[0] +
+                            (double)c->b2 * q[1] -
+                            (double)c->a1 * q[2] -
+                            (double)c->a2 * q[3]) * scale;
+                if (y > (double)INT32_MAX) y = (double)INT32_MAX;
+                if (y < (double)INT32_MIN) y = (double)INT32_MIN;
+                q[1] = q[0]; q[0] = (double)x;
+                q[3] = q[2]; q[2] = y;
+                buf[i] = (int32_t)y;
+                h->x2 = h->x1; h->x1 = x;
+                h->y2 = h->y1; h->y1 = buf[i];
+            }
+            continue;
+        }
+#endif
         for (i = 0; i < n; i++) {
             int32_t x = buf[i];
             int64_t acc = (int64_t)c->b0 * x + (int64_t)c->b1 * h->x1 + (int64_t)c->b2 * h->x2
