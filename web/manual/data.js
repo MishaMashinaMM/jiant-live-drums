@@ -613,6 +613,10 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.3", items: [
+    ["JIANT LIVE DRUMS: ecualizador de tres bandas por pista en GLO › MIX › EQ: LOW 50 Hz, MID 700 Hz y HIGH 10 kHz, de −15 a +15 dB, activable por pista.", "JIANT LIVE DRUMS: three-band EQ per track in GLO › MIX › EQ: LOW 50 Hz, MID 700 Hz and HIGH 10 kHz, −15 to +15 dB, independently enabled per track."],
+    ["El filtro LOW usa estado de realimentación de precisión fraccionaria para evitar chasquidos al iniciar o soltar notas; MID y HIGH conservan su procesamiento.", "LOW uses fractional-precision feedback state to avoid crackling at note-on and note-off; MID and HIGH retain their processing."]
+  ]},
   {v: "0.9.18", items: [
     ["RATCH y ECHO son uno: RATCH x1–x8, FLAT, FADE (el ECHO de antes) o RISE, con un paso de altura (+1 DEG, −1 DEG, +OCT). Sus golpes se derraman sobre los pasos siguientes (cuatro pasos en un sinte, dos en un kit); un golpe que cae en un paso con la misma nota se omite.", "RATCH and ECHO are one: RATCH x1–x8, FLAT, FADE (the old ECHO) or RISE, with a pitch step (+1 DEG, −1 DEG, +OCT). Its hits spill over the steps after it (four steps on a synth, two on a kit); a hit landing on a step with the same note is left out."],
     ["ARP toca las notas del paso de a una a su RATE (1/32 a 1/4), en su ORDER y octavas, a lo largo del paso y sus ties y más allá. ARP SCALE se carga como WALK; OCT es ahora una octava por vuelta (el CLIMB de antes); TOUCH pasa a los modos de los sonidos.", "ARP plays the step's notes one at a time at its RATE (1/32 to 1/4), in its ORDER and octaves, through the step and its TIEs and past them. ARP SCALE loads as a WALK; OCT is now an octave a lap (the old CLIMB); TOUCH becomes the sounds' modes."],
