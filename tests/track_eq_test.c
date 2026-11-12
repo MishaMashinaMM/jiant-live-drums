@@ -82,10 +82,10 @@ static void check_low_fractional_feedback(int gain)
         }
     }
     if (worst > 2.0) {
-        fprintf(stderr,"FAIL LOW fractional reference at %+d: %.2f sample units\\n",gain,worst);
+        fprintf(stderr,"FAIL LOW fractional reference at %+d: %.2f sample units\n",gain,worst);
         exit(1);
     }
-    printf("PASS LOW %+d fractional reference: max error %.3f units\\n",gain,worst);
+    printf("PASS LOW %+d fractional reference: max error %.3f units\n",gain,worst);
 }
 
 int main(void)
