@@ -54,8 +54,8 @@ if (cd "$BASE_TREE" && FELUCCA_NO_SEQUENCER=1 sh tests/run_tests.sh) > "$AUDIT_D
 else
     MAIN_RC=$?
 fi
-awk '/^HOST TEST STEP FAILED / {sub(/^HOST TEST STEP FAILED \\([0-9]+\\): /, ""); print}' "$AUDIT_DIR/main-tests.log" | LC_ALL=C sort -u > "$AUDIT_DIR/main-failed-steps.txt"
-awk '/^HOST TEST STEP FAILED / {sub(/^HOST TEST STEP FAILED \\([0-9]+\\): /, ""); print}' "$FEATURE_LOG" | LC_ALL=C sort -u > "$AUDIT_DIR/feature-failed-steps.txt"
+awk '/^HOST TEST STEP FAILED / {sub(/^HOST TEST STEP FAILED \([0-9]+\): /, ""); print}' "$AUDIT_DIR/main-tests.log" | LC_ALL=C sort -u > "$AUDIT_DIR/main-failed-steps.txt"
+awk '/^HOST TEST STEP FAILED / {sub(/^HOST TEST STEP FAILED \([0-9]+\): /, ""); print}' "$FEATURE_LOG" | LC_ALL=C sort -u > "$AUDIT_DIR/feature-failed-steps.txt"
 
 {
     echo "JLD baseline comparison (same source ancestry, live-only firmware build)"
