@@ -13,7 +13,7 @@
 
 The links above are the GitHub Pages routes for this separate Drums repository. The repository includes the Drums-specific browser emulator, firmware installer, editor, and an inherited interactive manual. The inherited manual still describes some original sequencer behavior and is **not a fully updated Drums control reference**.
 
-JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbral drum sound module**. It extends DRUM-X, adds DRUM-LAB, expands MIDI routing and CC control, and keeps the eight-voice shared pool. The **sequencer is disabled** in this edition (`FELUCCA_NO_SEQUENCER=1`); its SEQ, PLAY, and REC buttons open dedicated live-MIDI pages. Original Jiant Live remains a separate project.
+JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbral drum sound module**. It extends DRUM-X, adds DRUM-LAB, expands MIDI routing and CC control, and keeps the eight-voice shared pool. The **sequencer is disabled by default** in this edition (no extra build flag required); its SEQ, PLAY, and REC buttons open dedicated live-MIDI pages. Original Jiant Live remains a separate project.
 
 > **Current status:** v0.3 milestone; experimental, **not an official Juan Jiant release**. Dedicated live-drum host tests and update-package simulations pass. **The published v0.3 firmware (`v0.3-1956d21`) was successfully installed and booted on two physical FM1 units through two different starting-firmware paths: one directly from official FM1 V15 firmware, and the other from original JIANT firmware. Both upgrade paths worked**, and the owner reports that all tested functions work as expected. The REC macro screen's partial-redraw fix was **verified on physical hardware**: editing macro values updates the affected cells without full-screen flicker. The 32-macro REC paging and project save/load were verified in the emulator; the earlier four-macro build was also checked on the device for DRUM-LAB sound/editing, SEQ/PLAY navigation, LEDs, and external-MIDI CC macro control. These are successful owner-reported device tests, not an exhaustive hardware qualification. Back up your data and prepare a recovery method before installing. Do not use the original JIANT web installer to install Drums.
 
@@ -157,7 +157,7 @@ The Drums site has the same core web-page options as Jiant Live:
 | Editor | `/webapp/editor/` | Sound/project editing, banks, settings, complete backup/restore |
 | Interactive manual | `/manual/` | Inherited JIANT navigation and control reference (Drums differences noted) |
 
-The site generator (`web/make_site.py`) embeds the tested update libraries and packages only the Drums build passed to it. The GitHub Pages workflow builds both hardware firmware and emulator with `FELUCCA_NO_SEQUENCER=1` from the current `main` commit; it does not select older JIANT `STABLE`, `PREVIEW`, or `CLASSIC` builds. Publish the site only after its workflow succeeds and the displayed version and SHA-256 are verified.
+The site generator (`web/make_site.py`) embeds the tested update libraries and packages only the Drums build passed to it. The GitHub Pages workflow builds both hardware firmware and emulator in the default live-only configuration from the current `main` commit; it does not select older JIANT `STABLE`, `PREVIEW`, or `CLASSIC` builds. Publish the site only after its workflow succeeds and the displayed version and SHA-256 are verified.
 
 ### Run the emulator locally
 
@@ -166,8 +166,8 @@ You can also build and serve the emulator on your own computer.
 Requirements: this source checkout, the original build dependencies, Python 3, and **Emscripten** (`emcc`) for WebAssembly builds.
 
 ```sh
-FELUCCA_NO_SEQUENCER=1 bash build.sh
-FELUCCA_NO_SEQUENCER=1 bash web/emu/build.sh
+bash build.sh
+bash web/emu/build.sh
 python3 -m http.server 8000 --directory build/emu
 ```
 
