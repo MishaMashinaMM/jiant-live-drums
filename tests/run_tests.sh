@@ -431,12 +431,27 @@ if ! command -v emcc >/dev/null 2>&1; then
 elif ! command -v node >/dev/null 2>&1 || [ ! -f build/gen/felucca_tables.h ]; then
     echo "== skip the browser emulator (needs node and build/gen)"
 else
-    run "browser emulator: the firmware to WebAssembly (web/emu/build.sh -> build/emu)" sh web/emu/build.sh
-    cc -O2 -ffp-contract=off -w -Ibuild/gen -Ifirmware/src -o "$OUT/emu_native" web/emu/native_check.c -lm
+    # Both browser and native comparison binaries must use the same firmware mode.
+    # Other host tests above retain their own legacy/explicit compilation modes.
+    EMU_NO_SEQUENCER=${FELUCCA_NO_SEQUENCER:-0}
+    case "$EMU_NO_SEQUENCER" in
+        0|1) ;;
+        *) echo "Invalid FELUCCA_NO_SEQUENCER=$EMU_NO_SEQUENCER (expected 0 or 1)"; exit 2 ;;
+    esac
+    echo "== emulator configuration: FELUCCA_NO_SEQUENCER=$EMU_NO_SEQUENCER"
+    run "browser emulator: the firmware to WebAssembly (web/emu/build.sh -> build/emu)" \
+        env FELUCCA_NO_SEQUENCER="$EMU_NO_SEQUENCER" sh web/emu/build.sh
+    cc -O2 -ffp-contract=off -w "-DFELUCCA_NO_SEQUENCER=$EMU_NO_SEQUENCER" \
+        -Ibuild/gen -Ifirmware/src -o "$OUT/emu_native" web/emu/native_check.c -lm
     run "browser emulator: the same song from the native build" "$OUT/emu_native" "$OUT/emu_native.f32"
     run "browser emulator: boot, keys, MIDI, screen, LEDs, PLAY, a save kept across instances, = native, cost" \
         node web/emu/emu_test.mjs build/emu/felucca.wasm "$OUT/emu_native.f32"
-        run "stems from the browser build (web/emu/stems.js): a backup in, each part alone, the song once round, WAV + ZIP" node web/emu/stems_test.mjs build/emu/felucca.wasm
+    if [ "$EMU_NO_SEQUENCER" = 0 ]; then
+        run "stems from the browser build (web/emu/stems.js): a backup in, each part alone, the song once round, WAV + ZIP" \
+            node web/emu/stems_test.mjs build/emu/felucca.wasm
+    else
+        echo "== skip browser song stems in live-only mode (requires sequencer; covered by mode 0)"
+    fi
 fi
 
 [ $fail -eq 0 ] && echo "ALL HOST TESTS PASSED" || { echo "HOST TESTS FAILED"; exit 1; }
