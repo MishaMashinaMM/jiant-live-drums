@@ -7,6 +7,37 @@
  * at the full rate while TIME fits, at half or a quarter of it for times up to twice / four times as long (dly_lo):
  * the longest at full rate (DLY_LEN - DLY_EDGE) / FS, the longest of all four times that */
 #include "prof.c"                         /* (0.9.14) MENU > ABOUT > PROFILE's measurements */
+#include "track_eq_dsp.c"                /* shared three-band EQ, after track summing, before global effects */
+static eq_dsp_t global_eq_state;
+static uint16_t global_eq_tail;         /* allow the low shelf's state to decay after the last note */
+
+/* Seven independent shared buses: dry stereo, three FX sends, and the SLICER's
+ * stereo input. Do NOT EQ the wet returns: reverb/delay/chorus are downstream. */
+static void global_eq_block(uint32_t n)
+{
+    int8_t gain[EQ_BANDS];
+    uint32_t k, i, active, input = 0;
+    int32_t *const bus[EQ_STREAMS] = {mix_l, mix_r, send_c, send_d, send_r, sl_l, sl_r};
+    for (k = 0; k < EQ_BANDS; k++)
+        gain[k] = (int8_t)clamp(global_eq_gain[k], -15, 15);
+    eq_dsp_tick(&global_eq_state, gain, (uint8_t)global_eq_on);
+    active = global_eq_state.gain[0] || global_eq_state.gain[1] || global_eq_state.gain[2];
+    if (!active && !global_eq_state.was_active) {
+        global_eq_tail = 0;
+        return;
+    }
+    global_eq_state.was_active = (uint8_t)!!active;
+    for (k = 0; k < EQ_STREAMS; k++) {
+        for (i = 0; i < n; i++)
+            input |= (uint32_t)bus[k][i];
+        eq_dsp_process(&global_eq_state, k, bus[k], n);
+    }
+    if (input)
+        global_eq_tail = 192u;           /* roughly 139 ms at CTL=32 */
+    else if (global_eq_tail)
+        --global_eq_tail;
+}
+
 #define CHO_LEN 2048u
 static union {
     int16_t s[DLY_LEN];
@@ -2412,7 +2443,7 @@ static __attribute__((noinline)) int master_rest(uint32_t n)
 static __attribute__((noinline)) int mix_hush(void)
 {
     uint32_t k, i;
-    if (!mix_msil || song.playing || prf.rest_ph < 6u || uin_on || pfx_any || fx_stems || mix_skip ||
+    if (global_eq_tail || !mix_msil || song.playing || prf.rest_ph < 6u || uin_on || pfx_any || fx_stems || mix_skip ||
         slicer_on())
         return 0;
     for (k = 0; k < NPART; k++) {
@@ -2508,6 +2539,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         pfx_end();                                      /* (DEC- / DEC+ back) */
     if (perf)
         perf_pre(mix_l, mix_r, sl_l, sl_r, send_d, send_r, n);   /* (THROW: the SLICER's bus too) */
+    global_eq_block(n);                                  /* pre-effects: dry, sends and slicer input; once per block */
     for (i = 0; i < n; i++) {                           /* (0.6.75) the buses' return and sides (the block before's sends); */
         wet[i] = fx_wet[i];                             /* this block's sends for the next */
         mix_l[i] += fx_sl[i];
