@@ -165,7 +165,15 @@ void eq_dsp_process(eq_dsp_t *s, unsigned stream, int32_t *buf, unsigned n)
     for (band = 0; band < EQ_BANDS; band++) {
         eq_hist_t *h = &s->hist[stream][band];
         const eq_coef_t *c = &EQ_TABLES[band][s->gain[band] + 15];
+        /* Emulator-only diagnostic: bypass LOW's arithmetic while preserving
+         * the entire per-track mixer route and EQ-active bookkeeping.
+         * Build with EMU_CFLAGS=-DEQ_DIAG_BYPASS_LOW=1; normal builds (including
+         * hardware and tests) retain the real 50 Hz shelf. */
+#if defined(EQ_DIAG_BYPASS_LOW) && EQ_DIAG_BYPASS_LOW
+        if (!s->gain[band] || band == 0) {
+#else
         if (!s->gain[band]) {
+#endif
             for (i = 0; i < n; i++) {
                 int32_t x = buf[i];
                 h->x2 = h->x1; h->x1 = x;
