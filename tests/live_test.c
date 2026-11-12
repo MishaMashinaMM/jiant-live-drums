@@ -437,10 +437,10 @@ static int pages(void)
     press(B_GLO); frame();
     ok = str_eq(cur_page()->title, "MIXER");
     turn(EN_SELECT, -1); frame();
-    ok &= str_eq(cur_page()->title, "RIELES") && crumb_is("GLO \xB7 LIVE \xB7 RIELES", "2/6");
+    ok &= str_eq(cur_page()->title, "RIELES") && crumb_is("GLO \xB7 LIVE \xB7 RIELES", "2/7");
     turn(EN_SELECT, -1); frame();
     turn(EN_SELECT, -1); frame();
-    ok &= str_eq(cur_page()->title, "MANO") && crumb_is("GLO \xB7 LIVE \xB7 MANO", "1/6") && tabs_lit(&k) == 4u && !k &&
+    ok &= str_eq(cur_page()->title, "MANO") && crumb_is("GLO \xB7 LIVE \xB7 MANO", "1/7") && tabs_lit(&k) == 4u && !k &&
           song.grid == 3;
     bad += check("GLO: MIXER at power-on; SELECT back RIELES, MANO (the chain's first, LIVE · four tabs)", ok);
     ui_power_on();
