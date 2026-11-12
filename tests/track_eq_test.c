@@ -41,6 +41,53 @@ static void check_close(const char *name, double measured, double expected, doub
     }
     printf("PASS %s: %.2f dB\n",name,measured);
 }
+/* Compare the hardware-compatible LOW's Q28 fractional feedback against the
+ * same coefficients evaluated with a full double-precision recursive state.
+ * The old LOW rounded away the recursive fraction every sample, accumulating
+ * thousands of sample units of error in repeated note/silence sequences. */
+static void check_low_fractional_feedback(int gain)
+{
+    static const int32_t coef[2][5] = {
+        {265734488, -527533773, 261804926, -527520735, 259116996}, /* -15 */
+        {271163877, -532882541, 261750703, -532895712, 264465953}  /* +15 */
+    };
+    const int32_t *c = coef[gain < 0 ? 0 : 1];
+    eq_dsp_t s;
+    int32_t b[BLK];
+    int8_t gains[3] = {(int8_t)gain, 0, 0};
+    double x1=0, x2=0, y1=0, y2=0, worst=0;
+    unsigned k, j;
+    eq_dsp_init(&s);
+    for (k=0; k<20; k++) eq_dsp_tick(&s,gains,1);
+    for (k=0; k<22000; k+=BLK) {
+        for (j=0; j<BLK; j++) {
+            unsigned step = (k+j)%2200u;
+            double envelope = step >= 1500u ? 0.0 :
+                  fmin(1.0, fmin((double)step/100.0, (1500.0-(double)step)/100.0));
+            b[j] = (int32_t)lrint(600000.0*envelope*
+                        sin(2.0*PI*110.0*(k+j)/FS));
+        }
+        /* Keep an exact copy for the independent reference. */
+        int32_t input[BLK];
+        memcpy(input,b,sizeof b);
+        eq_dsp_process(&s,0,b,BLK);
+        for (j=0; j<BLK; j++) {
+            double x = input[j];
+            double y = ((double)c[0]*x + (double)c[1]*x1 +
+                        (double)c[2]*x2 - (double)c[3]*y1 -
+                        (double)c[4]*y2) / 268435456.0;
+            double err = fabs((double)b[j]-y);
+            if (err > worst) worst=err;
+            x2=x1; x1=x; y2=y1; y1=y;
+        }
+    }
+    if (worst > 2.0) {
+        fprintf(stderr,"FAIL LOW fractional reference at %+d: %.2f sample units\\n",gain,worst);
+        exit(1);
+    }
+    printf("PASS LOW %+d fractional reference: max error %.3f units\\n",gain,worst);
+}
+
 int main(void)
 {
     eq_dsp_t s;
@@ -115,5 +162,7 @@ int main(void)
             assert(llabs((long long)a[i]) <= 16);
     }
     puts("PASS LOW impulse tail settles for boost and cut");
+    check_low_fractional_feedback(-15);
+    check_low_fractional_feedback(15);
     return 0;
 }
