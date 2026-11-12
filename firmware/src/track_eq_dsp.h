@@ -10,6 +10,11 @@ typedef struct {
     int8_t gain[EQ_BANDS];
     uint8_t on;
     uint8_t was_active; /* one neutral processing block on bypass transition */
+#if defined(EQ_DIAG_LOW_DOUBLE) && EQ_DIAG_LOW_DOUBLE
+    /* Emulator-only high-precision LOW history: x1, x2, y1, y2 for each bus.
+     * Normal hardware builds do not allocate this state. */
+    double low_hist[EQ_STREAMS][4];
+#endif
 } eq_dsp_t;
 void eq_dsp_init(eq_dsp_t *s);
 void eq_dsp_tick(eq_dsp_t *s, const int8_t gain[EQ_BANDS], uint8_t on);
