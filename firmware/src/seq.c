@@ -881,9 +881,11 @@ typedef struct {
 } dxo_t;
 static dxo_t dxo[NPART][DXO_N];
 static uint8_t dxo_n[NPART];
+#if !FELUCCA_NO_SEQUENCER
 static step_t dxo_bak[NPART];                           /* the step a held one was last recorded into, as it was */
 static uint8_t dxo_bak_at[NPART];                       /* .. which (its source step + 1; 0 none), entered at play idx */
 static uint16_t dxo_bak_idx[NPART];
+#endif /* original sequencer's recorded octave-hold undo scratch */
 static uint32_t dxo_part(const track_t *t, uint32_t r)  /* the part of the playing step it is in */
 {
     uint32_t sl = step_samples(t, div_samples((uint32_t)t->p[P_SDIV]), t->seq_idx) / (r ? r : 1u), p;
@@ -942,14 +944,17 @@ static void dxo_off(track_t *t, uint32_t id)
     if (j == dxo_n[ti])
         return;
     dxo_n[ti] = (uint8_t)j;
+#if !FELUCCA_NO_SEQUENCER
     if (!j && dxo_bak_at[ti]) {                         /* let go early in a step it was held into: that step back */
         if (rec_on(t) && dxo_bak_idx[ti] == t->seq_idx && seq_src(t, t->seq_idx) == dxo_bak_at[ti] - 1u &&
             t->seq_pos < step_samples(t, div_samples((uint32_t)t->p[P_SDIV]), t->seq_idx) / 2u)
             t->step[dxo_bak_at[ti] - 1u] = dxo_bak[ti];
         dxo_bak_at[ti] = 0;
     }
+#endif
 }
 /* the sequencer enters step idx of track t (before it plays it): recording, the held ones go into it */
+#if !FELUCCA_NO_SEQUENCER
 static __attribute__((noinline)) void dxo_rec_hold(track_t *t, uint32_t idx)
 {
     uint32_t ti = trk_index(t), k, src = seq_src(t, idx), bak = 0;
@@ -973,6 +978,7 @@ static __attribute__((noinline)) void dxo_rec_hold(track_t *t, uint32_t idx)
         e->quiet = (uint8_t)(idx + 1u);
     }
 }
+#endif /* no recording into pattern steps in live-only mode */
 static void dxo_hit(track_t *t, const dxo_t *e) { trk_note_on(t, e->note, e->vel); }
 /* a block on (events_block, after the sequencer): the held ones' next hits */
 static __attribute__((noinline)) void dxo_tick(track_t *t, uint32_t n)
@@ -2196,8 +2202,10 @@ static void seq_tick(track_t *t, uint32_t n)
             t->loops++;                                 /* (0.6.39) one more loop of the pattern (TRIG) */
         if (!lon)
             rec_hold(t, t->seq_idx, len ? len : 1u);   /* (LIVE: the ghost's steps, live_adv) */
+#if !FELUCCA_NO_SEQUENCER
         if (trk_index(t) < NPART && dxo_n[trk_index(t)])
-            dxo_rec_hold(t, t->seq_idx);                /* (0.8.5) a held ratchet records into it */
+            dxo_rec_hold(t, t->seq_idx);
+#endif                /* (0.8.5) a held ratchet records into it */
         {
             const step_t *s = &seq_steps(t)[seq_src(t, t->seq_idx)];   /* (0.9.18: RANDOM held is LIVE's RND) */
             uint32_t skip = SEQ_ROLLED, i, k;
