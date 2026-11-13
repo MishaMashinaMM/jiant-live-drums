@@ -171,10 +171,13 @@ static int section_jump(uint32_t s)
     char b[8] = "A";
     s &= 3u;
     b[0] = (char)('A' + s);
+#if !FELUCCA_NO_SEQUENCER
+    /* Only the original song transport can be in a running chain. */
     if (chain.running && !chain.loop) {
         ui_message("STOP THE SONG FIRST");
         return 1;
     }
+#endif
     if (!project_used(s)) {
         ui_say(b, " IS EMPTY");
         return 1;
