@@ -516,7 +516,8 @@ static volatile uint32_t bar_n;                 /* (0.6.43) the bars since PLAY 
 #if FELUCCA_NO_SEQUENCER
 /* Keep the scalar for shared UI/clock diagnostics. The old count-in was
  * sequencer recording only, so there are no note queues or pending beats. */
-static volatile uint8_t cin_left;
+static volatile uint8_t cin_left, cin_total;
+static volatile uint32_t cin_pos;              /* shared read-only count-in UI state, stays zero */
 #else
 static volatile uint8_t cin_left, cin_total;    /* count-in beats remaining / total */
 static volatile uint32_t cin_pos;
