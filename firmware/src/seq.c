@@ -513,11 +513,18 @@ static volatile uint32_t bar_n;                 /* (0.6.43) the bars since PLAY 
  * beat) is recorded onto step 1 when it starts (cin_keep, cin_flush), held on or let go as it was. An external clock
  * never counts in (its Start starts). STOP (seq_stop) cancels it. */
 /* (clk_pos, clk_step, clk_n: mod.c, read by the SLICER and the FX layer before this file) */
-static volatile uint8_t cin_left, cin_total;    /* the count-in's beats still to come (0: none), of how many */
-static volatile uint32_t cin_pos;               /* samples into its beat playing */
-static uint8_t cin_flush;                       /* the count-in ended in this block: record what was kept */
-static uint8_t cin_note[NTRK][4], cin_vel[NTRK][4], cin_n[NTRK], cin_up[NTRK];   /* kept notes; cin_up bit k: let go */
-static uint8_t cin_oct[NTRK][4];                /* (0.8.5) .. a kit's octave: its hits a step (bits 0-3), TOUCH (4-5) */
+#if FELUCCA_NO_SEQUENCER
+/* Keep the scalar for shared UI/clock diagnostics. The old count-in was
+ * sequencer recording only, so there are no note queues or pending beats. */
+static volatile uint8_t cin_left, cin_total;
+static volatile uint32_t cin_pos;              /* shared read-only count-in UI state, stays zero */
+#else
+static volatile uint8_t cin_left, cin_total;    /* count-in beats remaining / total */
+static volatile uint32_t cin_pos;
+static uint8_t cin_flush;
+static uint8_t cin_note[NTRK][4], cin_vel[NTRK][4], cin_n[NTRK], cin_up[NTRK];
+static uint8_t cin_oct[NTRK][4];
+#endif
 static int seq_counting(void) { return cin_left != 0u; }
 static uint32_t click_beat_len(void) { return 4u * div_samples(2); }   /* DIV 2: 1/16 */
 static int click_wanted(void)                  /* CLICK REC: while a track is armed (not in a song: no recording) */
@@ -789,6 +796,7 @@ static void rec_release(track_t *t, uint32_t note)
 }
 
 /* a note into armed track t in the count-in's last eighth: kept for step 1 (cin_flush); once each, 4 per track */
+#if !FELUCCA_NO_SEQUENCER
 static __attribute__((noinline)) void cin_keep(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t i = trk_index(t), k;
@@ -807,12 +815,15 @@ static __attribute__((noinline)) void cin_keep(track_t *t, uint32_t note, uint32
     cin_up[i] &= (uint8_t)~(1u << k);
 }
 
+#endif /* retired count-in note capture */
 static uint8_t in_norec;                            /* (0.6.84) input_on plays without recording (key_next) */
 static void input_on(track_t *t, uint32_t note, uint32_t vel)
 {
     last_note = (uint8_t)note;
+#if !FELUCCA_NO_SEQUENCER
     if (cin_left)
         cin_keep(t, note, vel);
+#endif
     if (t->p[P_AMODE] == AM_TRNS) {                 /* ARP TRNS: the key transposes the sequence */
         t->trn = (int8_t)clamp((int32_t)note - 60, -36, 36);
         return;
@@ -832,12 +843,14 @@ static void input_off(track_t *t, uint32_t note)
 {
     if (midi_note_held(t, note))
         return;
+#if !FELUCCA_NO_SEQUENCER
     if (cin_left) {                                 /* a kept note let go before step 1: recorded, then let go */
         uint32_t i = trk_index(t), k;
         for (k = 0; k < cin_n[i]; k++)
             if (cin_note[i][k] == note)
                 cin_up[i] |= (uint8_t)(1u << k);
     }
+#endif
     rec_release(t, note);
     arp_remove(t, note);                            /* both: the note may have started in the */
     trk_note_off(t, note);                          /* other mode (ARP switched while held) */
@@ -1518,8 +1531,10 @@ static void seq_stop(void)
         mo_send(0xFCu, 0, 0);
     song.playing = 0;
     cin_left = 0;                                  /* (a count-in: cancelled, nothing recorded) */
+#if !FELUCCA_NO_SEQUENCER
     cin_flush = 0;
     memset(cin_n, 0, sizeof cin_n);
+#endif
     if (song.g[G_CLOCK])                           /* external clock: the arp stops with the transport, */
         for (i = 0; i < NPART; i++)                /* its sounding note too (HOLD keeps the latched chord) */
             if (trk[i].arp_note)
@@ -2220,6 +2235,7 @@ static void seq_tick(track_t *t, uint32_t n)
 #include "midi_clock.c"
 
 /* the count-in: its first beat now (accented) */
+#if !FELUCCA_NO_SEQUENCER
 static __attribute__((noinline)) void cin_begin(void)
 {
     cin_total = cin_left = (uint8_t)(4u * cin_bars);
@@ -2262,6 +2278,7 @@ static __attribute__((noinline)) void cin_record(void)
         cin_n[i] = 0;
     }
 }
+#endif /* old count-in and record-on-first-beat logic */
 /* the metronome's beat: adv samples on while the transport runs (click.c sounds it in this block) */
 static void click_tick(uint32_t adv)
 {
@@ -2289,8 +2306,10 @@ static void click_tick(uint32_t adv)
  * ui_draw.c, swings on it; CLICK OFF it moves all the same) */
 static int32_t click_beat_now(void)
 {
+#if !FELUCCA_NO_SEQUENCER
     if (cin_left)
         return (int32_t)((uint32_t)(cin_total - cin_left) % 4u);
+#endif
     if (!song.playing)
         return -1;
     return clk_pos == CLK_START ? 0 : (int32_t)(clk_step >> 2);
@@ -2308,8 +2327,10 @@ static void events_block(uint32_t n)
         midi_beat_samples = 0;
     }
     mo_block(n);                                    /* (0.6.72) MIDI OUT: its setting, the clock */
+#if !FELUCCA_NO_SEQUENCER
     if (cin_left && !clock_mode)
         cin_block(n);
+#endif
 #if FELUCCA_SEQ_PROBE || FELUCCA_NO_SEQUENCER
     /* Stage 18A: transport stays stopped. This is a size probe, not a live-ready firmware. */
     transport_req = 0;
@@ -2449,8 +2470,10 @@ static void events_block(uint32_t n)
     for (i = 0; i < NPART; i++)                       /* (0.8.5) the kit's octaves held: their ratchets */
         if (dxo_n[i])
             dxo_tick(&trk[i], clock_mode ? seq_n : n);
+#if !FELUCCA_NO_SEQUENCER
     if (cin_flush)
         cin_record();
+#endif
     if (song.playing)
         click_tick(seq_n);
     for (i = 0; i < NPART; i++)
