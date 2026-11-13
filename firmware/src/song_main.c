@@ -3,7 +3,9 @@
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * JIANT (FELUCCA TONIC): after SLOOP 2.4.1's song (isod89/sloop-fm1, GPL-3.0). */
 /* The song, the main loop's part (song_chain.c: what it is). Included by project.c. */
+#if !FELUCCA_NO_SEQUENCER
 static project_store_t song_keep __attribute__((section(".pool")));   /* the music as it was before PLAY */
+#endif
 
 /* ---- the songs (NSONG, four sections each: storage.c) */
 static uint8_t song_idx_dirty;                    /* the index changed (rows, the current song), not in flash yet */
@@ -405,6 +407,9 @@ static void song_poll(void)
             ui_say("SONG ROWS ", b);
         }
     }
+#if !FELUCCA_NO_SEQUENCER
+    /* No live-only transport can end a song: do not reserve the old playback
+     * snapshot or compile the corresponding restore path. */
     if (chain.ended && !song.playing) {
         uint8_t cur = proj_cur;
         char name[PROJ_NAME_LEN + 1u];
@@ -417,6 +422,7 @@ static void song_poll(void)
             ui_message("SONG END");
         }
     }
+#endif
     if (memcmp(&chain_config, &song_idx.rows[song_cur], sizeof chain_config)) {   /* the rows changed */
         song_idx.rows[song_cur] = chain_config;
         song_idx_dirty = 1;
