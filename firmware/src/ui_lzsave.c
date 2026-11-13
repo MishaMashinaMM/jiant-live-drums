@@ -63,7 +63,6 @@ static void graph_lz_tools(void)
     static const char *const WHAT[6] = {"CLEAR SEQ", "INIT SOUND", "DELETE ROW", "CLEAR SONG", "NEW PROJECT", "CPU TEST"};
     static const char *const ON[6] = {"STEPS + AUTO", "ENGINE DEFAULT", "", "ALL ROWS", "EVERYTHING", "HEAVY SONG"};
     uint32_t c;
-    char b[12];
 #if FELUCCA_NO_SEQUENCER
     static const uint8_t LIVE_TOOL[] = {1u, 4u, 5u};
     for (uint32_t row = 0; row < sizeof LIVE_TOOL / sizeof LIVE_TOOL[0]; row++) {
@@ -78,6 +77,7 @@ static void graph_lz_tools(void)
         cv_text_r(230, y + CAP_IN(X, 39), &AF_X, c == 5u ? "CPU LOAD" : ON[c], sel ? T_MID : T_DIM, bg);
     }
 #else
+    char b[12];  /* legacy ARRANGE row label; unused by live-only tools */
     for (c = 0; c < 6u; c++) {
         int32_t y = 1 + (int32_t)c * 23;
         int sel = ui.act == c + 1u;
