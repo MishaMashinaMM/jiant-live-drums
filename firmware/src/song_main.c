@@ -65,6 +65,7 @@ static void song_name(char *b)
 }
 
 /* section s (a project slot) into sec_stage for row `row` (SEC_LIVE: a live jump); 0 = staged */
+#if !FELUCCA_NO_SEQUENCER
 static int song_stage(uint32_t s, uint32_t row)
 {
     project_t *p = &proj_scratch;
@@ -99,6 +100,7 @@ static int song_stage(uint32_t s, uint32_t row)
     return 0;
 }
 
+#endif /* legacy ISR section staging */
 /* the bars section s's loop takes: its longest pattern (LEN steps of its DIV) in bars, rounded up, 1..CHAIN_BARS */
 static uint32_t section_bars(uint32_t s)
 {
@@ -183,6 +185,12 @@ static int section_jump(uint32_t s)
         ui_say("SECTION ", b);
         return 0;
     }
+#if FELUCCA_NO_SEQUENCER
+    /* Ordinary section loads above remain supported. The removed song transport
+     * must never queue a section for ISR staging. */
+    ui_message("STOP SONG FIRST");
+    return 1;
+#else
     fm1_irq_off();                                    /* (the ISR may be applying one) */
     chain.running = 0;                                /* (a single section ends a quick chain) */
     chain.armed_bar = 0;
@@ -193,6 +201,7 @@ static int section_jump(uint32_t s)
     live.req = (int8_t)s;
     ui_say(b, " NEXT BAR");
     return 0;
+#endif
 }
 /* the music now into section s: RAM at once (playing too), flash once stopped (song_poll) */
 static void section_store(uint32_t s)
@@ -225,6 +234,10 @@ static void section_recall(void)
 /* a quick chain of n sections (n >= 2), each its longest pattern's bars, round and round */
 static void quick_chain(const uint8_t *s, uint32_t n)
 {
+#if FELUCCA_NO_SEQUENCER
+    (void)s; (void)n;
+    ui_message("NO SONG TRANSPORT");
+#else
     uint32_t i;
     if (chain.running && !chain.loop) {
         ui_message("STOP THE SONG FIRST");
@@ -261,6 +274,7 @@ static void quick_chain(const uint8_t *s, uint32_t n)
         transport_req = 1;
     }
     ui_message("QUICK CHAIN");
+#endif
 }
 /* SONG REC on / off */
 static void song_rec_toggle(void)
@@ -372,6 +386,7 @@ static int song_open(uint32_t n) { return song_switch(n, 0); }     /* (SAVE > PR
 static void song_poll(void)
 {
     uint32_t k;
+#if !FELUCCA_NO_SEQUENCER
     if (chain.applied) {
         chain.applied = 0;
         for (k = 0; k < NTRK; k++)
@@ -423,6 +438,7 @@ static void song_poll(void)
         }
     }
 #endif
+#endif /* retired song ISR playback and recording */
     if (memcmp(&chain_config, &song_idx.rows[song_cur], sizeof chain_config)) {   /* the rows changed */
         song_idx.rows[song_cur] = chain_config;
         song_idx_dirty = 1;
