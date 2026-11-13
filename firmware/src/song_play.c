@@ -3,6 +3,7 @@
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * JIANT (FELUCCA TONIC): after SLOOP 2.4.1's arranger, live sections and SONG REC (isod89/sloop-fm1, GPL-3.0). */
 /* The song, the audio ISR's part (song_chain.c: what it is). Included at the end of seq.c. */
+#if !FELUCCA_NO_SEQUENCER
 static uint32_t chain_bar(void) { return 16u * div_samples(2); }        /* a 4/4 bar: 16 steps of 1/16 (DIV 2) */
 
 /* the staged section in: every track from its step 0 (seq_tick: chain.carry samples into it) */
@@ -77,6 +78,7 @@ static void chain_apply(void)                         /* a song row's section in
 }
 
 /* SONG REC: a row for section s, its bars counted from 0 */
+#endif /* old section application and scene playback */
 static void srec_finish(void)
 {
     uint32_t i, n = 0;
@@ -126,6 +128,7 @@ static void srec_stop(void)                           /* SONG REC pressed again,
     live.srec = 0;
 }
 
+#if !FELUCCA_NO_SEQUENCER
 static void chain_start(void)                         /* (seq_start) */
 {
     chain.carry = 0;
@@ -142,6 +145,9 @@ static void chain_start(void)                         /* (seq_start) */
     chain.scn = 0;
     chain_apply();
 }
+#else
+static void chain_start(void) { }  /* no song transport in live-only mode */
+#endif
 static void chain_stop(void)                          /* (seq_stop) */
 {
     chain.armed = 0;
@@ -155,6 +161,7 @@ static void chain_stop(void)                          /* (seq_stop) */
     scene_pfx = 0;                                    /* (a scene's punch-in effects end with the song) */
     chain.ended = chain.kept;                         /* (a quick chain keeps nothing: what plays stays) */
 }
+#if !FELUCCA_NO_SEQUENCER
 static void chain_tick(uint32_t n)
 {
     uint32_t bar;
@@ -207,3 +214,7 @@ static void chain_tick(uint32_t n)
             srec_add(live.cur);
     }
 }
+
+#else
+static void chain_tick(uint32_t n) { (void)n; } /* legacy-only song playback */
+#endif

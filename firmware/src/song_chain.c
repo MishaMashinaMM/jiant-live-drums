@@ -56,6 +56,7 @@ static void scene_capture(scene_t *s)
 }
 static song_index_t song_idx;
 static uint8_t song_cur;                      /* the song whose sections proj_slot holds (0: the four project slots) */
+#if !FELUCCA_NO_SEQUENCER
 #define SEC_LIVE 0xFEu                /* sec_stage.row: a live jump (the song layer), not a song row */
 typedef struct {                      /* a track of a section, as the ISR puts it in */
     int16_t p[P_COUNT];
@@ -73,6 +74,7 @@ static struct {
     volatile uint8_t ready;           /* main: staged; ISR: taken (0) */
     uint8_t row, section;             /* the song row it is for (SEC_LIVE: a live jump), the section (0..3) */
 } sec_stage __attribute__((section(".lowbuf")));   /* (0.6.78: app.ld LOWBUF) */
+#endif /* !FELUCCA_NO_SEQUENCER: retired song playback staging */
 static struct {
     chain_config_t config;
     volatile uint8_t armed, running, row, remaining;   /* remaining: the bars of the row still to play */
