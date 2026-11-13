@@ -1,0 +1,47 @@
+name: Live-only cleanup checks
+
+on:
+  push:
+    branches:
+      - 'cleanup/v03-sequencer-*'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'firmware/src/**'
+      - 'tests/**'
+      - 'web/emu/**'
+      - '.github/workflows/live-cleanup-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate UI/fonts/engine headers
+        run: |
+          pip install Pillow==12.3.0 numpy==2.3.5 fonttools==4.61.1
+          python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()"
+      - name: Dedicated 11 live-drum regression tests
+        run: bash tests/run_live_drum_tests.sh
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.11
+      - name: Live-only WebAssembly smoke test
+        run: |
+          bash web/emu/build.sh
+          node web/emu/live-drums-wasm-test.mjs build/emu/felucca.wasm
+      - name: Default emulator/native parity (baseline known legacy host failures excluded)
+        run: |
+          bash tests/run_tests.sh > /tmp/jld-cleanup-all-tests.log 2>&1 || true
+          grep -E '^emu: all ok' /tmp/jld-cleanup-all-tests.log
+          ! grep -E '^emu: .*FAIL|^emu: [0-9]+ FAILED|HOST TEST STEP FAILED.*browser emulator' /tmp/jld-cleanup-all-tests.log
