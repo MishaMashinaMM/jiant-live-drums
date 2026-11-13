@@ -77,9 +77,9 @@ static void chain_apply(void)                         /* a song row's section in
     scene_apply(chain.row);
 }
 
+#endif /* old section application and scene playback */
 /* SONG REC: a row for section s, its bars counted from 0 */
 #if !FELUCCA_NO_SEQUENCER
-#endif /* old section application and scene playback */
 static void srec_finish(void)
 {
     uint32_t i, n = 0;
@@ -129,11 +129,11 @@ static void srec_stop(void)                           /* SONG REC pressed again,
     live.srec = 0;
 }
 
-#if !FELUCCA_NO_SEQUENCER
 #else
 static void srec_stop(void) { live.srec = 0; }  /* no recording state in live-only */
 #endif
 
+#if !FELUCCA_NO_SEQUENCER
 static void chain_start(void)                         /* (seq_start) */
 {
     chain.carry = 0;
