@@ -40,8 +40,5 @@ jobs:
         run: |
           bash web/emu/build.sh
           node web/emu/live-drums-wasm-test.mjs build/emu/felucca.wasm
-      - name: Default emulator/native parity (baseline known legacy host failures excluded)
-        run: |
-          bash tests/run_tests.sh > /tmp/jld-cleanup-all-tests.log 2>&1 || true
-          grep -E '^emu: all ok' /tmp/jld-cleanup-all-tests.log
-          ! grep -E '^emu: .*FAIL|^emu: [0-9]+ FAILED|HOST TEST STEP FAILED.*browser emulator' /tmp/jld-cleanup-all-tests.log
+      - name: Direct browser emulator functional test
+        run: node web/emu/emu_test.mjs build/emu/felucca.wasm
