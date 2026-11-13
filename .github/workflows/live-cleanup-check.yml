@@ -85,3 +85,17 @@ jobs:
             echo "ERROR: retired song recording scratch still allocated"
             exit 1
           fi
+      - name: Export linked firmware symbol inventory
+        env:
+          JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
+        run: |
+          "$JIELI_TOOLCHAIN/common/bin/objdump" -t build/felucca.elf > build/firmware-symbols.txt
+          echo '--- Firmware linked symbol table preview ---'
+          head -n 35 build/firmware-symbols.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-memory-audit
+          path: |
+            build/firmware-symbols.txt
+            build/felucca.elf
+          retention-days: 14
