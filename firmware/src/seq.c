@@ -371,8 +371,15 @@ static void arp_remove(track_t *t, uint32_t note)
 
 static void rec_note(track_t *t, uint32_t note, uint32_t vel);
 static void rec_release(track_t *t, uint32_t note);
+#if FELUCCA_NO_SEQUENCER
+/* No sequencer transport exists in Drums. Declare legacy recording impossible
+ * at compile time to let the optimizer drop its dependent paths. */
+static int rec_on(const track_t *t) { (void)t; return 0; }
+static int pfx_rec_ok(void) { return 0; }
+#else
 static int rec_on(const track_t *t) { return ((song.rec >> trk_index(t)) & 1u) && song.playing && !chain.running; }
-static int pfx_rec_ok(void) { return song.rec && song.playing && !chain.running; }   /* (pfx.c: the punch-in lane) */
+static int pfx_rec_ok(void) { return song.rec && song.playing && !chain.running; }   /* (pfx.c: punch-in lane) */
+#endif
 
 #include "motion.c"
 
