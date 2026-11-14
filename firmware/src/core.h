@@ -18,9 +18,9 @@
 #define FELUCCA_FM4 0            /* the DIGITAL engine (eng_digital.c, four-operator FM): kept in the tree, not built
                                   * by default; replaced by FM6, its sounds convert (fm4_convert.c) */
 #endif
-#define NENGINES 16              /* append-only engine indices: 15 DRUM-LAB (Stage 20A) */
+#define NENGINES 17              /* append-only: 15 DRUM-LAB, 16 DRUM-80 */
 #define ENGI_DIGITAL 1u          /* reserved without FELUCCA_FM4: never selectable (eng_ok), its sounds load as FM6 */
-#define NENG_SHOWN (NENGINES - !FELUCCA_FM4 - 5)   /* the engines one can pick: PRESETS, the EDIT layer, the editor,
+#define NENG_SHOWN (NENGINES - !FELUCCA_FM4 - 6)   /* the engines one can pick: PRESETS, the EDIT layer, the editor,
                                                 * in the display order of engines.c ENGINE_ORDER (PHYS 9, and in
                                                 * JIANT SAMPLE 4, GRAIN 8, SLICE 13: retired) */
 /* (JIANT 0.6.71) the second core (hal/fm1_multicore.h; fx.c mix_block hands it some synth tracks). MC_CPU(): the core
@@ -214,6 +214,7 @@ static void params_by_count(int16_t *out, const int16_t *in, uint32_t np, const 
 #define ENGI_SAMPLE 4u
 #define ENGI_ANIMAL 14u          /* (JIANT 0.8.3) eng_animal.c */
 #define ENGI_DRUMLAB 15u         /* Jiant Live Drums: electronic percussion */
+#define ENGI_DRUM80 16u          /* Stage 1: silent 80s drum engine scaffold */
 #define ENGI_PHASE 2u            /* (0.9.9: named for the power-on parts and the display order, engines.c) */
 #define ENGI_LOFI 3u
 #define ENGI_VOICE 5u            /* eng_formant.c ENG_FORMANT */
