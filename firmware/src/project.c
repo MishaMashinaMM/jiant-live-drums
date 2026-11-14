@@ -129,6 +129,8 @@ typedef struct {
     uint8_t fm6[NTRK][FM6_PACKED];             /* each track's FM6 patch, packed (eng_fm6.c) */
     dx_lane_t dx[8];                           /* the DRUM-X kit (drumx_voice.c) */
     dx_lane_t dx12[4];                         /* 9B2: B2/S2/O2/T2 independent patches */
+    uint16_t d80_mask[NPART];                  /* sparse DRUM-80 pad changes */
+    d80_pad_t d80_patch[NPART][D80_PADS];      /* TYPE, 12 parameters, MIDI note */
     uint16_t lab_mask[NPART];                   /* Stage 20B: DRUM-LAB's edited pads only */
     uint8_t lab_patch[NPART][12][10];           /* pitch..metal, kind derived from MIDI note */
     uint8_t lab_kind[NPART][12];                /* Stage 24B: optional per-pad sound type */
@@ -667,6 +669,16 @@ static int proj_import(project_t *q, const void *b, int n)
     proj_fm4(q);
     proj_perc(q);                                       /* (SAMPLE PERC: DRUM, before the retired engines) */
     proj_phys_gone(q);
+    /* All older project formats predate DRUM-80. Normalize the new fields
+     * before checksumming, including an import through the legacy converter. */
+    if (((const uint32_t *)b)[0] != PROJ_MAGIC)
+        for (uint32_t ti = 0; ti < NPART; ++ti) {
+            q->d80_mask[ti] = 0;
+            for (uint32_t pad = 0; pad < D80_PADS; ++pad) {
+                d80_pad_defaults(&q->d80_patch[ti][pad], pad);
+                q->d80_patch[ti][pad].note = (uint8_t)(36u + pad);
+            }
+        }
     /* Normalize new optional TYPE defaults after *every* legacy importer,
      * not only the modern FUNC parser. Otherwise an old FUN7/FUN6 image
      * changes project_t bytes when it is saved and loaded a second time. */
@@ -893,12 +905,32 @@ static uint32_t proj_perf_mask(const project_t *q, uint32_t t)
             mask |= 1u << lane;
     return mask;
 }
+static uint16_t proj_d80_mask(const project_t *q, uint32_t ti)
+{
+    uint16_t mask = 0;
+    if (q->t[ti].engine != ENGI_DRUM80) return 0;
+    for (uint32_t pad = 0; pad < D80_PADS; ++pad) {
+        const d80_pad_t *p = &q->d80_patch[ti][pad];
+        if (p->type != pad || p->note != 36u + pad ||
+            memcmp(p->param, d80_defaults[pad], D80_PARAMS))
+            mask |= (uint16_t)(1u << pad);
+    }
+    return mask;
+}
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
     if (q->rx_on) n += 8u;                       /* 'R' 'X' and six MIDI channels */
     n += 6u;                                    /* 'E' 'Q', 3 signed gains biased by 15, ON */
     if (q->cm_count) n += 3u + q->cm_count * CM_ROW_SIZE;
+    {
+        uint32_t count = 0;
+        for (t = 0; t < NPART; ++t) {
+            uint32_t mask = proj_d80_mask(q, t);
+            if (mask) count += 2u + proj_bits(mask) * sizeof(d80_pad_t);
+        }
+        if (count) n += 3u + count; /* '8' '0' track mask, lane masks, pad records */
+    }
     if (proj_djf_events(&q->motion))                    /* (0.9.1) the DJ FILTER's records: their block's head */
         n += 3u;
     if (proj_mf_tracks(q))                              /* (0.9.1) MICRO's 64ths: their block */
@@ -1281,6 +1313,22 @@ static int proj_pack(project_store_t *out, const project_t *q)
     b[pos++] = 'E'; b[pos++] = 'Q';
     for (i = 0; i < 3u; i++) b[pos++] = (uint8_t)(clamp(q->eq_gain[i], -15, 15) + 15);
     b[pos++] = (uint8_t)!!q->eq_on;
+    {   /* DRUM-80 sparse pad records, after legacy optional extensions. */
+        uint32_t tracks = 0;
+        for (t = 0; t < NPART; ++t) if (proj_d80_mask(q, t)) tracks |= 1u << t;
+        if (tracks) {
+            b[pos++] = '8'; b[pos++] = '0'; b[pos++] = (uint8_t)tracks;
+            for (t = 0; t < NPART; ++t) {
+                uint16_t mask = proj_d80_mask(q, t);
+                if (!mask) continue;
+                b[pos++] = (uint8_t)mask; b[pos++] = (uint8_t)(mask >> 8);
+                for (i = 0; i < D80_PADS; ++i) if (mask & (1u << i)) {
+                    memcpy(b + pos, &q->d80_patch[t][i], sizeof(d80_pad_t));
+                    pos += sizeof(d80_pad_t);
+                }
+            }
+        }
+    }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
     for (i = 0; i < 4u; i++)
@@ -1740,6 +1788,33 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         q->eq_present = 1u;
         pos += 6u;
     }
+    for (t = 0; t < NPART; ++t)
+        for (i = 0; i < D80_PADS; ++i) {
+            d80_pad_defaults(&q->d80_patch[t][i], i);
+            q->d80_patch[t][i].note = (uint8_t)(36u + i);
+        }
+    if (pos + 3u <= room && b[pos] == '8' && b[pos + 1u] == '0') {
+        uint32_t tracks = b[pos + 2u];
+        if (!tracks || (tracks >> NPART)) return 0;
+        pos += 3u;
+        for (t = 0; t < NPART; ++t) if (tracks & (1u << t)) {
+            uint32_t mask;
+            if (q->t[t].engine != ENGI_DRUM80 || pos + 2u > room) return 0;
+            mask = b[pos] | (uint32_t)b[pos + 1u] << 8;
+            pos += 2u;
+            if (!mask || (mask & 0xF000u)) return 0;
+            q->d80_mask[t] = (uint16_t)mask;
+            for (i = 0; i < D80_PADS; ++i) if (mask & (1u << i)) {
+                d80_pad_t *p = &q->d80_patch[t][i];
+                if (pos + sizeof(d80_pad_t) > room) return 0;
+                memcpy(p, b + pos, sizeof(d80_pad_t));
+                pos += sizeof(d80_pad_t);
+                if (p->type >= D80_TYPES || p->note > 127u) return 0;
+                for (uint32_t field = 0; field < D80_PARAMS; ++field)
+                    if (p->param[field] > 127u) return 0;
+            }
+        }
+    }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);
@@ -2025,6 +2100,15 @@ static void project_capture(project_t *p)
     memcpy(p->dx12, dx_kit12, sizeof p->dx12);
     for (i = 0; i < NPART; i++) {
         uint32_t lane;
+        if (trk[i].eng_req == ENGI_DRUM80) d80_ensure(i);
+        for (lane = 0; lane < D80_PADS; ++lane) {
+            if (trk[i].eng_req == ENGI_DRUM80) p->d80_patch[i][lane] = d80_kit[i][lane];
+            else {
+                d80_pad_defaults(&p->d80_patch[i][lane], lane);
+                p->d80_patch[i][lane].note = (uint8_t)(36u + lane);
+            }
+        }
+        p->d80_mask[i] = proj_d80_mask(p, i);
         if (trk[i].eng_req == ENGI_DRUMLAB) drumlab_kit_ensure(&trk[i]);
         for (lane = 0; lane < 12u; lane++)
             p->lab_kind[i][lane] = trk[i].eng_req == ENGI_DRUMLAB ?
@@ -2229,6 +2313,12 @@ static void sound_put(project_t *p, uint32_t k)
         memcpy(dx_snd, p->dx_snd, sizeof dx_snd);
         memcpy(dx_lay, p->dx_lay, sizeof dx_lay);
     }
+    if (e == ENGI_DRUM80) {
+        uint32_t ti = k % NTRK;
+        d80_ready[ti] = 0;
+        d80_ensure(ti);
+        memcpy(d80_kit[ti], p->d80_patch[ti], sizeof d80_kit[ti]);
+    }
     if (e == ENGI_DRUMLAB) {
         uint32_t lane, ti = k % NTRK;
         memcpy(drumlab_global[ti], p->lab_global[ti], 8u);
@@ -2375,6 +2465,10 @@ static int project_restore_runtime(const project_t *input)
         drumlab_midi_custom[k] = p->t[k].engine == ENGI_DRUMLAB ? p->lab_note_on[k] : 0u;
         if (drumlab_midi_custom[k])
             memcpy(drumlab_midi_note[k], p->lab_note[k], 12u);
+        d80_ready[k] = 0;
+        d80_ensure(k);
+        if (p->t[k].engine == ENGI_DRUM80)
+            memcpy(d80_kit[k], p->d80_patch[k], sizeof d80_kit[k]);
         drumlab_kit_ready[k] = 0;
         drumlab_kit_dirty[k] = p->t[k].engine == ENGI_DRUMLAB ? p->lab_mask[k] : 0u;
         if (p->t[k].engine != ENGI_DRUMLAB) continue;

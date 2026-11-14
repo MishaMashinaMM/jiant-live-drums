@@ -577,22 +577,22 @@ static int page_visible(uint32_t i)
     if (PAGES[i].graph == GR_PATS || PAGES[i].graph == GR_CHANCE)   /* (0.6.37) PHRASES, a step's CHANCE: out of the */
         return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
     if (PAGES[i].graph == GR_DXSND)  /* X-MOD belongs only to DRUM-X; LAB has four SOUND pages */
-        return trk_eng(TSEL) == ENGI_DRUM ||
+        return trk_eng(TSEL) == ENGI_DRUM || trk_eng(TSEL) == ENGI_DRUM80 ||
                (trk_eng(TSEL) == ENGI_DRUMLAB && PAGES[i].title[0] != 'X');
     if (PAGES[i].graph == GR_DXIMG) /* DRUM-X-specific KIT 3 / IMAGE */
         return trk_eng(TSEL) == ENGI_DRUM;
     if (PAGES[i].scope == SC_TRACK && ((PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7) ||
         (PAGES[i].id[0] >= P_LN8 && PAGES[i].id[0] <= P_LN11)))
-        return trk_eng(TSEL) == ENGI_DRUM || trk_eng(TSEL) == ENGI_DRUMLAB;
+        return trk_eng(TSEL) == ENGI_DRUM || trk_eng(TSEL) == ENGI_DRUMLAB || trk_eng(TSEL) == ENGI_DRUM80;
     if (PAGES[i].graph == GR_FOCUS)                     /* (0.8.5) FOCUS: a synth's (FM6: OPERATOR, DRUM: SOUND) */
-        return trk_eng(TSEL) != ENGI_DRUM && trk_eng(TSEL) != ENGI_DRUMLAB && trk_eng(TSEL) != ENGI_FM6 &&
+        return trk_eng(TSEL) != ENGI_DRUM && trk_eng(TSEL) != ENGI_DRUMLAB && trk_eng(TSEL) != ENGI_DRUM80 && trk_eng(TSEL) != ENGI_FM6 &&
                !(FELUCCA_FM4 && trk_eng(TSEL) == ENGI_DIGITAL);
     if (PAGES[i].id[0] == P_ALLOC)                      /* (0.8.5) VOICE 2: not a kit's */
         return trk_eng(TSEL) != ENGI_DRUM && trk_eng(TSEL) != ENGI_DRUMLAB;
     if (PAGES[i].graph >= GR_FMOP && PAGES[i].graph <= GR_FMENV)   /* (0.6.10) OPERATOR, OP ENV, OPERATOR 2: FM6's */
         return trk_eng(TSEL) == ENGI_FM6;
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] == P_WRDEP)   /* (0.7.8) ROTOR: WHEEL's */
-        return trk_engp(TSEL) == &ENG_WHEEL;
+        return 0; /* WHEEL retired; rotor page hidden */
     if (PAGES[i].id[0] == P_LRTRG && PAGES[i].id[1] == 0xFFu)   /* (0.6.12) RETRIG: LOFI BYTE / FLOAT's */
         return trk_engp(TSEL) == &ENG_LOFI && TSEL->p[P_E1] >= RW_BYTE;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] == P_FTYPE)   /* (JIANT 0.5) FILTER: ANALOG's, or the part's */
@@ -1774,6 +1774,8 @@ static void dx_knob(const page_t *pg, uint32_t k, int32_t s);
 static void dx_cards(const page_t *pg);
 static void lab_knob(const page_t *pg, uint32_t k, int32_t s);
 static void lab_cards(const page_t *pg);
+static void d80_knob(const page_t *pg, uint32_t k, int32_t s);
+static void d80_cards(const page_t *pg);
 static void dx_kit3_knob(uint32_t k, int32_t s);      /* (0.6.54) KIT 3: TONE's BP, FEEDBK */
 #define DX_KIT3(pg) ((pg)->graph == GR_DXIMG && (pg)->title[0] == 'K')   /* (0.6.58) GR_DXIMG: KIT 3, or STEREO (IMAGE) */
 static void dx_kit3_cards(void);

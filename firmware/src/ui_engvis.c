@@ -1385,77 +1385,6 @@ static VX_CODE void vx_fm6env(const track_t *t)
     cv_text_r(228, 4, &AF_S, b, T_TEXT, T_SURF);
 }
 
-/* -------------------------------------------------------------------------------------------- WHEEL --- */
-static const uint8_t VW_RAT[9] = {8, 24, 16, 32, 48, 64, 80, 96, 128};   /* the bars' harmonics, x16 */
-/* TUBÍCOLAS */
-static VX_CODE void vx_wheel(const track_t *t, const int32_t *A, int32_t en_home)
-{
-    const int16_t *p = t->p;
-    const drw_trk_t *T = &drw_t[drw_part(t)];
-    vxf_t f = vx_uf(A, 100, 0);
-    uint32_t n0 = vxs.nms[5], mt = vxs.mt[5], i, j;
-    int32_t en = vx_level(t, 5, en_home), dr = (p[P_E6] * 516 >> 8), hb = (dr * 56 >> 8), perc = 0, pk, dep, click = (p[P_E5] * 516 >> 8);
-    uint32_t age = vx_age(t, 5, 0), pc = (uint32_t)p[P_E4] % 7u;
-    vxs.kc = 1;
-    if (en) { vxs.rph[0] = T->rph[0]; vxs.rph[1] = T->rph[1]; }   /* (the rotors as they turn while it sounds) */
-    dep = (clamp(p[P_WRDEP], 0, 127) + 1) * (T->rwet >> 7) >> 7;  /* (0..256: DEPTH, the rotor on) */
-    pk = pc ? 3 + (int32_t)((pc - 1u) & 1u) : -1;
-    for (i = 0; i < NVOICE; i++)
-        if (t->v[i].active && drw_v[drw_part(t)][i].perc > perc) perc = drw_v[drw_part(t)][i].perc;
-    perc = UI_ANIM_OFF ? 0 : perc >> 7;               /* decorative PERC squash */
-    if (!UI_ANIM_OFF && vxs.nms[5] != n0)              /* decorative CLICK bubbles */
-        for (i = 0; i < 9u; i++)
-            if (drw_level(p, i) && vx_hash(i + vxs.nage[5] * 9u) < click) vxs.bub[i] = fm1_ms | 1u;
-    vx_line(&f, -62 * 16, 30 * 16, 62 * 16, 30 * 16, 31 + (en * 77 >> 8));
-    for (i = 0; i < 9u; i++) {
-        int32_t l = drw_level(p, i), X = (-48 + (int32_t)i * 12) * 16, pp = (int32_t)i == pk ? perc : 0;
-        int32_t h = 48 + l * 102 + (pp * 160 >> 8) + (en * l * 10 >> 8), th = 64 + l * 35, c0 = (en * 51 >> 8) + hb + (pp * 102 >> 8);
-        int32_t bend = ((og_sin((vxs.rph[1] >> 16) - i * 5734u) * dep) >> 15) * h / 60 * 6 / 256;
-        int32_t am = 128 + ((og_sin((vxs.rph[0] >> 16) - i * 8344u) * dep) >> 16), hx = 0, hy = 0, k, m;
-        char d[2] = {(char)('0' + l), 0};
-        th = th < h ? th : h;
-        for (k = -1; k <= 1; k += 2)                     /* the tube, its mouth */
-            vx_line(&f, X + k * 42, 30 * 16, X + k * 38, 30 * 16 - th, 46 + c0);
-        vx_ring(&f, X, 30 * 16 - th, 42, 14, 64 + c0);
-        vx_text(f.cx + ((X * f.s) >> 8), f.cy + ((30 * 16 * f.s) >> 8) + 64, d, l ? T_MID : T_DIM);
-        if (!l) continue;
-        for (k = 0; k <= 10; k++) {                      /* the worm out of it, waving at its harmonic */
-            int32_t yy = 30 * 16 - th - k * (h - th) / 10, xx = X + bend * k * k / 100 +
-                         ((((og_sin((uint32_t)(k * VW_RAT[i] * 65536 / 320) - vx_ang(mt, 200 + (int32_t)i * 16)) * 10) >> 15) * (77 + en)) >> 8);
-            for (m = -26; k && m <= 26; m += 52)
-                vx_line(&f, hx + m, hy, xx + m, yy, 51 + l * 77 / 8 * am / 256 + c0);
-            hx = xx; hy = yy;
-        }
-        hx = X + bend;
-        hy = 30 * 16 - h - 42;
-        m = (int32_t)(VW_RAT[i] + 4) / 8;                /* its crown: as many tentacles as its harmonic */
-        m = clamp(m, 2, 8);
-        for (j = 0; j < (uint32_t)m; j++) {
-            uint32_t a = 65536u - (uint32_t)(4915 + 22938 * (int32_t)j / (m - 1));
-            int32_t wl = 38 + ((og_sin(vx_ang(mt, 200) + (j + i) * 10430u) * 13 >> 15) * en >> 8);
-            vx_line(&f, hx + ((og_cos(a) * 45) >> 15), hy + ((og_sin(a) * 45) >> 15), hx + ((og_cos(a) * (45 + wl)) >> 15),
-                    hy + ((og_sin(a) * (45 + wl)) >> 15), 77 + l * 102 / 8 + c0);
-        }
-        vx_ring(&f, hx, hy, 51, 48, 82 + l * 102 / 8 + c0);
-        m = en * l / 8 * ((int32_t)i == pk ? 256 + perc : 256) / 256;   /* its face: shouting with its bar */
-        vx_face(&f, hx, hy - 6, 18, 16, age < 90u && l > 3, m > 64 ? hy + 21 - (m * 7 >> 8) : hy + 19, 10, m > 64 ? (m * 14 >> 8) : 0,
-                10 + (m * 8 >> 8), 243, 218, 154);
-    }
-    for (i = 0; i < 9u; i++)                             /* CLICK's bubbles, rising */
-        if (vxs.bub[i] && fm1_ms - vxs.bub[i] < 1200u) {
-            int32_t a = (int32_t)(fm1_ms - vxs.bub[i]) * 256 / 1000, l = drw_level(p, i);
-            vxs.dal = (int16_t)clamp(a, 0, 256);
-            vx_ring(&f, (-48 + (int32_t)i * 12) * 16 + ((og_sin((uint32_t)a * 367u) * 24) >> 15),
-                    30 * 16 - (3 + l * 7) * 16 - 96 - (a * 30 * 16 >> 8), 16 + a / 16, 16 + a / 16, 128);
-            vxs.dal = 0;
-        }
-    if (T->dust)                                         /* DUST: motes drifting */
-        for (i = 0; i < (uint32_t)((T->dust * 40 >> 8)); i++)
-            vx_dot(&f, (vx_hash(i * 9u + 1u) * 124 / 256 - 62) * 16,
-                   (int32_t)(((uint32_t)vx_hash(i * 3u + 2u) * 6u + (mt >> 4) * (uint32_t)(77 + vx_hash(i) / 2) / 256u) % 1504u) - 752, 16, 90);
-    vxs.kc = 0;
-}
-
 /* -------------------------------------------------------------------------------------------- NOISE --- */
 /* the swarm's step (the mock-up's, a frame of 30 a second): COLOR their walk, FREQ their swirl and its ring, PEAK
  * how tight, DUST's impulses flare them (DENSE) */
@@ -2137,8 +2066,6 @@ static int vx_draw(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h,
         vx_analog(t, A, en_home);
     else if (trk_eng(t) == ENGI_FM6)
         vx_fm6(t, A, en_home, 6u, 0);
-    else if (e == &ENG_WHEEL)
-        vx_wheel(t, A, en_home);
     else if (e == &ENG_NOISE)
         vx_noise(t, A, en_home);
     else if (e == &ENG_PHASE)

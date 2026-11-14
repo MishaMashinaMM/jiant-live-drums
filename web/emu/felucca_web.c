@@ -498,6 +498,14 @@ EXPORT void web_test_heavy(void)
     ui.force = 1;
 }
 
+/* Automated audio regression: select DRUM-80 on the first track without UI gestures. */
+EXPORT void web_test_drum80(void)
+{
+    host_preset(&trk[0], ENGI_DRUM80, 0);
+    song.sel = 0;
+    ui.force = 1;
+}
+
 EXPORT uint32_t web_test_user_preset(uint32_t i) { return (uint32_t)up_used(i); }
 
 EXPORT uint16_t *web_screen(void) { return web_fb; }
@@ -514,6 +522,10 @@ EXPORT uint32_t web_drum_pad_note(uint32_t lane)
         return drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane];
     if (trk[ti].eng_req == ENGI_DRUMLAB)
         return drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane;
+    if (trk[ti].eng_req == ENGI_DRUM80) {
+        d80_ensure(ti);
+        return d80_kit[ti][lane].note;
+    }
     return 255u;
 }
 EXPORT uint32_t web_drum_selected_track(void) { return song.sel; }

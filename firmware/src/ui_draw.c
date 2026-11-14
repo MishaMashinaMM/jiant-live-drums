@@ -1218,7 +1218,8 @@ static void draw_columns(void)
         return;
     }
     if (cur_page()->graph == GR_DXSND) {               /* EDIT > SOUND (ui_dx.c) */
-        if (trk_eng(TSEL) == ENGI_DRUMLAB) lab_cards(cur_page());
+        if (trk_eng(TSEL) == ENGI_DRUM80) d80_cards(cur_page());
+        else if (trk_eng(TSEL) == ENGI_DRUMLAB) lab_cards(cur_page());
         else dx_cards(cur_page());
         return;
     }
@@ -2309,14 +2310,15 @@ static uint32_t drum_live_row_signature(uint32_t perf, uint32_t lane)
 {
     uint32_t ti = song.sel;
     const track_t *t = &trk[ti];
-    uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB;
+    uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB, d80 = t->eng_req == ENGI_DRUM80;
     uint32_t sig = 2166136261u;
     if (lab) drumlab_kit_ensure(&trk[ti]);
+    if (d80) d80_ensure(ti);
     sig = (sig ^ (lane == ui.drum_map_pad)) * 16777619u;
-    if (drum || lab) {
+    if (drum || lab || d80) {
         uint32_t note = drum ? (drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane])
-                             : (drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane);
-        sig = (sig ^ (lab ? drumlab_kit[ti][lane].kind : 0u)) * 16777619u;
+                             : d80 ? d80_kit[ti][lane].note : (drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane);
+        sig = (sig ^ (lab ? drumlab_kit[ti][lane].kind : d80 ? d80_kit[ti][lane].type : 0u)) * 16777619u;
         sig = (sig ^ (perf ? drum_perf_curve[ti][lane] : note)) * 16777619u;
         sig = (sig ^ (perf ? drum_perf_sound[ti][lane] : (uint8_t)drum_pad_pan[ti][lane])) * 16777619u;
         sig = (sig ^ (perf ? drum_perf_choke[ti][lane] : (uint8_t)drum_pad_pitch[ti][lane])) * 16777619u;
@@ -2332,13 +2334,14 @@ static void draw_drum_live_row(uint32_t perf, uint32_t lane)
 {
     uint32_t ti = song.sel, first = ui.drum_map_pad < 6u ? 0u : 6u;
     const track_t *t = &trk[ti];
-    uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB;
+    uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB, d80 = t->eng_req == ENGI_DRUM80;
     uint16_t col = lane == ui.drum_map_pad ? T_ACCENT : T_TEXT;
     static const char *const curves[] = {"LIN", "SOFT", "HARD", "FIX"};
     char b[24];
     cv_begin(240, 23, T_BG);
-    if (drum || lab) {
-        if (lab) {
+    if (drum || lab || d80) {
+        if (d80) cv_text(6, CAP_IN(S, 20), &AF_S, d80_names[d80_kit[ti][lane].type], col);
+        else if (lab) {
             drumlab_pad_label(lane, drumlab_kit[ti][lane].kind, b);
             cv_text(6, CAP_IN(S, 20), &AF_S, b, col);
         } else cv_text(6, CAP_IN(S, 20), &AF_S, drum_lane_abbr(t, lane), col);
@@ -2352,7 +2355,7 @@ static void draw_drum_live_row(uint32_t perf, uint32_t lane)
             cv_text(194, CAP_IN(S, 20), &AF_S, drum_retrigger[ti][lane] ? "RST" : "OVR", col);
         } else {
             uint32_t note = drum ? (drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane])
-                                 : (drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane);
+                                 : d80 ? d80_kit[ti][lane].note : (drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane);
             fmt_int(b, (int32_t)note);
             cv_text(68, CAP_IN(S, 20), &AF_S, b, col);
             {
@@ -2378,14 +2381,15 @@ static void draw_drum_midi_map(void)
 {
     const uint32_t ti = song.sel, first = ui.drum_map_pad < 6u ? 0u : 6u;
     const track_t *t = &trk[ti];
-    uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB;
+    uint32_t drum = t->eng_req == ENGI_DRUM, lab = t->eng_req == ENGI_DRUMLAB, d80 = t->eng_req == ENGI_DRUM80;
     char b[24];
     if (lab) drumlab_kit_ensure(&trk[ti]);
+    if (d80) d80_ensure(ti);
     lcd_fill(0, 0, 240, 240, T_BG);
     cv_begin(240, 40, T_BG);
     cv_text(6, CAP_IN(M, 24), &AF_M, "DRUM MIDI MAP", T_TEXT);
     b[0] = 'T'; b[1] = (char)('1' + ti); b[2] = ' '; b[3] = 0;
-    str_cpy(b + 3, drum ? "DRUM-X" : lab ? "DRUM-LAB" : "NO DRUM", sizeof b - 3u);
+    str_cpy(b + 3, drum ? "DRUM-X" : lab ? "DRUM-LAB" : d80 ? "DRUM-80" : "NO DRUM", sizeof b - 3u);
     cv_text(6, 30 + CAP_IN(S, 10), &AF_S, b, T_ACCENT);
     cv_blit(0, 0);
 
@@ -2395,7 +2399,7 @@ static void draw_drum_midi_map(void)
     cv_text(116, CAP_IN(S, 14), &AF_S, "PAN", T_DIM);
     cv_text(174, CAP_IN(S, 14), &AF_S, "PITCH", T_DIM);
     cv_blit(0, 40);
-    if (drum || lab) for (uint32_t lane = first; lane < first + 6u; lane++)
+    if (drum || lab || d80) for (uint32_t lane = first; lane < first + 6u; lane++)
         draw_drum_live_row(0u, lane);
 
     cv_begin(240, 42, T_BG);

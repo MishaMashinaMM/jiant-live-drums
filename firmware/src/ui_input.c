@@ -1162,7 +1162,8 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     if (pg->graph == GR_DXSND) {                          /* EDIT > SOUND: the DRUM-X kit (ui_dx.c) */
-        if (trk_eng(TSEL) == ENGI_DRUMLAB) lab_knob(pg, slot, steps);
+        if (trk_eng(TSEL) == ENGI_DRUM80) d80_knob(pg, slot, steps);
+        else if (trk_eng(TSEL) == ENGI_DRUMLAB) lab_knob(pg, slot, steps);
         else dx_knob(pg, slot, steps);
         return;
     }
@@ -2347,11 +2348,16 @@ static void ui_input_frame(void)
                 old = drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane];
             else if (t->eng_req == ENGI_DRUMLAB)
                 old = drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36 + (int32_t)lane;
+            else if (t->eng_req == ENGI_DRUM80) {
+                d80_ensure(ti);
+                old = d80_kit[ti][lane].note;
+            }
             if (old >= 0) {
                 uint32_t note = (uint32_t)clamp(old + (s > 0 ? 1 : -1), 0, 127);
                 fm1_irq_off();
                 if (t->eng_req == ENGI_DRUM) drum_note_set(t, lane, note);
-                else drumlab_note_set(t, lane, note);
+                else if (t->eng_req == ENGI_DRUMLAB) drumlab_note_set(t, lane, note);
+                else if (t->eng_req == ENGI_DRUM80) d80_note_set(ti, lane, note);
                 fm1_irq_on();
                 ui.force = 1u;
             }
@@ -2944,4 +2950,5 @@ timeout:
 }
 
 #include "ui_dx.c"                                  /* EDIT > SOUND / SOUND 2: the DRUM-X kit */
+#include "ui_drum80.c"                            /* DRUM-80: pad/type/parameter editing */
 #include "ui_lab.c"                                 /* DRUM-LAB: independent electronic drum patches */

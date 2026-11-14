@@ -34,7 +34,7 @@ static int check(const char *what, int ok)
 /* the value parameter k (old id) of track t had in the old project */
 static int16_t oldv(uint32_t t, uint32_t k) { return (int16_t)(t * 100u + k * 3u + 1u); }
 
-static const uint8_t OLD_ENG[PROJ_LT] = {7, 0, 5, 0};   /* WHEEL, ANALOG, VOICE; the drum track: 0 (no engine) */
+static const uint8_t OLD_ENG[PROJ_LT] = {2, 0, 5, 0};   /* PHASE, ANALOG, VOICE; drum track: 0 */
 static void fill_v2_track(proj_trk_v2_t *d, uint32_t t)
 {
     uint32_t k;
@@ -144,7 +144,7 @@ static void fill_v3_track(proj_trk_v3_t *d, uint32_t t)
     uint32_t k;
     for (k = 0; k < PROJ_NP_V3; k++)
         d->p[k] = oldv3(t, k);
-    d->engine = (uint8_t)(t == 3u ? 11u : t == 2u ? 7u : t * 3u);   /* (0 3 7 11: not a retired one, PHYS 9, TRIO 6) */
+    d->engine = (uint8_t)(t == 3u ? 11u : t == 2u ? 2u : t * 3u);   /* (0 3 7 11: not a retired one, PHYS 9, TRIO 6) */
     d->preset = (uint8_t)(t + 1u);
     for (k = 0; k < NSTEP; k++) {
         step8_t *s = &d->step[k];
@@ -258,9 +258,9 @@ int main(void)
         ok &= track_ok(&q.t[t], &v2.t[t], t, t == 3u, 127, 127);   /* (G_DRLVL / G_DRREV 525 / 526: 127) */
     bad += check("FUN2 -> FUN6: every parameter mapped, SLICER and matrix OFF (4 tracks)", ok);
 
-    bad += check("FUN2 -> FUN6: engine bytes kept (WHEEL 7, ANALOG 0, VOICE 5)",
-                 q.t[0].engine == 7 && q.t[1].engine == 0 && q.t[2].engine == 5 &&
-                 str_eq(ENGINES[7]->name, "WHEEL") && str_eq(ENGINES[5]->name, "VOICE") && NENGINES > 8);
+    bad += check("FUN2 -> FUN6: active engine bytes kept (PHASE 2, ANALOG 0, VOICE 5)",
+                 q.t[0].engine == 2 && q.t[1].engine == 0 && q.t[2].engine == 5 &&
+                 str_eq(ENGINES[2]->name, "PHASE") && str_eq(ENGINES[5]->name, "VOICE") && NENGINES > 8);
     bad += check("FUN2 -> FUN6: the drum track -> part 4, DRUM (its kit on load), steps kept (lanes as hits)",
                  q.parts == NPART && q.t[3].engine == ENGI_DRUM && str_eq(ENGINES[ENGI_DRUM]->name, "DRUM") &&
                  TRK_OLD[3][0] == ENGI_DRUM && q.t[3].preset == PROJ_DEF_KEEP &&
@@ -303,9 +303,9 @@ int main(void)
          steps_grid_same(q2.t[3].step, v3.t[0].step) && !memcmp(&q2.t[0], &q.t[0], sizeof q.t[0]);
     bad += check("FUN3 before 1.0: the drum track -> part 4 (LEVEL / REV from G_DRLVL / G_DRREV)", ok);
 
-    /* a FUN6 round trip: stored as is (a matrix slot set; another engine: WHEEL, 7 (GRAIN, 8, is retired in JIANT); a
+    /* a FUN6 round trip: stored as is (a matrix slot set; another engine: PHASE, 2; a
      * DRUM track with notes on its lanes stays so: only an older format is converted) */
-    q.t[1].engine = 7;
+    q.t[1].engine = 2;
     q.t[2].p[P_M2SRC] = 6;
     q.t[2].p[P_M2DST] = 11;
     q.t[2].p[P_M2AMT] = -17;
@@ -313,9 +313,21 @@ int main(void)
     q.t[0].step[0] = (step_t){{36, 42, 0, 0}, 2, ST_NOTE, 0, 96, 1u << DV_SNARE, 1u << DV_SNARE};
     q.sum = proj_sum(&q);
     memcpy(&buf, &q, sizeof q);
-    bad += check("FUN6 -> FUN6: as stored (a matrix slot, engine 7, a DRUM step with notes and hits)",
-                 proj_import(&q2, &buf, (int)sizeof q) && !memcmp(&q, &q2, sizeof q) && q2.t[1].engine == 7 &&
+    bad += check("FUN6 -> FUN6: as stored (a matrix slot, PHASE, a DRUM step with notes and hits)",
+                 proj_import(&q2, &buf, (int)sizeof q) && !memcmp(&q, &q2, sizeof q) && q2.t[1].engine == 2 &&
                  q2.t[2].p[P_M2AMT] == -17 && q2.t[0].step[0].n == 2u && q2.t[0].step[0].hit == 1u << DV_SNARE);
+    {   /* WHEEL ID 7 is reserved: old projects must safely use ANALOG,
+         * not resurrect WHEEL or reinterpret its old bytes as DRUM-80. */
+        project_t retired = q;
+        retired.t[1].engine = 7u;
+        retired.sum = proj_sum(&retired);
+        memcpy(&buf, &retired, sizeof retired);
+        ok = proj_import(&q2, &buf, (int)sizeof retired) &&
+             q2.t[1].engine == ENGI_PHYS_TO &&
+             q2.t[1].preset == 0u &&
+             q2.t[1].p[P_E0] == ENGINES[ENGI_PHYS_TO]->presets[0].e[0];
+        bad += check("retired WHEEL projects migrate safely to ANALOG", ok);
+    }
     q.t[0].engine = 3;
     q.t[0].step[0] = q.t[0].step[1];
     q.sum = proj_sum(&q);
@@ -1116,6 +1128,36 @@ int main(void)
                 ok = restored.lab_global[0][field] == 100u;
             bad += check("Stage 25E: legacy projects initialize all kit multipliers to 100%", ok);
         }
+        {   /* DRUM-80: sparse TYPE, twelve controls and MIDI map round-trip. */
+            static project_t d80, restored;
+            static project_store_t saved;
+            d80 = f;
+            d80.t[0].engine = ENGI_DRUM80;
+            for (uint32_t lane = 0; lane < D80_PADS; ++lane) {
+                d80_pad_defaults(&d80.d80_patch[0][lane], lane);
+                d80.d80_patch[0][lane].note = (uint8_t)(36u + lane);
+            }
+            d80.d80_patch[0][2].type = D80_BD;
+            memcpy(d80.d80_patch[0][2].param, d80_defaults[D80_BD], D80_PARAMS);
+            d80.d80_patch[0][2].param[9] = 127u; /* transient PUNCH */
+            d80.d80_patch[0][2].note = 99u;
+            d80.sum = proj_sum(&d80);
+            ok = proj_pack(&saved, &d80) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.d80_patch[0][2].type == D80_BD &&
+                 restored.d80_patch[0][2].param[9] == 127u &&
+                 restored.d80_patch[0][2].note == 99u &&
+                 restored.d80_patch[0][3].type == D80_RS &&
+                 restored.d80_patch[0][3].note == 39u;
+            bad += check("DRUM-80: sparse pad TYPE/PUNCH/MIDI round trip", ok);
+            d80.d80_patch[0][2].type = D80_CP;
+            memcpy(d80.d80_patch[0][2].param, d80_defaults[D80_CP], D80_PARAMS);
+            d80.d80_patch[0][2].note = 38u;
+            d80.sum = proj_sum(&d80);
+            ok = proj_pack(&saved, &d80) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.d80_patch[0][2].type == D80_CP &&
+                 restored.d80_patch[0][2].note == 38u;
+            bad += check("DRUM-80: factory pads omit sparse data", ok);
+        }
         {   /* Stage 22: DRUM-X uses the same custom-note capability independently. */
             static project_t dx, restored;
             static project_store_t saved;
@@ -1287,6 +1329,31 @@ int main(void)
                 }
             }
             bad += check("FUNC: 20000 damaged sections (hash right): refused or loaded valid, nothing read past", okz && loaded < 20000u);
+        }
+        {   /* DRUM-80 sparse project serialization in the real FUN format. */
+            static project_t d80, restored;
+            static project_store_t wire;
+            d80 = g; /* valid six-track fixture already imported above */
+            d80.t[0].engine = ENGI_DRUM80;
+            for (uint32_t pad = 0; pad < D80_PADS; ++pad) {
+                d80_pad_defaults(&d80.d80_patch[0][pad], pad);
+                d80.d80_patch[0][pad].note = (uint8_t)(36u + pad);
+            }
+            d80.d80_patch[0][4].type = D80_BD;
+            d80.d80_patch[0][4].param[0] = 123;
+            d80.d80_patch[0][4].param[11] = 17;
+            d80.d80_patch[0][4].note = 91;
+            d80.sum = proj_sum(&d80);
+            int packed_ok = proj_pack(&wire, &d80);
+            bad += check("DRUM-80 modified pad packs in project", packed_ok);
+            if (packed_ok) {
+                int loaded = proj_import(&restored, &wire, sizeof wire);
+                bad += check("DRUM-80 modified pad imports from project", loaded);
+                if (loaded)
+                    bad += check("DRUM-80 all pad records survive project serialization",
+                                 memcmp(d80.d80_patch[0], restored.d80_patch[0],
+                                        sizeof d80.d80_patch[0]) == 0);
+            }
         }
         fs.raw[100] ^= 1u;
         bad += check("FUNC: a byte changed: the hash refuses it", !proj_import(&g, &fs, sizeof fs));
