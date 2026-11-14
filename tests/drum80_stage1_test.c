@@ -54,6 +54,18 @@ int main(void)
     host_preset(&trk[0], ENGI_DRUM80, 0);
     bad += ck("DRUM-80 allocates an active synthesis voice",
               (trk_note_on(&trk[0], 36, 100), trk[0].v[0].active && d80_voice[0][0].active));
+    d80_voice[0][1].active = 1u;
+    d80_voice[0][1].pad = D80_OH;
+    trk[0].v[2].note = 40u; /* factory closed hat */
+    drum80_note_on(&trk[0], &trk[0].v[2]);
+    bad += ck("closed hat chokes factory open hat on same track",
+              !d80_voice[0][1].active && d80_voice[0][2].active);
+    d80_voice[0][1].active = 1u;
+    d80_voice[0][1].pad = D80_OH;
+    trk[1].v[2].note = 40u;
+    drum80_note_on(&trk[1], &trk[1].v[2]);
+    bad += ck("closed hat does not choke another track",
+              d80_voice[0][1].active);
     printf("DRUM-80 STAGE 1 %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return !!bad;
 }
