@@ -113,7 +113,8 @@ static void drum80_note_on(track_t *t, voice_t *v)
     }
     /* Factory closed hat chokes the factory open hat on the same track.
      * Reassigned/duplicated pad types remain independent. */
-    if (pad == D80_CH)
+    if (pad == D80_CH && d80_kit[ti][pad].type == D80_CH &&
+        d80_kit[ti][D80_OH].type == D80_OH)
         for (uint32_t other = 0; other < NVOICE; ++other)
             if (d80_voice[ti][other].active && d80_voice[ti][other].pad == D80_OH)
                 d80_voice[ti][other].active = 0u;
