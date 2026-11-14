@@ -1,6 +1,6 @@
-# JLD v0.3 — experimental global EQ
+# JLD v0.3 — global EQ technical notes
 
-Branch: `feature/global-eq`, created **directly from `main`**, not from `feature/track-eq`. The existing per-track EQ experiment remains untouched.
+Originally developed on `feature/global-eq` directly from `main`, independently of the experimental per-track EQ branch.
 
 ## Controls
 
@@ -13,7 +13,7 @@ Open **GLO → MIX → EQ**.
 
 The page controls one **shared** EQ, not the selected track. All values default to flat (0 dB); ON defaults to enabled.
 
-**Project persistence (experimental):** LOW/MID/HIGH/ON are now written to an optional six-byte `EQ` block in the existing packed project format. Loading a project without that block resets the EQ to flat (0 dB) and ON, preserving legacy sound. Project-format regression tests cover round-trip and absent/invalid blocks. **EQ is not a device-wide setting**: values are saved with projects, not independently across power cycles; unsaved changes are lost. The web editor does not yet expose these controls.
+**Project persistence:** LOW/MID/HIGH/ON are now written to an optional six-byte `EQ` block in the existing packed project format. Loading a project without that block resets the EQ to flat (0 dB) and ON, preserving legacy sound. Project-format regression tests cover round-trip and absent/invalid blocks. **EQ is not a device-wide setting**: values are saved with projects, not independently across power cycles; unsaved changes are lost. The web editor does not yet expose these controls.
 
 ## Actual signal flow
 
@@ -35,7 +35,7 @@ The DSP coefficients and precision-preserving Q28 LOW feedback are reused from t
 - Additional 4,096-block seven-stream stress test under ASan/UBSan: `tests/global_eq_stress_test.c`, automated in GitHub Actions.
 - Project save/load format regression: `tests/project_test.c`, automated by the live test workflow.
 - Build hardware firmware: `bash build.sh` (`FELUCCA_NO_SEQUENCER=1` by default for JLD Drums).
-- **Not yet hardware tested.** Do not describe this branch as production-ready until the hardware build, UI, emulator, existing audio tests and an FM1 multitrack stress test pass.
+- **Physical FM1 flash confirmed November 14, 2026.** The owner reported that the Global EQ build flashed successfully and tested functions worked well. Extended six-track hardware CPU-load measurements and long-duration stability testing remain outstanding.
 - The existing stem-export code collects per-track audio *before* the shared EQ. Consequently, stems are not guaranteed to sum to the EQ-filtered master mix in this preview. Fix/test this before claiming full stems support.
 - A global EQ necessarily changes how effects inputs interact with overlapping tracks versus independent per-track filters; compare sound and gain staging before release.
 - A freeze/reset under excessive workload was observed with **the different per-track EQ branch**. A global EQ is expected to use less CPU, but its stability and actual CPU savings require new measurements.
