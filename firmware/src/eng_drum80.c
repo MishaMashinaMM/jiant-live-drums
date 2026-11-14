@@ -120,7 +120,13 @@ static void drum80_note_on(track_t *t, voice_t *v)
                 d80_voice[ti][other].active = 0u;
     d80_voice_t *d = &d80_voice[ti][slot];
     const d80_pad_t *p = &d80_kit[ti][pad];
-    uint32_t pitch = (uint32_t)clamp(30 + (int32_t)p->param[0] * 55 / 127, 0, 127);
+    /* Per-type pitch registers: kick/toms stay low, snare/clap/metallic
+     * percussion start progressively higher. TUNE spans a useful range. */
+    static const uint8_t base[D80_TYPES] = {
+        28, 42, 52, 52, 62, 62, 33, 42, 62, 53, 43, 50
+    };
+    uint32_t pitch = (uint32_t)clamp((int32_t)base[p->type] +
+                                    (int32_t)p->param[0] * 30 / 127, 0, 127);
     memset(d, 0, sizeof *d);
     d->pad = (uint8_t)pad;
     d->active = 1u;
