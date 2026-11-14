@@ -17,7 +17,7 @@ for test in drum_midi_map_test drumlab_ui_test cc_macro_ui_test drums_clock_test
         echo "PASS: $test"
     else
         echo "FAIL: $test"
-        tail -n 30 "$out/$test.log"
+        tail -n 180 "$out/$test.log"
         exit 1
     fi
 done
