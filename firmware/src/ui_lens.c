@@ -27,7 +27,7 @@ static uint32_t pd_of_fam(uint32_t f)
 static uint32_t edit_kind(void)                          /* 0 a synth, 1 FM6, 2 DRUM, 3 DIGITAL (FELUCCA_FM4) */
 {
     uint32_t e = trk_eng(TSEL);
-    return e == ENGI_FM6 ? 1u : (e == ENGI_DRUM || e == ENGI_DRUMLAB) ? 2u : FELUCCA_FM4 && e == ENGI_DIGITAL ? 3u : 0u;
+    return e == ENGI_FM6 ? 1u : (e == ENGI_DRUM || e == ENGI_DRUMLAB || e == ENGI_DRUM80) ? 2u : FELUCCA_FM4 && e == ENGI_DIGITAL ? 3u : 0u;
 }
 static int pd_on(void) { return !ui.home && !page_over && pd_of_fam(PAGES[ui.page].fam) < PD_N; }
 static uint32_t pd_cur(void) { return pd_of_fam(PAGES[ui.page].fam); }
