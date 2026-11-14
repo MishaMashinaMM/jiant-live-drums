@@ -223,7 +223,21 @@ static void drum80_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
                 attack = (type == D80_BD ? d80_pcm_bd[frame] : d80_pcm_sd[frame]) * 120;
             tone = tone / (type == D80_BD ? 5 : 3);
             x = (int32_t)(((int64_t)tone * d->body * osc_mix) >> 31);
-            x += attack * (32 + p->param[2]) / 159;
+            /* ATTACK shapes the PCM onset over 0.5..12 ms: low values
+             * round the leading edge, high values expose the full transient.
+             * PUNCH independently emphasizes the first 8 ms of the PCM
+             * waveform, rather than adding noise masked by that waveform.
+             * Both controls interpolate continuously over 0..127. */
+            uint32_t fade_samples = 24u + (127u - p->param[4]) * 552u / 127u;
+            uint32_t onset = d->age >= fade_samples ? 127u :
+                             d->age * 127u / fade_samples;
+            uint32_t punch_left = d->age < 384u ? 384u - d->age : 0u;
+            uint32_t punch_gain = 96u + (uint32_t)p->param[9] *
+                                  punch_left / 384u;
+            int32_t pcm = attack * (32 + p->param[2]) / 159;
+            pcm = pcm * (int32_t)onset / 127;
+            pcm = pcm * (int32_t)punch_gain / 160;
+            x += pcm;
         } else {
             x = (int32_t)(((int64_t)tone * d->body * osc_mix) >> 31);
         }
