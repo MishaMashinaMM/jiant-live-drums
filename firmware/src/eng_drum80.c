@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * DRUM-80 Stage 1: silent registration scaffold.
- * No synthesis or per-voice state until the pad/editor/persistence integration.
+ * DRUM-80: independent 12-pad 1980s drum engine.
+ * Fixed-point oscillator/noise synthesis with per-pad controls and MIDI map.
  */
 #define D80_PADS 12u
 #define D80_PARAMS 12u
