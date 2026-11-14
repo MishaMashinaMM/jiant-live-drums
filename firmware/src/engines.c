@@ -10,6 +10,7 @@
 #include "eng_formant.c"
 #include "eng_drum.c"           /* DRUM: the 8-lane DRUM-X kit (drumx_voice.c) */
 #include "eng_drumlab.c"        /* Stage 20A: independent electronic percussion */
+#include "eng_drum80.c"          /* Stage 1: silent DRUM-80 scaffold */
 #include "eng_noise.c"
 #include "eng_fm6.c"            /* FM6: 6-operator FM, msfa ported (fm6_core.c, Apache-2.0) */
 #include "eng_animal.c"         /* (JIANT 0.8.3) ANIMAL: animal calls (CMOS PULSE WHSTL WING GLOTT) */
@@ -65,6 +66,7 @@ static const engine_t *const ENGINES[NENGINES] = {
     &ENG_GONE,                   /* 13: reserved (SLICE, retired in JIANT) */
     &ENG_ANIMAL,                 /* 14 (ENGI_ANIMAL, JIANT 0.8.3) */
     &ENG_DRUMLAB,                /* 15: append-only; does not renumber saved engines */
+    &ENG_DRUM80,                 /* 16: DRUM-80, new engine ID */
 };
 
 /* a track's engine number as an index (the audio paths: a compare, cheaper than % NENGINES; a bad number: 0) */
@@ -85,6 +87,7 @@ static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     ENGI_PHASE,                  /* PHASE; WHEEL retired */
     ENGI_NOISE,                  /* NOISE */
     ENGI_DRUMLAB,                /* append: keeps established startup/order stable */
+    ENGI_DRUM80,                 /* append: DRUM-80 */
 #if FELUCCA_FM4
     ENGI_DIGITAL,                /* DIGITAL (retired, FELUCCA_FM4 builds only): after the rest */
 #endif
