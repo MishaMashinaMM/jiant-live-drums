@@ -65,7 +65,9 @@ jobs:
           
           1. Unzip the complete artifact (do not open HTML directly from the ZIP).
           2. In this folder run: python -m http.server 8765
-          3. Preview firmware in Chrome: http://localhost:8765/emu/\n          4. Web editor: http://localhost:8765/webapp/editor/\n          5. Installer (only after preview): http://localhost:8765/webapp/installer/
+          3. Preview firmware in Chrome: http://localhost:8765/emu/
+          4. Web editor: http://localhost:8765/webapp/editor/
+          5. Installer (only after preview): http://localhost:8765/webapp/installer/
           6. Back up your FM1 before installing. Use one test unit only.
           7. Keep the server running while flashing. Do not unplug during transfer.
           
@@ -73,7 +75,9 @@ jobs:
           deployment or changes to main are made by this workflow.
           EOF
           test -s build/drum80-test-site/firmware/SOURCE_COMMIT
-          test -s build/drum80-test-site/emu/felucca.wasm\n          test -s build/drum80-test-site/webapp/editor/index.html\n          test -s build/drum80-test-site/webapp/installer/index.html
+          test -s build/drum80-test-site/emu/felucca.wasm
+          test -s build/drum80-test-site/webapp/editor/index.html
+          test -s build/drum80-test-site/webapp/installer/index.html
           test -s build/drum80-test-site/firmware/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
