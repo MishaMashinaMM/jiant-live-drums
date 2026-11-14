@@ -93,6 +93,23 @@ int main(void)
     bad += ck("DRUM-80 local keys match DRUM-X default octave (key 7 = MIDI 36)",
               ENG_DRUM80.keys && ENG_DRUM80.keys(&trk[0], 7u) == 36 &&
               ENG_DRUM80.keys(&trk[0], 18u) == 47);
+    {   /* Kit-wide controls are neutral at 100, affect every pad, and
+         * never rewrite individual pad settings (including on other tracks). */
+        d80_pad_t first, second;
+        d80_ensure(0);
+        trk[0].p[P_E0] = 100;
+        d80_effective(&trk[0], &d80_kit[0][0], &first);
+        bad += ck("global TUNE 100 is neutral", first.param[0] == d80_kit[0][0].param[0]);
+        trk[0].p[P_E0] = 50;
+        d80_effective(&trk[0], &d80_kit[0][0], &first);
+        d80_effective(&trk[0], &d80_kit[0][1], &second);
+        bad += ck("global TUNE affects two different pads",
+                  first.param[0] == d80_kit[0][0].param[0] / 2 &&
+                  second.param[0] == d80_kit[0][1].param[0] / 2);
+        bad += ck("global TUNE does not overwrite individual pad",
+                  d80_kit[0][0].param[0] == d80_defaults[d80_kit[0][0].type][0]);
+        trk[0].p[P_E0] = 100;
+    }
     printf("DRUM-80 STAGE 1 %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return !!bad;
 }
