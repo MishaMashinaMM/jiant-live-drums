@@ -187,10 +187,10 @@ static void drum80_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
         x += (int32_t)(((int64_t)hiss * d->noise * mix) >> 31);
         if (d->age < click_samples && p->param[9]) {
             uint32_t left = click_samples - d->age;
-            int32_t click = (int32_t)(((int64_t)hiss * p->param[9] * left) / ((int64_t)click_samples * 127u * 5u));
+            int32_t click = (hiss * (int32_t)p->param[9] / 127) * (int32_t)left / (int32_t)click_samples / 5;
             x += click;
         }
-        x = (int32_t)(((int64_t)x * level * velocity_gain) / (127u * 127u));
+        x = (x * level / 127) * velocity_gain / 127;
         if (drive) {
             int32_t y = x * (128 + drive) / 128;
             x = clamp(y, -32768, 32767);
