@@ -100,7 +100,7 @@ static d80_voice_t d80_voice[NPART][NVOICE];
 static uint32_t d80_decay(uint32_t p, uint32_t base, uint32_t range)
 {
     /* Q24 envelope multiplier, based on the requested tail length. */
-    uint32_t samples = (base + p * range / 127u) * 48u / 1000u;
+    uint32_t samples = (base + p * range / 127u) * 48u; /* ms -> samples at 48 kHz */
     return samples ? 16777216u / samples : 16777216u;
 }
 static void drum80_note_on(track_t *t, voice_t *v)
