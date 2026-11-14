@@ -514,6 +514,10 @@ EXPORT uint32_t web_drum_pad_note(uint32_t lane)
         return drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane];
     if (trk[ti].eng_req == ENGI_DRUMLAB)
         return drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36u + lane;
+    if (trk[ti].eng_req == ENGI_DRUM80) {
+        d80_ensure(ti);
+        return d80_kit[ti][lane].note;
+    }
     return 255u;
 }
 EXPORT uint32_t web_drum_selected_track(void) { return song.sel; }
