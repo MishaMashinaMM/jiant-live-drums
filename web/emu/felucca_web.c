@@ -498,6 +498,14 @@ EXPORT void web_test_heavy(void)
     ui.force = 1;
 }
 
+/* Automated audio regression: select DRUM-80 on the first track without UI gestures. */
+EXPORT void web_test_drum80(void)
+{
+    host_preset(&trk[0], ENGI_DRUM80, 0);
+    song.sel = 0;
+    ui.force = 1;
+}
+
 EXPORT uint32_t web_test_user_preset(uint32_t i) { return (uint32_t)up_used(i); }
 
 EXPORT uint16_t *web_screen(void) { return web_fb; }
