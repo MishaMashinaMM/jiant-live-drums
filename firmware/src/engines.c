@@ -8,7 +8,6 @@
 #include "eng_phase.c"
 #include "eng_lofi.c"
 #include "eng_formant.c"
-#include "eng_wheel.c"
 #include "eng_drum.c"           /* DRUM: the 8-lane DRUM-X kit (drumx_voice.c) */
 #include "eng_drumlab.c"        /* Stage 20A: independent electronic percussion */
 #include "eng_noise.c"
@@ -57,7 +56,7 @@ static const engine_t *const ENGINES[NENGINES] = {
     &ENG_GONE,                   /* 4: reserved (SAMPLE, retired in JIANT) */
     &ENG_FORMANT,                /* 5 VOICE (eng_formant.c: "voice" is a sounding note in voice.c) */
     &ENG_GONE,                   /* 6: reserved (TRIO, folded into ANALOG in JIANT 0.4: core.h analog_from_trio) */
-    &ENG_WHEEL,                  /* 7 */
+    &ENG_GONE,                   /* 7: reserved (WHEEL retired; older projects fall back to ANALOG) */
     &ENG_GONE,                   /* 8: reserved (GRAIN, retired in JIANT) */
     &ENG_GONE,                   /* 9: reserved (PHYS, retired in TONIC: its sounds play as ANALOG) */
     &ENG_DRUM,                   /* 10 (ENGI_DRUM) */
@@ -74,7 +73,7 @@ static inline uint32_t eng_idx(uint32_t e) { return e < NENGINES ? e : 0u; }
 /* the order the engines are shown in (PRESETS browsing and its ENG knob, the EDIT layer's keys, the editor's list):
  * engine indices, never DIGITAL's reserved 1 (with FELUCCA_FM4 it comes last). The indices stay as they are (the
  * stores and the protocol hold them); only this table orders them. (0.9.9) DRUM-X, VOICE, ANIMAL first, as the parts
- * at power-on (TRK_DEF: T1..T6 are its first six), then PHASE WHEEL NOISE; was ANALOG FM6 PHASE LOFI VOICE WHEEL
+ * at power-on (TRK_DEF: T1..T6 are its first six), then PHASE NOISE; was ANALOG FM6 PHASE LOFI VOICE WHEEL
  * NOISE DRUM ANIMAL. PROGRAM CHANGE numbers the sounds in this order too (ui.c midi_pc_poll) */
 static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     ENGI_DRUM,                   /* DRUM (DRUM-X) */
@@ -83,7 +82,7 @@ static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     ENGI_LOFI,                   /* LOFI */
     ENGI_ANALOG,                 /* ANALOG */
     ENGI_FM6,                    /* FM6 */
-    ENGI_PHASE, ENGI_WHEEL,      /* PHASE WHEEL */
+    ENGI_PHASE,                  /* PHASE; WHEEL retired */
     ENGI_NOISE,                  /* NOISE */
     ENGI_DRUMLAB,                /* append: keeps established startup/order stable */
 #if FELUCCA_FM4
@@ -167,7 +166,7 @@ static const uint8_t TRK_DEF[NPART][3] = {{ENGI_DRUM, 0, 0}, {ENGI_VOICE, TRK_PR
 /* DRUM-X (DRUM's first, the factory kit), SINGER EN, CMOS BIRD, BYTEBEAT, FAT BASS, TINE EP */
 /* the parts at power-on through 0.9.8 (the same columns): what an old project's tracks it had no room for load as
  * (project.c proj_new_tracks, PROJ_DEF_SOUND: format 1's tracks 2..4, a 4-track format's T5 / T6): never change it.
- * ANALOG ACID, FM6 PAD (was DIGITAL PAD), LOFI PULSE LD (3: BYTE first), DRUM KIT; (JIANT 0.6) PHASE's first, WHEEL's first */
+ * ANALOG ACID, FM6 PAD (was DIGITAL PAD), LOFI PULSE LD (3: BYTE first), DRUM KIT; (JIANT 0.6) PHASE's first, WHEEL's first (WHEEL now retired) */
 static const uint8_t TRK_OLD[NPART][3] = {{0, 4, 0}, {ENGI_FM6, 4, 0}, {3, 3, 0}, {ENGI_DRUM, 0, 0}, {2, 0, 0}, {7, 0, 0}};
 static uint32_t trk_old_engine(uint32_t i) { return TRK_OLD[i % NPART][0]; }
 static uint32_t trk_def_engine(uint32_t i) { return TRK_DEF[i % NPART][0]; }
