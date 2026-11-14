@@ -20,11 +20,10 @@ static const char *const d80_names[D80_TYPES] = {
     "BD", "SD", "CP", "RS", "CH", "OH", "LT", "HT", "CB", "CL", "PC1", "PC2"
 };
 /* BODY: TUNE SWEEP BODY DECAY; ATTACK: ATTACK NOISE BRIGHT TAIL;
- * SHAPE: DRIVE PUNCH VEL LEVEL. Initial neutral factory settings.
- * Sound-specific factory tuning belongs to Stage 2, not this silent scaffold. */
+ * SHAPE: DRIVE PUNCH VEL LEVEL. Experimental BD/SD factory voicing (A/B test); remaining ten types unchanged. */
 static const uint8_t d80_defaults[D80_TYPES][D80_PARAMS] = {
-    {50,85,110,65,75,0,40,0,0,85,64,100},  /* BD */
-    {70,10,85,50,90,95,95,55,15,90,64,100}, /* SD */
+    {24,48,115,38,110,0,40,0,8,115,64,100}, /* BD: shorter, lower, harder transient */
+    {52,12,120,42,112,72,82,45,20,120,64,100},/* SD: stronger body and attack */
     {64,0,0,15,100,110,85,75,10,90,64,100}, /* CP */
     {75,0,90,15,110,5,80,10,5,90,64,100},   /* RS */
     {80,0,45,10,90,110,115,12,5,85,64,100}, /* CH */
