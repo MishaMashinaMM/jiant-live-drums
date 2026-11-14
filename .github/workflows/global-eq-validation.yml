@@ -1,0 +1,23 @@
+name: Global EQ host validation
+on:
+  push:
+    branches: [feature/global-eq]
+  pull_request:
+    paths:
+      - 'firmware/src/track_eq_dsp.*'
+      - 'tests/global_eq_test.c'
+      - 'tests/run_global_eq_tests.sh'
+      - '.github/workflows/global-eq-validation.yml'
+  workflow_dispatch:
+
+jobs:
+  global-eq-dsp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run fixed-point DSP regression
+        run: sh tests/run_global_eq_tests.sh
+      - name: Compile with warnings
+        run: |
+          cc -O2 -std=gnu99 -Wall -Wextra -I firmware/src tests/global_eq_test.c firmware/src/track_eq_dsp.c -lm -o /tmp/jld-global-eq-warnings
+          /tmp/jld-global-eq-warnings
