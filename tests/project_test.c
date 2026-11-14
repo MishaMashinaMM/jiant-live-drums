@@ -1116,6 +1116,36 @@ int main(void)
                 ok = restored.lab_global[0][field] == 100u;
             bad += check("Stage 25E: legacy projects initialize all kit multipliers to 100%", ok);
         }
+        {   /* DRUM-80: sparse TYPE, twelve controls and MIDI map round-trip. */
+            static project_t d80, restored;
+            static project_store_t saved;
+            d80 = f;
+            d80.t[0].engine = ENGI_DRUM80;
+            for (uint32_t lane = 0; lane < D80_PADS; ++lane) {
+                d80_pad_defaults(&d80.d80_patch[0][lane], lane);
+                d80.d80_patch[0][lane].note = (uint8_t)(36u + lane);
+            }
+            d80.d80_patch[0][2].type = D80_BD;
+            memcpy(d80.d80_patch[0][2].param, d80_defaults[D80_BD], D80_PARAMS);
+            d80.d80_patch[0][2].param[9] = 127u; /* transient PUNCH */
+            d80.d80_patch[0][2].note = 99u;
+            d80.sum = proj_sum(&d80);
+            ok = proj_pack(&saved, &d80) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.d80_patch[0][2].type == D80_BD &&
+                 restored.d80_patch[0][2].param[9] == 127u &&
+                 restored.d80_patch[0][2].note == 99u &&
+                 restored.d80_patch[0][3].type == D80_RS &&
+                 restored.d80_patch[0][3].note == 39u;
+            bad += check("DRUM-80: sparse pad TYPE/PUNCH/MIDI round trip", ok);
+            d80.d80_patch[0][2].type = D80_CP;
+            memcpy(d80.d80_patch[0][2].param, d80_defaults[D80_CP], D80_PARAMS);
+            d80.d80_patch[0][2].note = 38u;
+            d80.sum = proj_sum(&d80);
+            ok = proj_pack(&saved, &d80) && proj_import(&restored, &saved, sizeof saved) &&
+                 restored.d80_patch[0][2].type == D80_CP &&
+                 restored.d80_patch[0][2].note == 38u;
+            bad += check("DRUM-80: factory pads omit sparse data", ok);
+        }
         {   /* Stage 22: DRUM-X uses the same custom-note capability independently. */
             static project_t dx, restored;
             static project_store_t saved;
