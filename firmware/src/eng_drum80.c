@@ -162,7 +162,7 @@ static void drum80_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     /* BODY controls oscillator weight; VEL blends fixed and note velocity.
      * ATTACK controls transient duration, independently of PUNCH amount. */
     osc_mix = osc_mix * (32 + (int32_t)p->param[2]) / 159;
-    uint32_t click_samples = 240u + (127u - p->param[4]) * 12u;
+    uint32_t click_samples = 240u + (127u - p->param[4]) * 9u;
     int32_t velocity_gain = 127 - (int32_t)p->param[10] +
                             (int32_t)p->param[10] * v->vel / 127;
 
