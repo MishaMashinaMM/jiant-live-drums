@@ -13,7 +13,7 @@ Open **GLO → MIX → EQ**.
 
 The page controls one **shared** EQ, not the selected track. All values default to flat (0 dB); ON defaults to enabled.
 
-**Preview limitation:** EQ control values currently live in RAM and are **not stored in project files or device settings**. Do not assume they survive restart or project changes. Persistence and editor support should be implemented and tested before a release.
+**Project persistence (experimental):** LOW/MID/HIGH/ON are now written to an optional six-byte `EQ` block in the existing packed project format. Loading a project without that block resets the EQ to flat (0 dB) and ON, preserving legacy sound. Project-format regression tests cover round-trip and absent/invalid blocks. **EQ is not a device-wide setting**: values are saved with projects, not independently across power cycles; unsaved changes are lost. The web editor does not yet expose these controls.
 
 ## Actual signal flow
 
@@ -32,6 +32,8 @@ The DSP coefficients and precision-preserving Q28 LOW feedback are reused from t
 ## Validation and risks
 
 - Standalone frequency, fractional-feedback and seven-stream tests: `cc -O2 -I firmware/src tests/global_eq_test.c firmware/src/track_eq_dsp.c -lm -o /tmp/jld-global-eq-test && /tmp/jld-global-eq-test`
+- Additional 4,096-block seven-stream stress test under ASan/UBSan: `tests/global_eq_stress_test.c`, automated in GitHub Actions.
+- Project save/load format regression: `tests/project_test.c`, automated by the live test workflow.
 - Build hardware firmware: `bash build.sh` (`FELUCCA_NO_SEQUENCER=1` by default for JLD Drums).
 - **Not yet hardware tested.** Do not describe this branch as production-ready until the hardware build, UI, emulator, existing audio tests and an FM1 multitrack stress test pass.
 - The existing stem-export code collects per-track audio *before* the shared EQ. Consequently, stems are not guaranteed to sum to the EQ-filtered master mix in this preview. Fix/test this before claiming full stems support.
