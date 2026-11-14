@@ -66,6 +66,30 @@ int main(void)
     drum80_note_on(&trk[1], &trk[1].v[2]);
     bad += ck("closed hat does not choke another track",
               d80_voice[0][1].active);
+    {   /* Exercise the actual fixed-point render path for all 12 factory
+         * sounds; no sample data or UI state is needed. */
+        vmod_t m = {0};
+        m.amp0 = m.amp1 = 32767;
+        uint32_t audible = 0, bounded = 1;
+        for (uint32_t pad = 0; pad < D80_PADS; ++pad) {
+            voice_t *v = &trk[0].v[0];
+            int32_t out[CTL] = {0};
+            d80_type_set(0, pad, pad);
+            d80_note_set(0, pad, 36u + pad);
+            v->note = (uint8_t)(36u + pad);
+            v->vel = 127u;
+            drum80_note_on(&trk[0], v);
+            drum80_render(&trk[0], v, out, CTL, &m);
+            uint32_t signal = 0;
+            for (uint32_t i = 0; i < CTL; ++i) {
+                signal |= out[i] != 0;
+                bounded &= out[i] > -1048576 && out[i] < 1048576;
+            }
+            audible += signal;
+        }
+        bad += ck("all twelve types produce audio samples", audible == D80_PADS);
+        bad += ck("initial output remains within bounded headroom", bounded);
+    }
     printf("DRUM-80 STAGE 1 %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return !!bad;
 }
