@@ -3273,6 +3273,7 @@ static void chain_screens(const char *dir)
     seq_stop();
 }
 
+#if !FELUCCA_NO_SEQUENCER
 static int test_chain(void)
 {
     uint32_t i, k, period, n = 32u;
@@ -3440,6 +3441,14 @@ static int test_chain(void)
     bad += check("confirmed CLEAR SONG keeps musical steps", !chain_config.count && !ui.song_row);
     return bad;
 }
+#else
+static int test_chain(void)
+{
+    /* Song playback is retired; reject transport requests even from old UI/editor callers. */
+    transport_req = 0;
+    return check("live-only SONG transport stays disabled", chain_prepare() == 2u && !transport_req);
+}
+#endif
 
 /* Product controls are exercised through the actual button/encoder handlers
  * and canvas, including all pages, both fonts and every shipped palette. */
@@ -8091,6 +8100,7 @@ static int test_dx_sound(void)
     return bad;
 }
 
+#if !FELUCCA_NO_SEQUENCER
 static int test_song_layer(void)
 {
     int bad = 0, ok;
@@ -8191,6 +8201,14 @@ static int test_song_layer(void)
     bad += check("  KNOB 1: the song, in when SAVE lets go (stopped)", ok);
     return bad;
 }
+#else
+static int test_song_layer(void)
+{
+    /* The old queued-song layer no longer exists in Drums. Direct project
+     * loading is exercised by the dedicated live-drum project/UI suites. */
+    return check("live-only song transport remains stopped", !chain.running && !song.playing);
+}
+#endif
 
 /* (0.6.12) LOFI BYTE / FLOAT's RTRG: a note on a sounding voice restarts the formula's time (off: it runs on) */
 static int test_lofi_rtrg(void)

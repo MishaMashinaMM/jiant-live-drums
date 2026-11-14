@@ -102,9 +102,12 @@ a.render(400);
 check(`a key sounds (peak ${a.peak.toFixed(3)}) and lights its LED`, a.peak > 0.01 && keyLit === 1);
 a.render(1500);
 a.peak = 0;
-a.ex.web_midi(0x90, 64, 100);                                  // Web MIDI: E4 on channel 1
+// Live-only boots with DRUM-X on T1; note 36 is its mapped kick.
+// The sequencer-enabled compatibility check retains the original E4 note.
+const midiNote = liveOnly ? 36 : 64;
+a.ex.web_midi(0x90, midiNote, 100);
 a.render(300);
-a.ex.web_midi(0x80, 64, 0);
+a.ex.web_midi(0x80, midiNote, 0);
 a.render(300);
 check(`a MIDI note in (USB-MIDI's queue) sounds (peak ${a.peak.toFixed(3)})`, a.peak > 0.01);
 const draws = a.ex.web_screen_draws();

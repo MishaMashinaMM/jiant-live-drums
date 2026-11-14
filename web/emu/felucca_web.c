@@ -23,7 +23,7 @@
 
 #define FELUCCA_WEB 1
 #ifndef FELUCCA_NO_SEQUENCER
-#define FELUCCA_NO_SEQUENCER 0
+#define FELUCCA_NO_SEQUENCER 1  /* Jiant Live Drums default; 0 for legacy tests */
 #endif
 #ifndef FELUCCA_CDC
 #define FELUCCA_CDC 1                    /* as src/felucca.c: MENU > USB SERIAL is there (nothing behind it) */

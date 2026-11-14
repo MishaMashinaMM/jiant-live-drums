@@ -35,7 +35,7 @@
 #define FELUCCA_SEQ_PROBE 0     /* Stage 18A size-only probe; never flash this experimental build */
 #endif
 #ifndef FELUCCA_NO_SEQUENCER
-#define FELUCCA_NO_SEQUENCER 0  /* Stage 18B experimental live-only build; not yet hardware-safe */
+#define FELUCCA_NO_SEQUENCER 1  /* JIANT LIVE DRUMS: live-only by default; 0 for legacy compatibility tests */
 #endif
 #if FELUCCA_NO_SEQUENCER && FELUCCA_SEQ_PROBE
 #error "Select either FELUCCA_NO_SEQUENCER or FELUCCA_SEQ_PROBE, not both"

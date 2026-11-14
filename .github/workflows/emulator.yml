@@ -33,7 +33,7 @@ jobs:
         run: |
           # build.sh already copies the current browser shell, substitutes
           # version placeholders and installs the browser assets.
-          EMU_PREVIEW=0 FELUCCA_NO_SEQUENCER=1 sh web/emu/build.sh
+          EMU_PREVIEW=0 sh web/emu/build.sh
           node web/emu/live-drums-wasm-test.mjs build/emu/felucca.wasm
       - name: live-drum firmware regressions
         run: bash tests/run_live_drum_tests.sh
@@ -68,7 +68,7 @@ jobs:
           AC79_SDK: /home/runner/fw-AC79_AIoT_SDK
           JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
         run: |
-          FELUCCA_NO_SEQUENCER=1 python3 tools/build.py
+          python3 tools/build.py
           python3 web/make_site.py build/felucca.fwsc "v0.3-${GITHUB_SHA::7}" build/site
           printf '%s\n' "$GITHUB_SHA" > build/site/firmware/SOURCE_COMMIT
           (cd build/site/firmware && sha256sum felucca-*.fwsc > SHA256SUMS)

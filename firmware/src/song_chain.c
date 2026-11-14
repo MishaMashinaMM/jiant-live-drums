@@ -56,6 +56,7 @@ static void scene_capture(scene_t *s)
 }
 static song_index_t song_idx;
 static uint8_t song_cur;                      /* the song whose sections proj_slot holds (0: the four project slots) */
+#if !FELUCCA_NO_SEQUENCER
 #define SEC_LIVE 0xFEu                /* sec_stage.row: a live jump (the song layer), not a song row */
 typedef struct {                      /* a track of a section, as the ISR puts it in */
     int16_t p[P_COUNT];
@@ -73,6 +74,7 @@ static struct {
     volatile uint8_t ready;           /* main: staged; ISR: taken (0) */
     uint8_t row, section;             /* the song row it is for (SEC_LIVE: a live jump), the section (0..3) */
 } sec_stage __attribute__((section(".lowbuf")));   /* (0.6.78: app.ld LOWBUF) */
+#endif /* !FELUCCA_NO_SEQUENCER: retired song playback staging */
 static struct {
     chain_config_t config;
     volatile uint8_t armed, running, row, remaining;   /* remaining: the bars of the row still to play */
@@ -89,11 +91,13 @@ static struct {
 static struct {
     volatile int8_t req;              /* a section asked for (staged), in on the next bar; -1 none */
     volatile int8_t cur;              /* the section playing: jumped to, loaded or stored; -1 none */
-    volatile uint8_t srec;            /* SONG REC: 0 off, 1 armed (from the next bar), 2 recording */
-    volatile uint8_t nrec;            /* .. its rows so far (the last one still growing) */
-    volatile uint8_t rec_done;        /* .. ISR: written, n rows (0xFF: nothing played); song_poll takes them */
+    volatile uint8_t srec;            /* kept as legacy UI state; never records in live-only */
+#if !FELUCCA_NO_SEQUENCER
+    volatile uint8_t nrec;            /* SONG REC: number of song rows captured */
+    volatile uint8_t rec_done;        /* ISR completed recording; main loop consumes it */
     chain_row_t rec[CHAIN_ROWS];
-    scene_t rec_scene[CHAIN_ROWS];    /* .. the scene as each row began */
+    scene_t rec_scene[CHAIN_ROWS];    /* sequencer-only recording scratch */
+#endif
     uint8_t dirty;                    /* sections stored in RAM, not in flash yet (bit s) */
     uint8_t mode;                     /* 1 SONG: PLAY plays the song; 0 LOOP */
 } live = {.req = -1, .cur = -1};
