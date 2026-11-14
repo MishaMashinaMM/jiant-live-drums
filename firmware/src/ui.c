@@ -577,7 +577,7 @@ static int page_visible(uint32_t i)
     if (PAGES[i].graph == GR_PATS || PAGES[i].graph == GR_CHANCE)   /* (0.6.37) PHRASES, a step's CHANCE: out of the */
         return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
     if (PAGES[i].graph == GR_DXSND)  /* X-MOD belongs only to DRUM-X; LAB has four SOUND pages */
-        return trk_eng(TSEL) == ENGI_DRUM ||
+        return trk_eng(TSEL) == ENGI_DRUM || trk_eng(TSEL) == ENGI_DRUM80 ||
                (trk_eng(TSEL) == ENGI_DRUMLAB && PAGES[i].title[0] != 'X');
     if (PAGES[i].graph == GR_DXIMG) /* DRUM-X-specific KIT 3 / IMAGE */
         return trk_eng(TSEL) == ENGI_DRUM;
@@ -1774,6 +1774,8 @@ static void dx_knob(const page_t *pg, uint32_t k, int32_t s);
 static void dx_cards(const page_t *pg);
 static void lab_knob(const page_t *pg, uint32_t k, int32_t s);
 static void lab_cards(const page_t *pg);
+static void d80_knob(const page_t *pg, uint32_t k, int32_t s);
+static void d80_cards(const page_t *pg);
 static void dx_kit3_knob(uint32_t k, int32_t s);      /* (0.6.54) KIT 3: TONE's BP, FEEDBK */
 #define DX_KIT3(pg) ((pg)->graph == GR_DXIMG && (pg)->title[0] == 'K')   /* (0.6.58) GR_DXIMG: KIT 3, or STEREO (IMAGE) */
 static void dx_kit3_cards(void);
