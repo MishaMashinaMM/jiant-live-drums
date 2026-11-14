@@ -110,6 +110,26 @@ a.render(300);
 a.ex.web_midi(0x80, midiNote, 0);
 a.render(300);
 check(`a MIDI note in (USB-MIDI's queue) sounds (peak ${a.peak.toFixed(3)})`, a.peak > 0.01);
+// DRUM-80: test actual synthesized samples, not just engine registration or build success.
+// Every factory pad must be audible via the exact MIDI route used by the browser buttons.
+{
+  const d80 = await device(null);
+  d80.render(2300);
+  d80.ex.web_test_drum80();
+  d80.render(200);
+  check("DRUM-80 engine exposes all 12 assigned notes",
+    Array.from({length:12},(_,i)=>d80.ex.web_drum_pad_note(i)).every((note,i)=>note===36+i));
+  for (let pad=0;pad<12;pad++) {
+    d80.peak=0;
+    const note=d80.ex.web_drum_pad_note(pad);
+    d80.ex.web_midi(0x90,note,110);
+    d80.render(180);
+    d80.ex.web_midi(0x80,note,0);
+    d80.render(220);
+    check(`DRUM-80 pad ${pad+1} MIDI ${note} renders audible audio (peak ${d80.peak.toFixed(4)})`,d80.peak>0.003 && d80.peak<1.1);
+    d80.render(500);
+  }
+}
 const draws = a.ex.web_screen_draws();
 a.turn(EN.K1, 3);
 check("KNOB 1 redraws the screen", a.ex.web_screen_draws() > draws);
