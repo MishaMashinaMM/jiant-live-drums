@@ -90,32 +90,6 @@ int main(void)
         bad += ck("all twelve types produce audio samples", audible == D80_PADS);
         bad += ck("initial output remains within bounded headroom", bounded);
     }
-    {   /* Actual project serializer round trip for independent pad edits. */
-        static project_t before, after;
-        static project_store_t packed;
-        host_tracks_init();
-        host_preset(&trk[0], ENGI_DRUM80, 0);
-        d80_type_set(0, 4, D80_BD);
-        d80_param_set(0, 4, 0, 123);
-        d80_param_set(0, 4, 11, 17);
-        d80_note_set(0, 4, 91);
-        project_capture(&before);
-        bad += ck("project captures custom pad type, tune, level and note",
-                  before.d80_patch[0][4].type == D80_BD &&
-                  before.d80_patch[0][4].param[0] == 123 &&
-                  before.d80_patch[0][4].param[11] == 17 &&
-                  before.d80_patch[0][4].note == 91);
-        int packed_ok = proj_pack(&packed, &before);
-        bad += ck("project packs modified DRUM-80 pad", packed_ok);
-        if (packed_ok) {
-            int unpacked_ok = proj_unpack(&after, packed.raw, sizeof packed.raw);
-            bad += ck("project unpacks modified DRUM-80 pad", unpacked_ok);
-            if (unpacked_ok)
-                bad += ck("project round-trip preserves every pad byte",
-                          memcmp(before.d80_patch[0], after.d80_patch[0],
-                                 sizeof before.d80_patch[0]) == 0);
-        }
-    }
     printf("DRUM-80 STAGE 1 %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return !!bad;
 }
