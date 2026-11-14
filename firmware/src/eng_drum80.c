@@ -209,6 +209,13 @@ static void drum80_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
         if (d->body < 256 && d->noise < 256) d->active = 0u;
     }
 }
+/* Match DRUM-X's local keyboard layout: C2 (MIDI 36) on key 7 at OCT 0.
+ * External MIDI note assignments remain exact and unaffected by octave controls. */
+static int32_t drum80_keys(const track_t *t, uint32_t k)
+{
+    (void)t;
+    return clamp(29 + (int32_t)k, 0, 127);
+}
 static const preset_t DRUM80_PRESETS[] = {
     {"80s KIT", {64, 36, 100, 70, 75, 60, 80, 55}, {0, 127, 127, 127}, 0, TAG(DRUM)},
 };
@@ -233,4 +240,5 @@ static const engine_t ENG_DRUM80 = {
     .knob = {P_E0, P_E1, P_E2, P_E3},
     .poly = NVOICE,
     .oneshot = 1,
+    .keys = drum80_keys,
 };
