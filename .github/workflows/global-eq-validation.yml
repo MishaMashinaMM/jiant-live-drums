@@ -21,3 +21,7 @@ jobs:
         run: |
           cc -O2 -std=gnu99 -Wall -Wextra -I firmware/src tests/global_eq_test.c firmware/src/track_eq_dsp.c -lm -o /tmp/jld-global-eq-warnings
           /tmp/jld-global-eq-warnings
+      - name: Address and undefined-behavior sanitizer regression
+        run: |
+          cc -O1 -g -std=gnu99 -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -I firmware/src tests/global_eq_test.c firmware/src/track_eq_dsp.c -lm -o /tmp/jld-global-eq-sanitized
+          /tmp/jld-global-eq-sanitized
