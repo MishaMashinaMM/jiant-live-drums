@@ -1218,7 +1218,8 @@ static void draw_columns(void)
         return;
     }
     if (cur_page()->graph == GR_DXSND) {               /* EDIT > SOUND (ui_dx.c) */
-        if (trk_eng(TSEL) == ENGI_DRUMLAB) lab_cards(cur_page());
+        if (trk_eng(TSEL) == ENGI_DRUM80) d80_cards(cur_page());
+        else if (trk_eng(TSEL) == ENGI_DRUMLAB) lab_cards(cur_page());
         else dx_cards(cur_page());
         return;
     }
