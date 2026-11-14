@@ -52,8 +52,8 @@ int main(void)
               !d80_note_set(0, 0, 128) && !d80_param_set(0, 0, 12, 0) &&
               !d80_param_set(0, 0, 0, 128) && !d80_type_set(NPART, 0, 0));
     host_preset(&trk[0], ENGI_DRUM80, 0);
-    bad += ck("silent engine does not retain active note voices",
-              (trk_note_on(&trk[0], 36, 100), !trk[0].v[0].active));
+    bad += ck("DRUM-80 allocates an active synthesis voice",
+              (trk_note_on(&trk[0], 36, 100), trk[0].v[0].active && d80_voice[0][0].active));
     printf("DRUM-80 STAGE 1 %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return !!bad;
 }
