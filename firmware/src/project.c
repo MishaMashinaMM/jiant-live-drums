@@ -137,6 +137,8 @@ typedef struct {
     uint8_t lab_note[NPART][12];                /* independent note number for each pad */
     uint8_t dx_note_on[NPART];                   /* Stage 22: optional DRUM-X MIDI map */
     uint8_t dx_note[NPART][12];
+    int8_t eq_gain[3];                           /* optional global EQ project block */
+    uint8_t eq_on, eq_present;
     uint8_t rx_on;                               /* JLD: RX channels included in this project */
     uint8_t rx[6];                              /* one-based channels, 1..16 */
     uint8_t cm_count;                           /* optional REC CC macros, zero in older projects */
@@ -895,6 +897,7 @@ static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
     if (q->rx_on) n += 8u;                       /* 'R' 'X' and six MIDI channels */
+    n += 6u;                                    /* 'E' 'Q', 3 signed gains biased by 15, ON */
     if (q->cm_count) n += 3u + q->cm_count * CM_ROW_SIZE;
     if (proj_djf_events(&q->motion))                    /* (0.9.1) the DJ FILTER's records: their block's head */
         n += 3u;
@@ -1275,6 +1278,9 @@ static int proj_pack(project_store_t *out, const project_t *q)
         memcpy(b + pos, q->cm_rows, q->cm_count * CM_ROW_SIZE);
         pos += q->cm_count * CM_ROW_SIZE;
     }
+    b[pos++] = 'E'; b[pos++] = 'Q';
+    for (i = 0; i < 3u; i++) b[pos++] = (uint8_t)(clamp(q->eq_gain[i], -15, 15) + 15);
+    b[pos++] = (uint8_t)!!q->eq_on;
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
     for (i = 0; i < 4u; i++)
@@ -1723,6 +1729,17 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         memcpy(q->cm_rows, b + pos, count * CM_ROW_SIZE);
         pos += count * CM_ROW_SIZE;
     }
+    if (pos + 2u <= room && b[pos] == 'E' && b[pos + 1u] == 'Q') {
+        if (pos + 6u > room) return 0;
+        for (i = 0; i < 3u; i++) {
+            if (b[pos + 2u + i] > 30u) return 0;
+            q->eq_gain[i] = (int8_t)((int)b[pos + 2u + i] - 15);
+        }
+        if (b[pos + 5u] > 1u) return 0;
+        q->eq_on = b[pos + 5u];
+        q->eq_present = 1u;
+        pos += 6u;
+    }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);
@@ -1984,6 +2001,9 @@ static void project_capture(project_t *p)
     p->size = sizeof *p;
     for (i = 0; i < G_COUNT; i++)
         p->g[i] = song.g[i];
+    for (i = 0; i < 3u; i++) p->eq_gain[i] = (int8_t)clamp(global_eq_gain[i], -15, 15);
+    p->eq_on = (uint8_t)!!global_eq_on;
+    p->eq_present = 1u;
     p->g[G_DJF] = motion_djf_value();                   /* (0.9.1) the knob's, not what its automation set */
     p->sel = song.sel;
     p->parts = NPART;
@@ -2276,6 +2296,8 @@ static int project_restore_runtime(const project_t *input)
     seq_stop();
     transport_req = 0;
     /* Legacy projects have no RX block: leave the existing global channels alone. */
+    for (i = 0; i < 3u; i++) global_eq_gain[i] = p->eq_present ? p->eq_gain[i] : 0;
+    global_eq_on = p->eq_present ? p->eq_on : 1;
     if (p->rx_on) memcpy(midi_rx, p->rx, sizeof p->rx);
     cm_count = p->cm_count;
     memcpy(cm_rows, p->cm_rows, sizeof cm_rows);
@@ -2413,6 +2435,9 @@ static void system_init(void)
     for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
     for (i = 0; i < 5u; i++) song.g[KEEP[i]] = kept[i];
+    /* A new/initialized project must not inherit the previous project's EQ. */
+    for (i = 0; i < 3u; i++) global_eq_gain[i] = 0;
+    global_eq_on = 1;
     chain_defaults(&chain_config);
     memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
     memset(pfx_lane, 0, sizeof pfx_lane);

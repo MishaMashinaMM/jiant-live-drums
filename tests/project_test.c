@@ -929,6 +929,61 @@ int main(void)
             ok = proj_pack(&saved, &with_rx) && proj_import(&restored, &saved, sizeof saved) && !restored.rx_on;
             bad += check("JLD: older project without RX block keeps global channels on load", ok);
         }
+        {   /* Global EQ: optional six-byte block, legacy default, and corrupt-value rejection. */
+            static project_t eq_src, eq_dst;
+            static project_store_t eq_wire;
+            unsigned eq_at;
+            eq_src = f;
+            eq_src.eq_gain[0] = -15;
+            eq_src.eq_gain[1] = 7;
+            eq_src.eq_gain[2] = 15;
+            eq_src.eq_on = 0u;
+            eq_src.eq_present = 1u;
+            eq_src.sum = proj_sum(&eq_src);
+            ok = proj_pack(&eq_wire, &eq_src) && proj_import(&eq_dst, &eq_wire, sizeof eq_wire) &&
+                 eq_dst.eq_present && !memcmp(eq_dst.eq_gain, eq_src.eq_gain, 3u) && !eq_dst.eq_on;
+            bad += check("JLD: global EQ -15/+7/+15 and OFF round-trip", ok);
+            /* A project with no EQ block retains the old flat, enabled defaults. */
+            eq_src.eq_present = 0u;
+            eq_src.eq_gain[0] = eq_src.eq_gain[1] = eq_src.eq_gain[2] = 0;
+            eq_src.eq_on = 1u;
+            eq_src.sum = proj_sum(&eq_src);
+            ok = proj_pack(&eq_wire, &eq_src) && proj_import(&eq_dst, &eq_wire, sizeof eq_wire) &&
+                 eq_dst.eq_present && !eq_dst.eq_gain[0] && !eq_dst.eq_gain[1] &&
+                 !eq_dst.eq_gain[2] && eq_dst.eq_on;
+            bad += check("JLD: flat EQ defaults round-trip", ok);
+            /* Simulate a pre-EQ wire image: no EQ marker, zeroed unused tail. */
+            ok = proj_pack(&eq_wire, &eq_src);
+            eq_at = 0u;
+            for (k = 68u; k + 6u <= PROJC_PFX_OFF; ++k)
+                if (eq_wire.raw[k] == 'E' && eq_wire.raw[k+1u] == 'Q' &&
+                    eq_wire.raw[k+2u] == 15u && eq_wire.raw[k+3u] == 15u &&
+                    eq_wire.raw[k+4u] == 15u && eq_wire.raw[k+5u] == 1u)
+                    eq_at = k;
+            if (eq_at) {
+                memset(eq_wire.raw + eq_at, 0, 6u);
+                { uint32_t hash = proj_hash(eq_wire.raw, PROJ_STORE_SIZE-4u);
+                  memcpy(eq_wire.raw + PROJ_STORE_SIZE-4u, &hash, 4u); }
+            }
+            ok &= eq_at && proj_import(&eq_dst, &eq_wire, sizeof eq_wire) &&
+                  !eq_dst.eq_present;
+            bad += check("JLD: pre-EQ packed project imports with absent EQ block", ok);
+            /* Find the EQ marker in the packed stream, then invalidate a gain. */
+            ok = proj_pack(&eq_wire, &eq_src);
+            eq_at = 0u;
+            for (k = 68u; k + 6u < PROJC_PFX_OFF; ++k)
+                if (eq_wire.raw[k] == 'E' && eq_wire.raw[k+1u] == 'Q' &&
+                    eq_wire.raw[k+2u] == 15u && eq_wire.raw[k+3u] == 15u &&
+                    eq_wire.raw[k+4u] == 15u && eq_wire.raw[k+5u] == 1u)
+                    eq_at = k;
+            if (eq_at) {
+                eq_wire.raw[eq_at+2u] = 31u;
+                { uint32_t hash = proj_hash(eq_wire.raw, PROJ_STORE_SIZE-4u);
+                  memcpy(eq_wire.raw + PROJ_STORE_SIZE-4u, &hash, 4u); }
+            }
+            ok &= eq_at && !proj_import(&eq_dst, &eq_wire, sizeof eq_wire);
+            bad += check("JLD: reject invalid encoded EQ gain", ok);
+        }
         {   /* REC macro storage: 4-row projects migrate, 32 rows round-trip unchanged. */
             static project_t m1, m2;
             static project_store_t wire;

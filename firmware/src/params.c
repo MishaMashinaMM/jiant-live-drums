@@ -672,6 +672,7 @@ static const page_t PAGES[] = {
                                                          * VALUE, the MOD slot aimed at it: SRC AMT (ui_input.c focus_knob) */
     {"STAGE", FAM_ENV, SC_TRACK, GR_STAGE, {0xFF, 0xFF, P_ELOOP, 0xFF}},   /* ENV's detail: STAGE (ATK DEC SUS REL), its
                                                          * value, LOOP (ui_input.c stage_knob) */
+    {"EQ", FAM_GLO, SC_GLOBAL, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}}, /* global 3-band, applied to shared buses before the FX returns */
     {"SENDS", FAM_TRK, SC_TRACK, GR_TRK, {P_DIST, P_CHOR, P_DLY, P_REV}},   /* GLO > MIX: the track's sends (as FX > SENDS),
                                                          * the six tracks' as bars (ui_graph.c track_col6) */
     /* (0.9.18) SEQ > BAR gone (0.9.2 .. 0.9.17: KNOB 1 the bar, KNOB 2 LEN): the bar is the roll's cursor / strip and
@@ -693,9 +694,24 @@ static const param_desc_t REV_AIR = PD("AIR", F_SEMI, -24, 24, 0);    /* (0.6.12
 static const param_desc_t AP_BEAT = PE("RATE", N_APDIV, 2);          /* (0.6.9) AUTO PAN's RATE on the tempo (SYNC BEAT) */
 static uint8_t sl_ui_step;       /* (JIANT 0.6.3) the SL PITCH page: the step KNOB 2 edits */
 
+static const param_desc_t G_EQ_DESC[4] = {
+    {"LOW", F_INT, -15, 15, 0, 0, "dB"},
+    {"MID", F_INT, -15, 15, 0, 0, "dB"},
+    {"HIGH", F_INT, -15, 15, 0, 0, "dB"},
+    PD("ON", F_ONOFF, 0, 1, 1)
+};
+/* Global EQ controls are independent of track selection. The preview starts
+ * flat so old projects sound identical. Persistence is a later milestone. */
+static int16_t global_eq_gain[3];
+static int16_t global_eq_on = 1;
+
 static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **valp)
 {
     uint32_t id = pg->id[slot];
+    if (str_eq(pg->title, "EQ") && slot < 4u) {
+        *valp = slot < 3u ? &global_eq_gain[slot] : &global_eq_on;
+        return &G_EQ_DESC[slot];
+    }
     if (id == 0xFFu) {
         *valp = 0;
         return 0;
