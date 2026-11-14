@@ -77,6 +77,18 @@ static int d80_note_set(uint32_t ti, uint32_t pad, uint32_t note)
     return 1;
 }
 
+/* Kit-wide EDIT controls P_E0..P_E7 are independent multipliers of each
+ * pad's first eight parameters. 100 is neutral. MIDI CC/macros already
+ * target these track parameters, so no separate MIDI or storage path is needed.
+ * Work on a copy: never overwrite an individual pad's saved settings. */
+static void d80_effective(const track_t *t, const d80_pad_t *source, d80_pad_t *out)
+{
+    *out = *source;
+    for (uint32_t i = 0; i < 8u; ++i) {
+        int32_t global = clamp(t->p[P_E0 + i], 0, 127);
+        out->param[i] = (uint8_t)clamp((int32_t)source->param[i] * global / 100, 0, 127);
+    }
+}
 /* Exact note matching, including duplicate note assignments.
  * First matching pad wins until multi-pad triggering is explicitly supported.
  * No modulo/octave wrap: user-defined note maps must be deterministic. */
@@ -119,7 +131,9 @@ static void drum80_note_on(track_t *t, voice_t *v)
             if (d80_voice[ti][other].active && d80_voice[ti][other].pad == D80_OH)
                 d80_voice[ti][other].active = 0u;
     d80_voice_t *d = &d80_voice[ti][slot];
-    const d80_pad_t *p = &d80_kit[ti][pad];
+    d80_pad_t effective;
+    d80_effective(t, &d80_kit[ti][pad], &effective);
+    const d80_pad_t *p = &effective;
     /* Per-type pitch registers: kick/toms stay low, snare/clap/metallic
      * percussion start progressively higher. TUNE spans a useful range. */
     static const uint8_t base[D80_TYPES] = {
@@ -153,7 +167,9 @@ static void drum80_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     if (ti >= NPART || slot >= NVOICE) return;
     d80_voice_t *d = &d80_voice[ti][slot];
     if (!d->active) return;
-    const d80_pad_t *p = &d80_kit[ti][d->pad];
+    d80_pad_t effective;
+    d80_effective(t, &d80_kit[ti][d->pad], &effective);
+    const d80_pad_t *p = &effective;
     uint32_t type = p->type, i;
     uint32_t bd = d80_decay(p->param[3], 30u, 750u);
     uint32_t nd = d80_decay(p->param[7], 6u, 350u);
@@ -217,20 +233,20 @@ static int32_t drum80_keys(const track_t *t, uint32_t k)
     return clamp(29 + (int32_t)k, 0, 127);
 }
 static const preset_t DRUM80_PRESETS[] = {
-    {"80s KIT", {64, 36, 100, 70, 75, 60, 80, 55}, {0, 127, 127, 127}, 0, TAG(DRUM)},
+    {"80s KIT", {100, 100, 100, 100, 100, 100, 100, 100}, {0, 127, 127, 127}, 0, TAG(DRUM)},
 };
 static const engine_t ENG_DRUM80 = {
     .name = "DRUM-80",
     .page_title = {"BODY", "ATTACK"},
     .edit = {
-        {"TUNE", F_PCT, 0, 127, 64, 0, 0},
-        {"SWEEP", F_PCT, 0, 127, 36, 0, 0},
+        {"TUNE", F_PCT, 0, 127, 100, 0, 0},
+        {"SWEEP", F_PCT, 0, 127, 100, 0, 0},
         {"BODY", F_PCT, 0, 127, 100, 0, 0},
-        {"DECAY", F_PCT, 0, 127, 70, 0, 0},
-        {"ATTACK", F_PCT, 0, 127, 75, 0, 0},
-        {"NOISE", F_PCT, 0, 127, 60, 0, 0},
-        {"BRIGHT", F_PCT, 0, 127, 80, 0, 0},
-        {"TAIL", F_PCT, 0, 127, 55, 0, 0},
+        {"DECAY", F_PCT, 0, 127, 100, 0, 0},
+        {"ATTACK", F_PCT, 0, 127, 100, 0, 0},
+        {"NOISE", F_PCT, 0, 127, 100, 0, 0},
+        {"BRIGHT", F_PCT, 0, 127, 100, 0, 0},
+        {"TAIL", F_PCT, 0, 127, 100, 0, 0},
     },
     .presets = DRUM80_PRESETS,
     .npresets = NELEM(DRUM80_PRESETS),
