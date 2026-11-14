@@ -33,6 +33,13 @@ int main(void)
               d80_kit[0][2].type == D80_BD &&
               d80_kit[0][2].note == 99u &&
               d80_kit[0][2].param[0] == d80_defaults[D80_BD][0]);
+    bad += ck("MIDI note lookup follows custom pad assignment",
+              d80_pad_for_note(0, 99) == 2 &&
+              d80_pad_for_note(0, 38) == -1 &&
+              d80_pad_for_note(1, 38) == 2 &&
+              d80_pad_for_note(0, 128) == -1);
+    bad += ck("duplicate MIDI assignments select first matching pad",
+              d80_note_set(0, 3, 99) && d80_pad_for_note(0, 99) == 2);
     bad += ck("duplicate types on independent pads",
               d80_type_set(0, 3, D80_BD) &&
               d80_kit[0][3].type == d80_kit[0][2].type &&
