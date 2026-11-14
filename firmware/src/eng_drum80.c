@@ -159,6 +159,13 @@ static void drum80_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     if (type == D80_CB || type == D80_PC2) osc_mix = 110;
     if (type == D80_RS) osc_mix = 75;
     if (type == D80_CL) osc_mix = 120;
+    /* BODY controls oscillator weight; VEL blends fixed and note velocity.
+     * ATTACK controls transient duration, independently of PUNCH amount. */
+    osc_mix = osc_mix * (32 + (int32_t)p->param[2]) / 159;
+    uint32_t click_samples = 240u + (127u - p->param[4]) * 12u;
+    int32_t velocity_gain = 127 - (int32_t)p->param[10] +
+                            (int32_t)p->param[10] * v->vel / 127;
+
     if (type == D80_CH) nd *= 4u;
     if (type == D80_OH) nd /= 2u;
     if (type == D80_CP) bd *= 5u;
@@ -178,12 +185,12 @@ static void drum80_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
         if (type == D80_CH || type == D80_OH) tone = (tone > 0 ? 18000 : -18000);
         x = (int32_t)(((int64_t)tone * d->body * osc_mix) >> 31);
         x += (int32_t)(((int64_t)hiss * d->noise * mix) >> 31);
-        if (d->age < 1440u && p->param[9]) {
-            uint32_t left = 1440u - d->age;
-            int32_t click = (int32_t)(((int64_t)hiss * p->param[9] * left) / (1440u * 127u * 5u));
+        if (d->age < click_samples && p->param[9]) {
+            uint32_t left = click_samples - d->age;
+            int32_t click = (int32_t)(((int64_t)hiss * p->param[9] * left) / ((int64_t)click_samples * 127u * 5u));
             x += click;
         }
-        x = (int32_t)(((int64_t)x * level) / 127u);
+        x = (int32_t)(((int64_t)x * level * velocity_gain) / (127u * 127u));
         if (drive) {
             int32_t y = x * (128 + drive) / 128;
             x = clamp(y, -32768, 32767);
