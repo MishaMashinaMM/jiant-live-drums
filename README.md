@@ -1,4 +1,4 @@
-# JIANT LIVE DRUMS v0.3
+# JIANT LIVE DRUMS v0.3 — Global EQ
 
 **Performance-focused firmware for the M-VAVE FM1**, modified by **Misha Mashina** from **JIANT by Juan Jiant** (based on Felucca).
 
@@ -13,14 +13,15 @@
 
 The links above are the GitHub Pages routes for this separate Drums repository. The repository includes the Drums-specific browser emulator, firmware installer, editor, and an inherited interactive manual. The inherited manual still describes some original sequencer behavior and is **not a fully updated Drums control reference**.
 
-JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbral drum sound module**. It extends DRUM-X, adds DRUM-LAB, expands MIDI routing and CC control, and keeps the eight-voice shared pool. The **sequencer is disabled by default** in this edition (no extra build flag required); its SEQ, PLAY, and REC buttons open dedicated live-MIDI pages. Original Jiant Live remains a separate project.
+JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbral drum sound module**. It extends DRUM-X, adds DRUM-LAB, expands MIDI routing and CC control, and keeps the eight-voice shared pool. The latest update adds a **single global three-band EQ** before effects, with project save/load. The **sequencer is disabled by default** in this edition (no extra build flag required); its SEQ, PLAY, and REC buttons open dedicated live-MIDI pages. Original Jiant Live remains a separate project.
 
-> **Current status:** v0.3 milestone; experimental, **not an official Juan Jiant release**. Dedicated live-drum host tests and update-package simulations pass. **The published v0.3 firmware (`v0.3-1956d21`) was successfully installed and booted on two physical FM1 units through two different starting-firmware paths: one directly from official FM1 V15 firmware, and the other from original JIANT firmware. Both upgrade paths worked**, and the owner reports that all tested functions work as expected. The REC macro screen's partial-redraw fix was **verified on physical hardware**: editing macro values updates the affected cells without full-screen flicker. The 32-macro REC paging and project save/load were verified in the emulator; the earlier four-macro build was also checked on the device for DRUM-LAB sound/editing, SEQ/PLAY navigation, LEDs, and external-MIDI CC macro control. These are successful owner-reported device tests, not an exhaustive hardware qualification. Back up your data and prepare a recovery method before installing. Do not use the original JIANT web installer to install Drums.
+> **Current status:** v0.3 milestone; experimental, **not an official Juan Jiant release**. Dedicated live-drum host tests and update-package simulations pass. **The published v0.3 firmware (`v0.3-1956d21`) was successfully installed and booted on two physical FM1 units through two different starting-firmware paths: one directly from official FM1 V15 firmware, and the other from original JIANT firmware. Both upgrade paths worked**, and the owner reports that all tested functions work as expected. The REC macro screen's partial-redraw fix was **verified on physical hardware**: editing macro values updates the affected cells without full-screen flicker. The 32-macro REC paging and project save/load were verified in the emulator; the earlier four-macro build was also checked on the device for DRUM-LAB sound/editing, SEQ/PLAY navigation, LEDs, and external-MIDI CC macro control. The newer Global EQ preview was also flashed successfully on November 14, 2026, with normal operation reported; prolonged multitrack CPU stress remains unverified. These are successful owner-reported device tests, not an exhaustive hardware qualification. Back up your data and prepare a recovery method before installing. Do not use the original JIANT web installer to install Drums.
 
 ## What's different from JIANT / Jiant Live
 
 | Feature | JIANT LIVE DRUMS v0.3 |
 | --- | --- |
+| Global 3-band EQ | **GLO → MIX → EQ**: LOW 50 Hz shelf, MID 700 Hz peak (Q=1), HIGH 10 kHz shelf; each −15 to +15 dB, plus ON/bypass. One shared EQ for all tracks, before effects, saved per project. |
 | MIDI input per track | Independent **RX channel 1–16** for each of six tracks. Two or more tracks may share a channel and sound together. |
 | MIDI routing | **1-4**, **1-6** (assigned-channel routing), or **SEL** (selected-track routing). TRACKS 4/6 still determines how many tracks are active. |
 | MIDI LEARN | **32 parameter destinations** rather than 10. One incoming CC can control several parameters on different tracks at once; MIDI Learn remains available alongside macros. |
@@ -34,6 +35,16 @@ JIANT LIVE DRUMS is designed for musicians using the FM1 as a **live multitimbra
 | ABOUT | JIANT LIVE DRUMS v0.3 identification and purpose, while retaining original author and license credits. |
 | Browser emulator | Can load an existing JIANT **backup JSON** into an isolated session to audition saved sounds/projects without changing the physical FM1. |
 | Sequencer / sound engines | **Sequencer disabled** for live use; the inherited melodic engines and effects remain. |
+
+### Global three-band EQ (new in this update)
+
+Open **GLO → MIX → EQ** to edit the **single shared EQ**. This replaces the earlier experimental idea of one EQ per track, which was too CPU-intensive. The three bands are **LOW 50 Hz**, **MID 700 Hz** and **HIGH 10 kHz**, each adjustable from **−15 to +15 dB**; **ON** enables or bypasses the EQ. The MID band is a peaking filter (Q=1); LOW/HIGH are broad shelves. Bypass and gain adjustments are smoothed to avoid abrupt switching artifacts.
+
+The EQ processes the **shared stereo dry buses, chorus/delay/reverb input sends, and SLICER input before effects processing**. It does **not** re-filter wet effects returns or the final output. It processes seven shared streams at most, rather than allocating six separate track EQs. All six tracks share the same settings.
+
+**Saved with projects:** LOW, MID, HIGH and ON are stored in an optional EQ block in the project file. Older projects without the block load with flat EQ (0 dB) and ON. The EQ is **not** an independently saved device-wide setting: save your project to retain edits. The browser editor does **not yet** expose the new EQ parameters. Exported individual stems are captured before the shared EQ and therefore may not reconstruct the EQ-filtered master.
+
+**Validation:** The Global EQ preview was successfully flashed to a physical FM1 on **November 14, 2026**, and the owner reported that it booted and the tested functions worked well. The emulator, DSP frequency tests, 4,096-block stress test, project compatibility tests, sanitizers and real firmware build also passed. **Extended six-track hardware CPU-load measurements and prolonged audio-stability testing remain outstanding**; this is not a claim of exhaustive device qualification. See [Global EQ technical notes](docs/JLD_GLOBAL_EQ_PREVIEW.md) for the signal flow and test limitations.
 
 ### Six receive channels
 
