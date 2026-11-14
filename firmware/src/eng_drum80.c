@@ -77,9 +77,22 @@ static int d80_note_set(uint32_t ti, uint32_t pad, uint32_t note)
     return 1;
 }
 
+/* Exact note matching, including duplicate note assignments.
+ * First matching pad wins until multi-pad triggering is explicitly supported.
+ * No modulo/octave wrap: user-defined note maps must be deterministic. */
+static int32_t d80_pad_for_note(uint32_t ti, uint32_t note)
+{
+    if (ti >= NPART || note > 127u) return -1;
+    d80_ensure(ti);
+    for (uint32_t pad = 0; pad < D80_PADS; ++pad)
+        if (d80_kit[ti][pad].note == note) return (int32_t)pad;
+    return -1;
+}
 static void drum80_note_on(track_t *t, voice_t *v)
 {
-    (void)t;
+    uint32_t ti = (uint32_t)(t - trk);
+    int32_t pad = d80_pad_for_note(ti, v->note);
+    (void)pad; /* Stage 1: routing resolves pad, but synthesis remains silent. */
     /* Silent placeholder: do not leave an allocated voice sounding indefinitely. */
     v->active = 0;
     v->gate = 0;
