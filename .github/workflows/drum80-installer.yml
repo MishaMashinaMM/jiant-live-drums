@@ -17,6 +17,8 @@ jobs:
           python-version: '3.13'
       - name: Install generators
         run: pip install Pillow==12.3.0 numpy==2.3.5 fonttools==4.61.1
+      - name: Generate firmware tables and UI headers
+        run: python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()"
       - name: Run DRUM-80 and project regressions
         run: bash tests/run_live_drum_tests.sh
       - uses: actions/cache@v4
