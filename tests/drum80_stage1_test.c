@@ -90,6 +90,9 @@ int main(void)
         bad += ck("all twelve types produce audio samples", audible == D80_PADS);
         bad += ck("initial output remains within bounded headroom", bounded);
     }
+    bad += ck("DRUM-80 local keys match DRUM-X default octave (key 7 = MIDI 36)",
+              ENG_DRUM80.keys && ENG_DRUM80.keys(&trk[0], 7u) == 36 &&
+              ENG_DRUM80.keys(&trk[0], 18u) == 47);
     printf("DRUM-80 STAGE 1 %s (%d failures)\n", bad ? "FAILED" : "PASSED", bad);
     return !!bad;
 }
