@@ -21,6 +21,14 @@ jobs:
         run: python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()"
       - name: Run DRUM-80 and project regressions
         run: bash tests/run_live_drum_tests.sh
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.11
+      - name: Build and test DRUM-80 browser emulator
+        run: |
+          bash web/emu/build.sh
+          node web/emu/live-drums-wasm-test.mjs build/emu/felucca.wasm
+          node web/emu/emu_test.mjs build/emu/felucca.wasm
       - uses: actions/cache@v4
         with:
           path: |
@@ -48,6 +56,8 @@ jobs:
           python3 web/make_site.py build/felucca.fwsc "drum80-${GITHUB_SHA::7}-preview" build/drum80-test-site
           printf '%s\n' "$GITHUB_SHA" > build/drum80-test-site/firmware/SOURCE_COMMIT
           (cd build/drum80-test-site/firmware && sha256sum felucca-*.fwsc > SHA256SUMS)
+          mkdir -p build/drum80-test-site/emu
+          cp -r build/emu/. build/drum80-test-site/emu/
           cat > build/drum80-test-site/START-HERE.txt <<'EOF'
           DRUM-80 TEST INSTALLER — EXPERIMENTAL FM1 FIRMWARE
           Built from the exact branch commit recorded in firmware/SOURCE_COMMIT.
@@ -55,15 +65,15 @@ jobs:
           
           1. Unzip the complete artifact (do not open HTML directly from the ZIP).
           2. In this folder run: python -m http.server 8765
-          3. In Chrome or Edge open: http://localhost:8765/webapp/installer/
-          4. Back up your FM1 before installing. Use one test unit only.
-          5. Keep the server running while flashing. Do not unplug during transfer.
+          3. Preview firmware in Chrome: http://localhost:8765/emu/\n          4. Web editor: http://localhost:8765/webapp/editor/\n          5. Installer (only after preview): http://localhost:8765/webapp/installer/
+          6. Back up your FM1 before installing. Use one test unit only.
+          7. Keep the server running while flashing. Do not unplug during transfer.
           
           The local installer works through Web MIDI on localhost. No GitHub Pages
           deployment or changes to main are made by this workflow.
           EOF
           test -s build/drum80-test-site/firmware/SOURCE_COMMIT
-          test -s build/drum80-test-site/webapp/installer/index.html
+          test -s build/drum80-test-site/emu/felucca.wasm\n          test -s build/drum80-test-site/webapp/editor/index.html\n          test -s build/drum80-test-site/webapp/installer/index.html
           test -s build/drum80-test-site/firmware/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
