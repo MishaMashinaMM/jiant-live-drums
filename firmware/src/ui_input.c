@@ -2348,11 +2348,16 @@ static void ui_input_frame(void)
                 old = drum_midi_custom[ti] ? drum_midi_note[ti][lane] : DRUM_NOTE12[lane];
             else if (t->eng_req == ENGI_DRUMLAB)
                 old = drumlab_midi_custom[ti] ? drumlab_midi_note[ti][lane] : 36 + (int32_t)lane;
+            else if (t->eng_req == ENGI_DRUM80) {
+                d80_ensure(ti);
+                old = d80_kit[ti][lane].note;
+            }
             if (old >= 0) {
                 uint32_t note = (uint32_t)clamp(old + (s > 0 ? 1 : -1), 0, 127);
                 fm1_irq_off();
                 if (t->eng_req == ENGI_DRUM) drum_note_set(t, lane, note);
-                else drumlab_note_set(t, lane, note);
+                else if (t->eng_req == ENGI_DRUMLAB) drumlab_note_set(t, lane, note);
+                else if (t->eng_req == ENGI_DRUM80) d80_note_set(ti, lane, note);
                 fm1_irq_on();
                 ui.force = 1u;
             }
