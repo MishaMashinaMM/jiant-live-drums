@@ -88,18 +88,106 @@ static int32_t d80_pad_for_note(uint32_t ti, uint32_t note)
         if (d80_kit[ti][pad].note == note) return (int32_t)pad;
     return -1;
 }
+/* Fixed-point, sample-free 1980s-style synthesis. One state per allocated
+ * shared voice; no per-sample allocation or floating-point operations. */
+typedef struct {
+    uint32_t phase, phase2, rng, age;
+    int32_t body, noise, sweep, lp;
+    uint32_t inc;
+    uint8_t pad, active;
+} d80_voice_t;
+static d80_voice_t d80_voice[NPART][NVOICE];
+static uint32_t d80_decay(uint32_t p, uint32_t base, uint32_t range)
+{
+    /* Q24 envelope multiplier, based on the requested tail length. */
+    uint32_t samples = (base + p * range / 127u) * 48u / 1000u;
+    return samples ? 16777216u / samples : 16777216u;
+}
 static void drum80_note_on(track_t *t, voice_t *v)
 {
-    uint32_t ti = (uint32_t)(t - trk);
+    uint32_t ti = (uint32_t)(t - trk), slot = (uint32_t)(v - t->v);
     int32_t pad = d80_pad_for_note(ti, v->note);
-    (void)pad; /* Stage 1: routing resolves pad, but synthesis remains silent. */
-    /* Silent placeholder: do not leave an allocated voice sounding indefinitely. */
-    v->active = 0;
-    v->gate = 0;
+    if (ti >= NPART || slot >= NVOICE || pad < 0) {
+        v->active = v->gate = 0;
+        return;
+    }
+    d80_voice_t *d = &d80_voice[ti][slot];
+    const d80_pad_t *p = &d80_kit[ti][pad];
+    uint32_t pitch = (uint32_t)clamp(30 + (int32_t)p->param[0] * 55 / 127, 0, 127);
+    memset(d, 0, sizeof *d);
+    d->pad = (uint8_t)pad;
+    d->active = 1u;
+    d->body = d->noise = d->sweep = 1 << 24;
+    d->inc = pitch_inc(pitch * 16u);
+    d->rng = 0x9E3779B9u ^ (v->age * 2654435761u) ^ ((pad + 1u) * 127u);
+}
+static int32_t drum80_amp(track_t *t, voice_t *v, int32_t adsr)
+{
+    uint32_t ti = (uint32_t)(t - trk), slot = (uint32_t)(v - t->v);
+    if (ti >= NPART || slot >= NVOICE || !d80_voice[ti][slot].active) {
+        v->active = v->gate = 0;
+        v->stage = 0;
+        v->env = 0;
+        return 0;
+    }
+    if (v->stage == 4u) return adsr;
+    v->env = 1 << 24;
+    return 32767;
 }
 static void drum80_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
-    (void)t; (void)v; (void)out; (void)n; (void)m;
+    uint32_t ti = (uint32_t)(t - trk), slot = (uint32_t)(v - t->v);
+    if (ti >= NPART || slot >= NVOICE) return;
+    d80_voice_t *d = &d80_voice[ti][slot];
+    if (!d->active) return;
+    const d80_pad_t *p = &d80_kit[ti][d->pad];
+    uint32_t type = p->type, i;
+    uint32_t bd = d80_decay(p->param[3], 30u, 750u);
+    uint32_t nd = d80_decay(p->param[7], 6u, 350u);
+    uint32_t sd = d80_decay(p->param[1], 8u, 130u);
+    int32_t mix = p->param[5], brightness = 1024 + (int32_t)p->param[6] * 230;
+    int32_t level = p->param[11], drive = p->param[8];
+    int32_t osc_mix = (type == D80_CP || type == D80_CH || type == D80_OH) ? 15 :
+                      (type == D80_SD ? 65 : 115);
+    if (type == D80_CB || type == D80_PC2) osc_mix = 110;
+    if (type == D80_RS) osc_mix = 75;
+    if (type == D80_CL) osc_mix = 120;
+    if (type == D80_CH) nd *= 4u;
+    if (type == D80_OH) nd /= 2u;
+    if (type == D80_CP) bd *= 5u;
+    for (i = 0; i < n; ++i) {
+        int32_t tone, hiss, x, inc;
+        if (!d->active) break;
+        d->rng ^= d->rng << 13; d->rng ^= d->rng >> 17; d->rng ^= d->rng << 5;
+        hiss = (int32_t)(d->rng >> 16) - 32768;
+        d->lp += (int32_t)(((int64_t)(hiss - d->lp) * brightness) >> 15);
+        hiss = d->lp;
+        inc = (int32_t)d->inc + (int32_t)(((int64_t)d->inc * d->sweep * p->param[1]) >> 29);
+        d->phase += (uint32_t)inc;
+        d->phase2 += (uint32_t)(inc + (type == D80_CB || type == D80_PC2 ? inc * 37 / 100 : inc / 2));
+        tone = sine_i(d->phase);
+        if (type == D80_SD || type == D80_CB || type == D80_PC2 || type == D80_CH || type == D80_OH)
+            tone = (tone * 2 + sine_i(d->phase2)) / 3;
+        if (type == D80_CH || type == D80_OH) tone = (tone > 0 ? 18000 : -18000);
+        x = (int32_t)(((int64_t)tone * d->body * osc_mix) >> 31);
+        x += (int32_t)(((int64_t)hiss * d->noise * mix) >> 31);
+        if (d->age < 1440u && p->param[9]) {
+            uint32_t left = 1440u - d->age;
+            int32_t click = (int32_t)(((int64_t)hiss * p->param[9] * left) / (1440u * 127u * 5u));
+            x += click;
+        }
+        x = (int32_t)(((int64_t)x * level) / 127u);
+        if (drive) {
+            int32_t y = x * (128 + drive) / 128;
+            x = clamp(y, -32768, 32767);
+        }
+        out[i] += voice_amp(x, m, i);
+        d->body -= (int32_t)(((int64_t)d->body * bd) >> 24);
+        d->noise -= (int32_t)(((int64_t)d->noise * nd) >> 24);
+        d->sweep -= (int32_t)(((int64_t)d->sweep * sd) >> 24);
+        d->age++;
+        if (d->body < 256 && d->noise < 256) d->active = 0u;
+    }
 }
 static const preset_t DRUM80_PRESETS[] = {
     {"80s KIT", {64, 36, 100, 70, 75, 60, 80, 55}, {0, 127, 127, 127}, 0, TAG(DRUM)},
@@ -120,6 +208,7 @@ static const engine_t ENG_DRUM80 = {
     .presets = DRUM80_PRESETS,
     .npresets = NELEM(DRUM80_PRESETS),
     .note_on = drum80_note_on,
+    .amp = drum80_amp,
     .render = drum80_render,
     .knob = {P_E0, P_E1, P_E2, P_E3},
     .poly = NVOICE,
