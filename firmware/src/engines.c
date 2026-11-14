@@ -168,5 +168,5 @@ static const uint8_t TRK_DEF[NPART][3] = {{ENGI_DRUM, 0, 0}, {ENGI_VOICE, TRK_PR
  * (project.c proj_new_tracks, PROJ_DEF_SOUND: format 1's tracks 2..4, a 4-track format's T5 / T6): never change it.
  * ANALOG ACID, FM6 PAD (was DIGITAL PAD), LOFI PULSE LD (3: BYTE first), DRUM KIT; (JIANT 0.6) PHASE's first, WHEEL's first (WHEEL now retired) */
 static const uint8_t TRK_OLD[NPART][3] = {{0, 4, 0}, {ENGI_FM6, 4, 0}, {3, 3, 0}, {ENGI_DRUM, 0, 0}, {2, 0, 0}, {7, 0, 0}};
-static uint32_t trk_old_engine(uint32_t i) { return TRK_OLD[i % NPART][0]; }
+static uint32_t trk_old_engine(uint32_t i) { return eng_live(TRK_OLD[i % NPART][0]); }
 static uint32_t trk_def_engine(uint32_t i) { return TRK_DEF[i % NPART][0]; }
