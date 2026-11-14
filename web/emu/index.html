@@ -111,7 +111,7 @@ footer small { font-size: 11px; opacity: .8; }
     <button id="midi-test-send-cc" type="button" disabled>Send CC</button>
   </div>
   <div class="pads" id="midi-test-pads" aria-label="Selected track drum MIDI assignments"></div>
-  <p id="midi-test-pad-status">Select a DRUM-X or DRUM-LAB track to use its MIDI note assignments. Set Channel to that track's RX channel. All Notes Off sends CC123 on every channel.</p>
+  <p id="midi-test-pad-status">Select a DRUM-X, DRUM-LAB or DRUM-80 track to use its MIDI note assignments. Set Channel to that track's RX channel. All Notes Off sends CC123 on every channel.</p>
 </details>
 <p class="keys">
   <span><kbd>Z</kbd>–<kbd>'</kbd> <kbd>Q</kbd>–<kbd>O</kbd> keys</span>
@@ -514,7 +514,7 @@ function midiTestPadMap(map) {
   const active = map.notes.some(n => n <= 127);
   document.getElementById("midi-test-pad-status").textContent = active
     ? `Track ${map.track + 1} drum pad notes (live assignments). Set Channel to this track's RX channel.`
-    : `Track ${map.track + 1} is not a drum engine. Select DRUM-X or DRUM-LAB to audition pads.`;
+    : `Track ${map.track + 1} is not a drum engine. Select DRUM-X, DRUM-LAB or DRUM-80 to audition pads.`;
   testPads.forEach((pad, i) => {
     const note = map.notes[i];
     pad.dataset.note = String(note);
