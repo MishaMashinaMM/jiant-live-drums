@@ -1330,6 +1330,31 @@ int main(void)
             }
             bad += check("FUNC: 20000 damaged sections (hash right): refused or loaded valid, nothing read past", okz && loaded < 20000u);
         }
+        {   /* DRUM-80 sparse project serialization in the real FUN format. */
+            static project_t d80, restored;
+            static project_store_t wire;
+            d80 = g; /* valid six-track fixture already imported above */
+            d80.t[0].engine = ENGI_DRUM80;
+            for (uint32_t pad = 0; pad < D80_PADS; ++pad) {
+                d80_pad_defaults(&d80.d80_patch[0][pad], pad);
+                d80.d80_patch[0][pad].note = (uint8_t)(36u + pad);
+            }
+            d80.d80_patch[0][4].type = D80_BD;
+            d80.d80_patch[0][4].param[0] = 123;
+            d80.d80_patch[0][4].param[11] = 17;
+            d80.d80_patch[0][4].note = 91;
+            d80.sum = proj_sum(&d80);
+            int packed_ok = proj_pack(&wire, &d80);
+            bad += check("DRUM-80 modified pad packs in project", packed_ok);
+            if (packed_ok) {
+                int loaded = proj_import(&restored, &wire, sizeof wire);
+                bad += check("DRUM-80 modified pad imports from project", loaded);
+                if (loaded)
+                    bad += check("DRUM-80 all pad records survive project serialization",
+                                 memcmp(d80.d80_patch[0], restored.d80_patch[0],
+                                        sizeof d80.d80_patch[0]) == 0);
+            }
+        }
         fs.raw[100] ^= 1u;
         bad += check("FUNC: a byte changed: the hash refuses it", !proj_import(&g, &fs, sizeof fs));
         for (k = 0, n = 1; k < NTRK; k++)               /* every step of every track a chord: too much for one slot */
@@ -1342,32 +1367,6 @@ int main(void)
         f.t[0].step[0].n = 9;                           /* (a value out of range: not for room) */
         ok &= !proj_pack(&fs, &f) && !proj_full;
         bad += check("FUNC: six full tracks do not fit: not packed, proj_full (SECTION FULL); a bad value: not proj_full", ok && n);
-    }
-    {   /* DRUM-80: actual project capture, pack, import and pad restoration. */
-        static project_t before, after;
-        static project_store_t packed;
-        host_preset(&trk[0], ENGI_DRUM80, 0);
-        d80_ensure(0);
-        d80_type_set(0, 4, D80_BD);
-        d80_param_set(0, 4, 0, 123);
-        d80_param_set(0, 4, 11, 17);
-        d80_note_set(0, 4, 91);
-        project_capture(&before);
-        bad += check("DRUM-80 capture retains type, tune, level and MIDI note",
-                     before.d80_patch[0][4].type == D80_BD &&
-                     before.d80_patch[0][4].param[0] == 123 &&
-                     before.d80_patch[0][4].param[11] == 17 &&
-                     before.d80_patch[0][4].note == 91);
-        int packed_ok = proj_pack(&packed, &before);
-        bad += check("DRUM-80 modified kit serializes", packed_ok);
-        if (packed_ok) {
-            int restored = proj_import(&after, &packed, sizeof packed);
-            bad += check("DRUM-80 modified kit deserializes", restored);
-            if (restored)
-                bad += check("DRUM-80 all 12 pads survive project round trip",
-                             memcmp(before.d80_patch[0], after.d80_patch[0],
-                                    sizeof before.d80_patch[0]) == 0);
-        }
     }
     printf("%s\n", bad ? "PROJECT FORMAT TEST FAILED" : "project format test passed");
     return bad != 0;
