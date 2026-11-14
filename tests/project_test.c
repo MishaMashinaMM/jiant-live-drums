@@ -952,6 +952,22 @@ int main(void)
                  eq_dst.eq_present && !eq_dst.eq_gain[0] && !eq_dst.eq_gain[1] &&
                  !eq_dst.eq_gain[2] && eq_dst.eq_on;
             bad += check("JLD: flat EQ defaults round-trip", ok);
+            /* Simulate a pre-EQ wire image: no EQ marker, zeroed unused tail. */
+            ok = proj_pack(&eq_wire, &eq_src);
+            eq_at = 0u;
+            for (k = 68u; k + 6u <= PROJC_PFX_OFF; ++k)
+                if (eq_wire.raw[k] == 'E' && eq_wire.raw[k+1u] == 'Q' &&
+                    eq_wire.raw[k+2u] == 15u && eq_wire.raw[k+3u] == 15u &&
+                    eq_wire.raw[k+4u] == 15u && eq_wire.raw[k+5u] == 1u)
+                    eq_at = k;
+            if (eq_at) {
+                memset(eq_wire.raw + eq_at, 0, 6u);
+                { uint32_t hash = proj_hash(eq_wire.raw, PROJ_STORE_SIZE-4u);
+                  memcpy(eq_wire.raw + PROJ_STORE_SIZE-4u, &hash, 4u); }
+            }
+            ok &= eq_at && proj_import(&eq_dst, &eq_wire, sizeof eq_wire) &&
+                  !eq_dst.eq_present;
+            bad += check("JLD: pre-EQ packed project imports with absent EQ block", ok);
             /* Find the EQ marker in the packed stream, then invalidate a gain. */
             ok = proj_pack(&eq_wire, &eq_src);
             eq_at = 0u;
