@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Isolated DRUM-80 hardware-test installer. Does not deploy Pages or touch main.
+name: DRUM-80 test web installer
+on:
+  push:
+    branches: [feature/drum80-stage1]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  installer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install generators
+        run: pip install Pillow==12.3.0 numpy==2.3.5 fonttools==4.61.1
+      - name: Run DRUM-80 and project regressions
+        run: bash tests/run_live_drum_tests.sh
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.jieli
+            ~/fw-AC79_AIoT_SDK/cpu/wl82/tools
+          key: jieli-ac79-v1.2.1
+      - name: Fetch firmware toolchain and reference SDK assets
+        run: |
+          retry() { for d in 0 5 15 30 60; do sleep "$d"; "$@" && return 0; done; return 1; }
+          T="$HOME/fw-AC79_AIoT_SDK/cpu/wl82/tools"
+          [ -e "$HOME/.jieli/toolchain" ] || retry sh tools/get_toolchain.sh "$HOME/.jieli"
+          if [ ! -s "$T/uboot.boot" ] || [ ! -s "$T/cfg_tool.bin" ] || [ ! -s "$T/cfg/eq_cfg_hw.bin" ]; then
+            git clone --filter=blob:none --no-checkout https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
+            (cd "$HOME/fw-AC79_AIoT_SDK" && git sparse-checkout set --no-cone /cpu/wl82/tools/uboot.boot /cpu/wl82/tools/cfg_tool.bin /cpu/wl82/tools/cfg/eq_cfg_hw.bin && retry git checkout d179b4484759423312073f5fbb232501aa491047)
+          fi
+          test -s "$T/uboot.boot" && test -s "$T/cfg_tool.bin" && test -s "$T/cfg/eq_cfg_hw.bin"
+      - name: Build exact test firmware
+        env:
+          FELUCCA_NO_SEQUENCER: '1'
+          AC79_SDK: /home/runner/fw-AC79_AIoT_SDK
+          JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
+        run: python3 tools/build.py
+      - name: Assemble self-contained browser installer
+        run: |
+          python3 web/make_site.py build/felucca.fwsc "drum80-${GITHUB_SHA::7}-preview" build/drum80-test-site
+          printf '%s\n' "$GITHUB_SHA" > build/drum80-test-site/firmware/SOURCE_COMMIT
+          (cd build/drum80-test-site/firmware && sha256sum felucca-*.fwsc > SHA256SUMS)
+          cat > build/drum80-test-site/START-HERE.txt <<'EOF'
+          DRUM-80 TEST INSTALLER — EXPERIMENTAL FM1 FIRMWARE
+          Built from the exact branch commit recorded in firmware/SOURCE_COMMIT.
+          This is not the public Jiant Live Drums release.
+          
+          1. Unzip the complete artifact (do not open HTML directly from the ZIP).
+          2. In this folder run: python -m http.server 8765
+          3. In Chrome or Edge open: http://localhost:8765/webapp/installer/
+          4. Back up your FM1 before installing. Use one test unit only.
+          5. Keep the server running while flashing. Do not unplug during transfer.
+          
+          The local installer works through Web MIDI on localhost. No GitHub Pages
+          deployment or changes to main are made by this workflow.
+          EOF
+          test -s build/drum80-test-site/firmware/SOURCE_COMMIT
+          test -s build/drum80-test-site/webapp/installer/index.html
+          test -s build/drum80-test-site/firmware/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drum80-web-installer-${{ github.sha }}
+          path: build/drum80-test-site/
+          retention-days: 30
+          if-no-files-found: error
