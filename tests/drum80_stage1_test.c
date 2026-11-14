@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * DRUM-80 Stage 1: silent engine and independent pad model regression tests.
+ * DRUM-80 engine registration, independent pads, MIDI routing and choke regression tests.
  */
 #define main hostsim_main
 #include "hostsim.c"
