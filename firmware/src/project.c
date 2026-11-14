@@ -2435,6 +2435,9 @@ static void system_init(void)
     for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
     for (i = 0; i < 5u; i++) song.g[KEEP[i]] = kept[i];
+    /* A new/initialized project must not inherit the previous project's EQ. */
+    for (i = 0; i < 3u; i++) global_eq_gain[i] = 0;
+    global_eq_on = 1;
     chain_defaults(&chain_config);
     memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
     memset(pfx_lane, 0, sizeof pfx_lane);
