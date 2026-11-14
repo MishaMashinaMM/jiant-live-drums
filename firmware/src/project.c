@@ -669,6 +669,16 @@ static int proj_import(project_t *q, const void *b, int n)
     proj_fm4(q);
     proj_perc(q);                                       /* (SAMPLE PERC: DRUM, before the retired engines) */
     proj_phys_gone(q);
+    /* All older project formats predate DRUM-80. Normalize the new fields
+     * before checksumming, including an import through the legacy converter. */
+    if (((const uint32_t *)b)[0] != PROJ_MAGIC)
+        for (uint32_t ti = 0; ti < NPART; ++ti) {
+            q->d80_mask[ti] = 0;
+            for (uint32_t pad = 0; pad < D80_PADS; ++pad) {
+                d80_pad_defaults(&q->d80_patch[ti][pad], pad);
+                q->d80_patch[ti][pad].note = (uint8_t)(36u + pad);
+            }
+        }
     /* Normalize new optional TYPE defaults after *every* legacy importer,
      * not only the modern FUNC parser. Otherwise an old FUN7/FUN6 image
      * changes project_t bytes when it is saved and loaded a second time. */
